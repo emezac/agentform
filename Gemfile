@@ -130,3 +130,5 @@ gem 'google-apis-sheets_v4'
 gem 'googleauth'
 gem 'signet'
 gem 'omniauth-google-oauth2'
+gem "aws-sdk-s3", "~> 1.148"
+
