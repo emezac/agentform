@@ -99,6 +99,7 @@ module SuperAgent
 
         SuperAgent.logger.error("AgentCardHandler: #{message}")
       end
+      end
     end
   end
 end

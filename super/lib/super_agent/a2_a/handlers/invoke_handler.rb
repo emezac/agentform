@@ -251,7 +251,7 @@ module SuperAgent
 
         SuperAgent.logger.info("InvokeHandler: #{message}")
       end
-    end
+      end
 
       # Streaming enumerator for Server-Sent Events
       class StreamingEnumerator

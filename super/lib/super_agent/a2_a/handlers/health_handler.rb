@@ -239,6 +239,7 @@ module SuperAgent
 
         SuperAgent.logger.error("HealthHandler: #{message}")
       end
+      end
     end
   end
 end
