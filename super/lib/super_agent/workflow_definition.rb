@@ -334,16 +334,34 @@ module SuperAgent
         store_config(:messages, msgs)
       end
 
-      def model(name)
-        store_config(:model, name)
+      def model(name = nil, &block)
+        if block_given?
+          store_config(:model, block)
+        elsif name
+          store_config(:model, name)
+        else
+          raise ArgumentError, 'model requires either a model name or a block'
+        end
       end
 
-      def temperature(value)
-        store_config(:temperature, value)
+      def temperature(value = nil, &block)
+        if block_given?
+          store_config(:temperature, block)
+        elsif value
+          store_config(:temperature, value)
+        else
+          raise ArgumentError, 'temperature requires either a value or a block'
+        end
       end
 
-      def max_tokens(value)
-        store_config(:max_tokens, value)
+      def max_tokens(value = nil, &block)
+        if block_given?
+          store_config(:max_tokens, block)
+        elsif value
+          store_config(:max_tokens, value)
+        else
+          raise ArgumentError, 'max_tokens requires either a value or a block'
+        end
       end
 
       def provider(name)
