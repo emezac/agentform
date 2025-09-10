@@ -310,12 +310,24 @@ module SuperAgent
       # CONFIGURACIÓN LLM
       # =====================
 
-      def prompt(text)
-        store_config(:prompt, text)
+      def prompt(text = nil, &block)
+        if block_given?
+          store_config(:prompt, block)
+        elsif text
+          store_config(:prompt, text)
+        else
+          raise ArgumentError, 'prompt requires either text or a block'
+        end
       end
 
-      def system_prompt(text)
-        store_config(:system_prompt, text)
+      def system_prompt(text = nil, &block)
+        if block_given?
+          store_config(:system_prompt, block)
+        elsif text
+          store_config(:system_prompt, text)
+        else
+          raise ArgumentError, 'system_prompt requires either text or a block'
+        end
       end
 
       def messages(msgs)
