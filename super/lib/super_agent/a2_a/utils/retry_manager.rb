@@ -2,8 +2,9 @@
 
 module SuperAgent
   module A2A
-    # Retry manager with exponential backoff for A2A operations
-    class RetryManager
+    module Utils
+      # Retry manager with exponential backoff for A2A operations
+      class RetryManager
       def initialize(max_retries: 3, base_delay: 1.0, max_delay: 32.0, backoff_factor: 2.0)
         @max_retries = max_retries
         @base_delay = base_delay
@@ -57,6 +58,7 @@ module SuperAgent
         SuperAgent.logger.warn(
           "A2A retry attempt #{attempt}/#{@max_retries} after #{delay}s delay: #{error.message}"
         )
+      end
       end
     end
   end

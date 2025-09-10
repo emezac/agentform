@@ -2,8 +2,9 @@
 
 module SuperAgent
   module A2A
-    # Thread-safe cache manager for A2A operations
-    class CacheManager
+    module Utils
+      # Thread-safe cache manager for A2A operations
+      class CacheManager
       def initialize(ttl: 300)
         @ttl = ttl
         @cache = {}
@@ -64,6 +65,7 @@ module SuperAgent
 
       def expired?(entry)
         Time.current > entry[:expires_at]
+      end
       end
     end
   end

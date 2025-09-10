@@ -4,8 +4,9 @@ require 'json'
 
 module SuperAgent
   module A2A
-    # JSON validator for A2A protocol compliance
-    class JsonValidator
+    module Utils
+      # JSON validator for A2A protocol compliance
+      class JsonValidator
       class << self
         def validate_agent_card(data)
           errors = []
