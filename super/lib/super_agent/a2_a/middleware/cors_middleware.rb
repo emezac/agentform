@@ -2,8 +2,9 @@
 
 module SuperAgent
   module A2A
-    # CORS middleware for A2A server
-    class CorsMiddleware
+    module Middleware
+      # CORS middleware for A2A server
+      class CorsMiddleware
       def initialize(app, options = {})
         @app = app
         @options = {
@@ -91,6 +92,7 @@ module SuperAgent
 
       def requested_headers(env)
         env['HTTP_ACCESS_CONTROL_REQUEST_HEADERS']
+      end
       end
     end
   end

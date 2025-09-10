@@ -4,8 +4,9 @@ require 'securerandom'
 
 module SuperAgent
   module A2A
-    # Logging middleware for A2A server with structured logging
-    class LoggingMiddleware
+    module Middleware
+      # Logging middleware for A2A server with structured logging
+      class LoggingMiddleware
       def initialize(app, logger: nil)
         @app = app
         @logger = logger || default_logger
