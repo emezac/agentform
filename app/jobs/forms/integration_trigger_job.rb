@@ -1,4 +1,6 @@
 # frozen_string_literal: true
+require 'net/http'
+require 'openssl'
 
 module Forms
   # Background job responsible for triggering external integrations when form events occur
