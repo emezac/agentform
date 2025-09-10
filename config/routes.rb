@@ -1,4 +1,6 @@
 Rails.application.routes.draw do
+
+  mount ActionCable.server => '/cable'
   # Letter opener routes (development only)
   if Rails.env.development?
     mount LetterOpenerWeb::Engine, at: "/letter_opener"

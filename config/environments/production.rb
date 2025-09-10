@@ -43,6 +43,7 @@ Rails.application.configure do
   # Prevent health checks from clogging up the logs.
   config.silence_healthcheck_path = "/up"
 
+  config.action_cable.allowed_request_origins = ['https://mydialogform.com']
   # Don't log any deprecations.
   config.active_support.report_deprecations = false
 
