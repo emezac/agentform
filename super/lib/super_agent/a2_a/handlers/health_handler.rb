@@ -242,4 +242,3 @@ module SuperAgent
     end
   end
 end
-end

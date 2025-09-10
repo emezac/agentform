@@ -2,8 +2,9 @@
 
 module SuperAgent
   module A2A
-    # Authentication middleware for A2A server
-    class AuthMiddleware
+    module Middleware
+      # Authentication middleware for A2A server
+      class AuthMiddleware
       def initialize(app, auth_token: nil)
         @app = app
         @auth_token = auth_token
