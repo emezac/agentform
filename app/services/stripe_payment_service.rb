@@ -1,5 +1,4 @@
-class StripePaymentService
-  include ApplicationService
+class StripePaymentService < ApplicationService
 
   def initialize(user:, form:, form_response:, payment_data:)
     @user = user
