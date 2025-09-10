@@ -324,6 +324,7 @@ module SuperAgent
 
         SuperAgent.logger.error("StreamingEnumerator: #{message}")
       end
+      end
     end
   end
 end
