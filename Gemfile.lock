@@ -707,6 +707,7 @@ DEPENDENCIES
   rspec-rails
   rspec-sidekiq
   rubocop-rails-omakase
+  ruby-openai
   rufus-scheduler (~> 3.9)
   selenium-webdriver
   sentry-ruby

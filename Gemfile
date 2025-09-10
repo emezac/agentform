@@ -109,6 +109,8 @@ group :test do
   gem "prawn"
 end
 
+gem 'ruby-openai'
+
 gem "heroicons", "~> 2.2"
 
 gem "chartkick", "~> 5.2"
