@@ -9,11 +9,12 @@ class Forms::ProcessAIWorkflowJob < ApplicationJob
   circuit_breaker_options(
     failure_threshold: 5,    # Open after 5 failures
     recovery_timeout: 60,    # Try to close after 60 seconds
-    expected_errors: [OpenAI::Error, Timeout::Error, Net::TimeoutError]
+    expected_errors: [OpenAI::Error, Timeout::Error, Net::OpenTimeout, Net::ReadTimeout]
   )
   
   retry_on OpenAI::Error, wait: :exponentially_longer, attempts: 5
-  retry_on Net::TimeoutError, wait: 10.seconds, attempts: 3
+  retry_on Net::OpenTimeout, wait: 10.seconds, attempts: 3
+  retry_on Net::ReadTimeout, wait: 10.seconds, attempts: 3
   retry_on StandardError, wait: 5.seconds, attempts: 3
   
   def perform(form_response_id, question_id, answer_data)
