@@ -9,10 +9,10 @@ class Forms::ProcessAIWorkflowJob < ApplicationJob
   circuit_breaker_options(
     failure_threshold: 5,    # Open after 5 failures
     recovery_timeout: 60,    # Try to close after 60 seconds
-    expected_errors: [OpenAI::RateLimitError, Timeout::Error, Net::TimeoutError]
+    expected_errors: [OpenAI::Error, Timeout::Error, Net::TimeoutError]
   )
   
-  retry_on OpenAI::RateLimitError, wait: :exponentially_longer, attempts: 5
+  retry_on OpenAI::Error, wait: :exponentially_longer, attempts: 5
   retry_on Net::TimeoutError, wait: 10.seconds, attempts: 3
   retry_on StandardError, wait: 5.seconds, attempts: 3
   
@@ -61,9 +61,14 @@ class Forms::ProcessAIWorkflowJob < ApplicationJob
       Rails.logger.error "AI Circuit breaker open for form #{form_response.form_id}: #{e.message}"
       handle_circuit_breaker_open(form_response)
       
-    rescue OpenAI::RateLimitError => e
-      Rails.logger.warn "OpenAI rate limit hit: #{e.message}"
-      reschedule_job(30.seconds.from_now, form_response_id, question_id, answer_data)
+    rescue OpenAI::Error => e
+      if e.message.include?("rate limit")
+        Rails.logger.warn "OpenAI rate limit hit: #{e.message}"
+        reschedule_job(30.seconds.from_now, form_response_id, question_id, answer_data)
+      else
+        Rails.logger.error "OpenAI API error: #{e.message}"
+        raise e
+      end
       
     rescue StandardError => e
       Rails.logger.error "AI Workflow failed for form #{form_response.form_id}: #{e.message}"
