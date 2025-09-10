@@ -314,16 +314,34 @@ class Api::BaseController < ActionController::API
 
   # Global rescue handlers for API (most specific first)
   
-  # SuperAgent specific error handling (conditional on SuperAgent being loaded)
-  if defined?(SuperAgent)
-    rescue_from SuperAgent::WorkflowError, with: :render_workflow_error
-    rescue_from SuperAgent::TaskError, with: :render_workflow_error
-  end
-  
-  if defined?(SuperAgent::A2A)
-    rescue_from SuperAgent::A2A::TimeoutError, with: :render_timeout_error
-    rescue_from SuperAgent::A2A::NetworkError, with: :render_network_error
-    rescue_from SuperAgent::A2A::AuthenticationError, with: :render_unauthorized
+  # SuperAgent specific error handling (conditional and safer)
+  begin
+    # Only define these rescue_from blocks if the constants exist
+    if defined?(SuperAgent) && defined?(SuperAgent::WorkflowError)
+      rescue_from SuperAgent::WorkflowError, with: :render_workflow_error
+    end
+    
+    if defined?(SuperAgent) && defined?(SuperAgent::TaskError)
+      rescue_from SuperAgent::TaskError, with: :render_workflow_error
+    end
+    
+    # Check for A2A module and its error classes more safely
+    if defined?(SuperAgent::A2A)
+      if SuperAgent::A2A.const_defined?(:TimeoutError)
+        rescue_from SuperAgent::A2A::TimeoutError, with: :render_timeout_error
+      end
+      
+      if SuperAgent::A2A.const_defined?(:NetworkError)
+        rescue_from SuperAgent::A2A::NetworkError, with: :render_network_error
+      end
+      
+      if SuperAgent::A2A.const_defined?(:AuthenticationError)
+        rescue_from SuperAgent::A2A::AuthenticationError, with: :render_unauthorized
+      end
+    end
+  rescue NameError => e
+    # Silently ignore if SuperAgent constants are not available
+    Rails.logger.debug "[API] SuperAgent error classes not available: #{e.message}"
   end
 
   # ActiveRecord specific errors
