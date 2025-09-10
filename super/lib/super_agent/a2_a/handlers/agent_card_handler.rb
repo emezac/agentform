@@ -2,8 +2,9 @@
 
 module SuperAgent
   module A2A
-    # Handler for serving Agent Card (/.well-known/agent.json)
-    class AgentCardHandler
+    module Handlers
+      # Handler for serving Agent Card (/.well-known/agent.json)
+      class AgentCardHandler
       def initialize(workflow_registry)
         @workflow_registry = workflow_registry
       end
@@ -100,4 +101,5 @@ module SuperAgent
       end
     end
   end
+end
 end

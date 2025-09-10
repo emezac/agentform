@@ -2,8 +2,9 @@
 
 module SuperAgent
   module A2A
-    # Handler for health check endpoint (/health)
-    class HealthHandler
+    module Handlers
+      # Handler for health check endpoint (/health)
+      class HealthHandler
       def initialize(workflow_registry, start_time: Time.current)
         @workflow_registry = workflow_registry
         @start_time = start_time
@@ -240,4 +241,5 @@ module SuperAgent
       end
     end
   end
+end
 end

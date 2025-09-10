@@ -5,8 +5,9 @@ require 'rack'
 
 module SuperAgent
   module A2A
-    # Handler for skill invocation endpoint (/invoke)
-    class InvokeHandler
+    module Handlers
+      # Handler for skill invocation endpoint (/invoke)
+      class InvokeHandler
       def initialize(workflow_registry)
         @workflow_registry = workflow_registry
       end
@@ -252,8 +253,8 @@ module SuperAgent
       end
     end
 
-    # Streaming enumerator for Server-Sent Events
-    class StreamingEnumerator
+      # Streaming enumerator for Server-Sent Events
+      class StreamingEnumerator
       def initialize(workflow_class, parameters, skill_name, request_id)
         @workflow_class = workflow_class
         @parameters = parameters
@@ -325,4 +326,5 @@ module SuperAgent
       end
     end
   end
+end
 end
