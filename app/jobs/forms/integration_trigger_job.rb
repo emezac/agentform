@@ -10,9 +10,10 @@ module Forms
     
     # Retry on specific errors that might be temporary (network issues, API rate limits)
     retry_on StandardError, wait: :polynomially_longer, attempts: 3
-    retry_on Net::TimeoutError, wait: 5.seconds, attempts: 5
+    retry_on Timeout::Error, wait: 5.seconds, attempts: 5
     retry_on Net::HTTPError, wait: 10.seconds, attempts: 3
-    
+
+        
     # Discard if records are not found or configuration is invalid
     discard_on ActiveRecord::RecordNotFound, ArgumentError
     
