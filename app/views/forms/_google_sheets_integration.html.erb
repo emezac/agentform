@@ -1,0 +1,238 @@
+<div class="bg-gray-50 rounded-lg p-4" data-controller="google-sheets-integration" data-google-sheets-integration-form-id-value="<%= @form.id %>">
+  
+  <% unless current_user.can_use_google_sheets? %>
+    <!-- Premium Upgrade Prompt -->
+    <div class="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg p-4">
+      <div class="flex items-start">
+        <div class="flex-shrink-0">
+          <div class="flex items-center justify-center h-8 w-8 rounded-full bg-indigo-100">
+            <svg class="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+          </div>
+        </div>
+        
+        <div class="ml-4 flex-1">
+          <h3 class="text-sm font-semibold text-indigo-900 mb-2">
+            Premium Feature
+          </h3>
+          
+          <div class="text-sm text-indigo-800 mb-3">
+            Google Sheets integration is available with Premium subscription. Automatically export form responses to Google Sheets and keep your data synchronized.
+          </div>
+          
+          <div class="flex items-center space-x-3">
+            <%= link_to subscription_management_path, 
+                  class: "inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-white bg-indigo-600 hover:bg-indigo-700" do %>
+              <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Upgrade to Premium
+            <% end %>
+            
+            <span class="text-xs text-indigo-600">
+              Starting at $29/month
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <!-- Existing Google Sheets Integration UI -->
+  <div class="flex items-center justify-between mb-3">
+    <div class="flex items-center space-x-2">
+      <div class="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
+        <svg class="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M19.5 3H4.5C3.12 3 2 4.12 2 5.5v13C2 19.88 3.12 21 4.5 21h15c1.38 0 2.5-1.12 2.5-2.5v-13C22 4.12 20.88 3 19.5 3zM19 18H5V6h14v12z"/>
+          <path d="M7 8h10v2H7zm0 3h10v2H7zm0 3h7v2H7z"/>
+        </svg>
+      </div>
+      <div>
+        <h5 class="text-sm font-medium text-gray-900">Google Sheets</h5>
+        <p class="text-xs text-gray-500">Auto-export responses</p>
+      </div>
+    </div>
+    
+    <% if @form.google_sheets_integration %>
+      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+        <div class="w-1.5 h-1.5 bg-green-400 rounded-full mr-1"></div>
+        Connected
+      </span>
+    <% else %>
+      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+        Not setup
+      </span>
+    <% end %>
+  </div>
+
+  <% if @form.google_sheets_integration %>
+    <!-- Existing Integration -->
+    <div class="space-y-3">
+      <div class="flex items-center justify-between">
+        <label class="flex items-center">
+          <input type="checkbox" 
+                 <%= 'checked' if @form.google_sheets_integration.auto_sync? %>
+                 class="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
+                 data-action="change->google-sheets-integration#toggleAutoSync">
+          <span class="ml-2 text-xs text-gray-700">Auto-sync</span>
+        </label>
+        
+        <a href="<%= @form.google_sheets_integration.spreadsheet_url %>" 
+           target="_blank" 
+           class="inline-flex items-center px-2 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50">
+          <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path>
+          </svg>
+          Open
+        </a>
+      </div>
+      
+      <div class="flex space-x-2">
+        <button type="button" 
+                class="flex-1 inline-flex items-center justify-center px-2 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50"
+                data-action="click->google-sheets-integration#exportNow">
+          <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          Export
+        </button>
+        
+        <button type="button" 
+                class="inline-flex items-center px-2 py-1 border border-red-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50"
+                data-action="click->google-sheets-integration#disconnect">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+      
+      <% if @form.google_sheets_integration.last_sync_at %>
+        <p class="text-xs text-gray-500">
+          Last sync: <%= time_ago_in_words(@form.google_sheets_integration.last_sync_at) %> ago
+        </p>
+      <% end %>
+      
+      <% if @form.google_sheets_integration.error_message.present? %>
+        <div class="p-2 bg-red-50 border border-red-200 rounded text-xs">
+          <p class="text-red-800 font-medium">Sync Error</p>
+          <p class="text-red-700"><%= @form.google_sheets_integration.error_message %></p>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <!-- Setup Integration -->
+    <div class="space-y-3">
+      <% unless @form.user.google_integration&.valid_token? %>
+        <!-- Need Google Connection First -->
+        <div class="text-center py-3">
+          <svg class="mx-auto h-8 w-8 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+          </svg>
+          <p class="mt-1 text-xs text-amber-600 font-medium">Connect Google Account First</p>
+          <p class="text-xs text-gray-500">Required for Google Sheets integration</p>
+        </div>
+        
+        <div class="text-center">
+          <%= link_to google_oauth_connect_path, 
+                class: "inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700" do %>
+            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+            </svg>
+            Connect Google
+          <% end %>
+        </div>
+      <% else %>
+        <!-- Google Connected - Show Setup Options -->
+        <div class="text-center py-3">
+          <svg class="mx-auto h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          <p class="mt-1 text-xs text-gray-500">Export responses to Google Sheets</p>
+        </div>
+      
+      <div class="space-y-2" data-google-sheets-integration-target="setupForm">
+        <div class="space-y-2">
+          <label class="flex items-center text-xs">
+            <input type="radio" 
+                   name="setup_type" 
+                   value="create_new" 
+                   class="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
+                   data-google-sheets-integration-target="setupType"
+                   data-action="change->google-sheets-integration#setupTypeChanged"
+                   checked>
+            <span class="ml-2 text-gray-700">Create new spreadsheet</span>
+          </label>
+          
+          <label class="flex items-center text-xs">
+            <input type="radio" 
+                   name="setup_type" 
+                   value="use_existing" 
+                   class="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
+                   data-google-sheets-integration-target="setupType"
+                   data-action="change->google-sheets-integration#setupTypeChanged">
+            <span class="ml-2 text-gray-700">Use existing spreadsheet</span>
+          </label>
+        </div>
+        
+        <div data-google-sheets-integration-target="newSpreadsheetOptions">
+          <input type="text" 
+                 placeholder="<%= @form.name %> - Responses"
+                 class="w-full text-xs border border-gray-300 rounded px-2 py-1"
+                 data-google-sheets-integration-target="spreadsheetTitle">
+        </div>
+        
+        <div class="hidden" data-google-sheets-integration-target="existingSpreadsheetOptions">
+          <input type="text" 
+                 placeholder="Spreadsheet ID"
+                 class="w-full text-xs border border-gray-300 rounded px-2 py-1"
+                 data-google-sheets-integration-target="spreadsheetId">
+        </div>
+        
+        <input type="text" 
+               value="Responses"
+               placeholder="Sheet Name"
+               class="w-full text-xs border border-gray-300 rounded px-2 py-1"
+               data-google-sheets-integration-target="sheetName">
+        
+        <div class="space-y-1">
+          <label class="flex items-center text-xs">
+            <input type="checkbox" 
+                   checked
+                   class="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
+                   data-google-sheets-integration-target="autoSync">
+            <span class="ml-2 text-gray-700">Auto-sync new responses</span>
+          </label>
+          
+          <label class="flex items-center text-xs">
+            <input type="checkbox" 
+                   checked
+                   class="rounded border-gray-300 text-green-600 shadow-sm focus:border-green-300 focus:ring focus:ring-green-200 focus:ring-opacity-50"
+                   data-google-sheets-integration-target="exportExisting">
+            <span class="ml-2 text-gray-700">Export existing responses</span>
+          </label>
+        </div>
+        
+        <div class="flex space-x-2">
+          <button type="button" 
+                  class="flex-1 inline-flex items-center justify-center px-2 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50"
+                  data-action="click->google-sheets-integration#testConnection">
+            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            Test
+          </button>
+          
+          <button type="button" 
+                  class="flex-1 inline-flex items-center justify-center px-2 py-1 border border-transparent text-xs font-medium rounded text-white bg-green-600 hover:bg-green-700"
+                  data-action="click->google-sheets-integration#setupIntegration">
+            <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+            </svg>
+            Connect
+          </button>
+        </div>
+      <% end %>
+    </div>
+  <% end %>
+  <% end %> <!-- End premium check -->
+</div>

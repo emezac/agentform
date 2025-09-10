@@ -1,0 +1,205 @@
+<% content_for :title, "Security Dashboard" %>
+
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex justify-between items-center">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Security Dashboard</h1>
+      <p class="text-gray-600">Monitor security events and admin activities</p>
+    </div>
+    
+    <div class="flex space-x-3">
+      <%= link_to "Audit Logs", admin_security_audit_logs_path, 
+          class: "btn btn-secondary" %>
+      <%= link_to "Security Report", admin_security_security_report_path, 
+          class: "btn btn-secondary" %>
+      <%= link_to "User Activity", admin_security_user_activity_path, 
+          class: "btn btn-secondary" %>
+    </div>
+  </div>
+
+  <!-- Security Alerts -->
+  <% if @alerts.any? %>
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4">
+      <div class="flex items-center mb-3">
+        <svg class="w-5 h-5 text-red-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+        </svg>
+        <h3 class="text-lg font-semibold text-red-800">Security Alerts (<%= @alerts.count %>)</h3>
+      </div>
+      
+      <div class="space-y-2">
+        <% @alerts.each do |alert| %>
+          <div class="flex items-center justify-between p-3 bg-white rounded border border-red-200">
+            <div class="flex-1">
+              <div class="flex items-center space-x-2">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                  <%= alert[:severity] == 'high' ? 'bg-red-100 text-red-800' : 
+                      alert[:severity] == 'medium' ? 'bg-yellow-100 text-yellow-800' : 
+                      'bg-blue-100 text-blue-800' %>">
+                  <%= alert[:severity].upcase %>
+                </span>
+                <span class="text-sm font-medium text-gray-900"><%= alert[:type].humanize %></span>
+              </div>
+              <p class="text-sm text-gray-600 mt-1"><%= alert[:message] %></p>
+            </div>
+            
+            <div class="flex items-center space-x-2">
+              <% if alert[:ip_address] %>
+                <%= form_with url: admin_security_block_ip_path, method: :post, local: true, class: "inline" do |f| %>
+                  <%= f.hidden_field :ip_address, value: alert[:ip_address] %>
+                  <%= f.hidden_field :reason, value: "Security alert: #{alert[:type]}" %>
+                  <%= f.submit "Block IP", class: "btn btn-sm btn-danger", 
+                      confirm: "Are you sure you want to block IP #{alert[:ip_address]}?" %>
+                <% end %>
+              <% end %>
+              <span class="text-xs text-gray-500">
+                <%= time_ago_in_words(alert[:created_at]) %> ago
+              </span>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Security Metrics -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <div class="w-8 h-8 bg-red-100 rounded-md flex items-center justify-center">
+            <svg class="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-500">Security Alerts Today</p>
+          <p class="text-2xl font-semibold text-gray-900"><%= @dashboard_data[:security_alerts_today] %></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <div class="w-8 h-8 bg-yellow-100 rounded-md flex items-center justify-center">
+            <svg class="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M3 6a3 3 0 013-3h10a1 1 0 01.8 1.6L14.25 8l2.55 3.4A1 1 0 0116 13H6a1 1 0 00-1 1v3a1 1 0 11-2 0V6z" clip-rule="evenodd"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-500">Failed Attempts (1h)</p>
+          <p class="text-2xl font-semibold text-gray-900"><%= @dashboard_data[:failed_attempts_last_hour] %></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <div class="w-8 h-8 bg-blue-100 rounded-md flex items-center justify-center">
+            <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-500">Active Admins (24h)</p>
+          <p class="text-2xl font-semibold text-gray-900"><%= @dashboard_data[:admin_activity_summary].count %></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <div class="w-8 h-8 bg-green-100 rounded-md flex items-center justify-center">
+            <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="ml-4">
+          <p class="text-sm font-medium text-gray-500">System Status</p>
+          <p class="text-2xl font-semibold text-green-600">Secure</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Top Suspicious IPs -->
+  <div class="bg-white rounded-lg shadow">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h3 class="text-lg font-medium text-gray-900">Top Suspicious IPs (24h)</h3>
+    </div>
+    <div class="p-6">
+      <% if @dashboard_data[:top_suspicious_ips].any? %>
+        <div class="space-y-3">
+          <% @dashboard_data[:top_suspicious_ips].each do |ip, count| %>
+            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+              <div class="flex items-center space-x-3">
+                <code class="text-sm font-mono bg-gray-200 px-2 py-1 rounded"><%= ip %></code>
+                <span class="text-sm text-gray-600"><%= count %> failed attempts</span>
+              </div>
+              
+              <%= form_with url: admin_security_block_ip_path, method: :post, local: true, class: "inline" do |f| %>
+                <%= f.hidden_field :ip_address, value: ip %>
+                <%= f.hidden_field :reason, value: "Suspicious activity: #{count} failed attempts" %>
+                <%= f.submit "Block IP", class: "btn btn-sm btn-danger", 
+                    confirm: "Are you sure you want to block IP #{ip}?" %>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="text-gray-500 text-center py-8">No suspicious IPs detected in the last 24 hours</p>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Recent Security Events -->
+  <div class="bg-white rounded-lg shadow">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <div class="flex justify-between items-center">
+        <h3 class="text-lg font-medium text-gray-900">Recent Security Events</h3>
+        <%= link_to "View All", admin_security_audit_logs_path, class: "text-indigo-600 hover:text-indigo-500" %>
+      </div>
+    </div>
+    <div class="p-6">
+      <% if @dashboard_data[:recent_security_events].any? %>
+        <div class="space-y-3">
+          <% @dashboard_data[:recent_security_events].each do |event| %>
+            <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+              <div class="flex-1">
+                <div class="flex items-center space-x-2">
+                  <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    <%= event[:event_type].humanize %>
+                  </span>
+                  <% if event[:user_email] %>
+                    <span class="text-sm text-gray-600">by <%= event[:user_email] %></span>
+                  <% end %>
+                  <% if event[:ip_address] %>
+                    <code class="text-xs font-mono bg-gray-100 px-1 py-0.5 rounded"><%= event[:ip_address] %></code>
+                  <% end %>
+                </div>
+                <% if event[:details].present? %>
+                  <p class="text-sm text-gray-500 mt-1">
+                    <%= truncate(event[:details].to_s, length: 100) %>
+                  </p>
+                <% end %>
+              </div>
+              <span class="text-xs text-gray-500">
+                <%= time_ago_in_words(event[:created_at]) %> ago
+              </span>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="text-gray-500 text-center py-8">No recent security events</p>
+      <% end %>
+    </div>
+  </div>
+</div>

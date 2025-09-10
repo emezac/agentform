@@ -1,0 +1,93 @@
+<div class="min-h-screen bg-gray-50 py-8">
+  <div class="container mx-auto px-4">
+    <div class="max-w-2xl mx-auto">
+      <div class="bg-white rounded-lg shadow-md p-8">
+        <div class="text-center mb-8">
+          <h1 class="text-3xl font-bold text-gray-900"><%= @form.name %></h1>
+          <% if @form.description.present? %>
+            <p class="text-gray-600 mt-2"><%= @form.description %></p>
+          <% end %>
+          <div class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p class="text-sm text-blue-800">
+              <strong>Preview Mode:</strong> This is how your form will appear to respondents.
+            </p>
+          </div>
+        </div>
+
+        <% if @form.form_questions.any? %>
+          <div class="space-y-6">
+            <% @form.form_questions.order(:position).each_with_index do |question, index| %>
+              <div class="border-b pb-6 last:border-b-0">
+                <label class="block text-sm font-medium text-gray-700 mb-2">
+                  <%= index + 1 %>. <%= question.title %>
+                  <% if question.required? %>
+                    <span class="text-red-500">*</span>
+                  <% end %>
+                </label>
+                
+                <% if question.description.present? %>
+                  <p class="text-sm text-gray-600 mb-3"><%= question.description %></p>
+                <% end %>
+
+                <!-- Render different input types based on question type -->
+                <% case question.question_type %>
+                <% when 'text_short' %>
+                  <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Your answer..." disabled>
+                
+                <% when 'text_long' %>
+                  <textarea rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Your answer..." disabled></textarea>
+                
+                <% when 'email' %>
+                  <input type="email" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="your@email.com" disabled>
+                
+                <% when 'multiple_choice' %>
+                  <div class="space-y-2">
+                    <label class="flex items-center">
+                      <input type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" disabled>
+                      <span class="ml-2 text-sm text-gray-700">Option 1</span>
+                    </label>
+                    <label class="flex items-center">
+                      <input type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" disabled>
+                      <span class="ml-2 text-sm text-gray-700">Option 2</span>
+                    </label>
+                    <label class="flex items-center">
+                      <input type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" disabled>
+                      <span class="ml-2 text-sm text-gray-700">Option 3</span>
+                    </label>
+                  </div>
+                
+                <% when 'rating' %>
+                  <div class="flex space-x-2">
+                    <% (1..5).each do |i| %>
+                      <button class="w-8 h-8 border border-gray-300 rounded-full hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled>
+                        <%= i %>
+                      </button>
+                    <% end %>
+                  </div>
+                
+                <% else %>
+                  <input type="text" class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Your answer..." disabled>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+
+          <div class="mt-8 text-center">
+            <button class="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" disabled>
+              Submit Response
+            </button>
+          </div>
+        <% else %>
+          <div class="text-center py-8">
+            <p class="text-gray-600">No questions have been added to this form yet.</p>
+            <%= link_to "Add Questions", edit_form_path(@form), class: "mt-4 inline-block bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700" %>
+          </div>
+        <% end %>
+      </div>
+
+      <div class="mt-6 text-center">
+        <%= link_to "← Back to Form", @form, class: "text-indigo-600 hover:text-indigo-800" %>
+      </div>
+    </div>
+  </div>
+</div>

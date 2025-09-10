@@ -1,0 +1,205 @@
+<% content_for :title, "Stripe Payment Settings" %>
+
+<div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+  <!-- Header -->
+  <div class="mb-8">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-3xl font-bold text-gray-900">Payment Settings</h1>
+        <p class="mt-2 text-gray-600">Configure Stripe to accept payments directly to your account</p>
+      </div>
+      
+      <% if @stripe_configured %>
+        <div class="flex items-center space-x-3">
+          <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+            </svg>
+            Connected
+          </span>
+          
+          <% if @test_mode %>
+            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+              Test Mode
+            </span>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Status Card -->
+  <% if @stripe_configured %>
+    <div class="bg-green-50 border border-green-200 rounded-lg p-6 mb-8">
+      <div class="flex items-start">
+        <svg class="w-6 h-6 text-green-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <div class="flex-1">
+          <h3 class="text-lg font-medium text-green-900">Stripe Connected Successfully</h3>
+          <p class="mt-1 text-green-700">Your forms can now accept payments directly to your Stripe account.</p>
+          
+          <div class="mt-4 flex items-center space-x-4">
+            <button type="button" 
+                    class="inline-flex items-center px-4 py-2 border border-green-300 text-sm font-medium rounded-md text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    data-action="click->stripe-settings#testConnection">
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              Test Connection
+            </button>
+            
+            <%= link_to "Disable Stripe", 
+                       disable_stripe_settings_path, 
+                       method: :delete,
+                       class: "inline-flex items-center px-4 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500",
+                       confirm: "Are you sure? This will disable payment processing for all your forms." %>
+          </div>
+        </div>
+      </div>
+    </div>
+  <% else %>
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6 mb-8">
+      <div class="flex items-start">
+        <svg class="w-6 h-6 text-blue-600 mt-0.5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <div>
+          <h3 class="text-lg font-medium text-blue-900">Connect Your Stripe Account</h3>
+          <p class="mt-1 text-blue-700">Add payment questions to your forms and receive payments directly to your Stripe account.</p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+
+  <!-- Configuration Form -->
+  <div class="bg-white shadow rounded-lg" data-controller="stripe-settings">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h2 class="text-lg font-medium text-gray-900">Stripe Configuration</h2>
+      <p class="mt-1 text-sm text-gray-500">Enter your Stripe API keys to enable payment processing</p>
+    </div>
+
+    <%= form_with model: current_user, url: stripe_settings_path, local: true, class: "space-y-6 p-6" do |form| %>
+      <!-- Stripe Enabled Toggle -->
+      <div class="flex items-center justify-between">
+        <div>
+          <label class="text-base font-medium text-gray-900">Enable Stripe Payments</label>
+          <p class="text-sm text-gray-500">Allow your forms to accept payments</p>
+        </div>
+        <div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+          <%= form.check_box :stripe_enabled, 
+                            { checked: current_user.stripe_enabled? || !current_user.stripe_publishable_key.present? },
+                            { class: "toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer",
+                              data: { action: "change->stripe-settings#toggleEnabled" } } %>
+          <label for="user_stripe_enabled" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer"></label>
+        </div>
+      </div>
+
+      <div id="stripe-fields">
+        <!-- Publishable Key -->
+        <div>
+          <%= form.label :stripe_publishable_key, class: "block text-sm font-medium text-gray-700 mb-2" do %>
+            Publishable Key
+            <span class="text-red-500">*</span>
+          <% end %>
+          <%= form.text_field :stripe_publishable_key, 
+                             class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                             placeholder: "pk_test_... or pk_live_...",
+                             data: { "stripe-settings-target": "publishableKey" } %>
+          <p class="mt-1 text-xs text-gray-500">Your Stripe publishable key (starts with pk_)</p>
+        </div>
+
+        <!-- Secret Key -->
+        <div>
+          <%= form.label :stripe_secret_key, class: "block text-sm font-medium text-gray-700 mb-2" do %>
+            Secret Key
+            <span class="text-red-500">*</span>
+          <% end %>
+          <%= form.password_field :stripe_secret_key, 
+                                 class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                                 placeholder: "sk_test_... or sk_live_...",
+                                 data: { "stripe-settings-target": "secretKey" } %>
+          <p class="mt-1 text-xs text-gray-500">Your Stripe secret key (starts with sk_) - will be encrypted</p>
+        </div>
+
+        <!-- Webhook Secret (Optional) -->
+        <div>
+          <%= form.label :stripe_webhook_secret, class: "block text-sm font-medium text-gray-700 mb-2" do %>
+            Webhook Secret
+            <span class="text-gray-400">(Optional)</span>
+          <% end %>
+          <%= form.password_field :stripe_webhook_secret, 
+                                 class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                                 placeholder: "whsec_...",
+                                 data: { "stripe-settings-target": "webhookSecret" } %>
+          <p class="mt-1 text-xs text-gray-500">Webhook endpoint secret for secure event handling</p>
+        </div>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="flex items-center justify-between pt-6 border-t border-gray-200">
+        <div>
+          <% if current_user.errors.any? %>
+            <div class="text-sm text-red-600">
+              <% current_user.errors.full_messages.each do |message| %>
+                <p><%= message %></p>
+              <% end %>
+            </div>
+          <% end %>
+        </div>
+        
+        <div class="flex items-center space-x-3">
+          <%= link_to "Cancel", root_path, class: "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+          
+          <%= form.submit "Save Settings", 
+                         class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500",
+                         data: { "stripe-settings-target": "submitButton" } %>
+        </div>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Help Section -->
+  <div class="mt-8 bg-gray-50 rounded-lg p-6">
+    <h3 class="text-lg font-medium text-gray-900 mb-4">How to Get Your Stripe Keys</h3>
+    
+    <div class="space-y-4 text-sm text-gray-600">
+      <div class="flex items-start">
+        <span class="flex-shrink-0 w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">1</span>
+        <div>
+          <p class="font-medium text-gray-900">Create a Stripe Account</p>
+          <p>Visit <a href="https://stripe.com" target="_blank" class="text-indigo-600 hover:text-indigo-500">stripe.com</a> and create an account if you don't have one.</p>
+        </div>
+      </div>
+      
+      <div class="flex items-start">
+        <span class="flex-shrink-0 w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">2</span>
+        <div>
+          <p class="font-medium text-gray-900">Get Your API Keys</p>
+          <p>Go to your Stripe Dashboard → Developers → API Keys to find your publishable and secret keys.</p>
+        </div>
+      </div>
+      
+      <div class="flex items-start">
+        <span class="flex-shrink-0 w-6 h-6 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-xs font-medium mr-3 mt-0.5">3</span>
+        <div>
+          <p class="font-medium text-gray-900">Test vs Live Mode</p>
+          <p>Use test keys (pk_test_/sk_test_) for testing, and live keys (pk_live_/sk_live_) for production.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connection Status -->
+  <div id="connection-status" class="hidden mt-4 p-4 rounded-md" data-stripe-settings-target="status"></div>
+</div>
+
+<style>
+.toggle-checkbox:checked {
+  right: 0;
+  border-color: #4F46E5;
+}
+.toggle-checkbox:checked + .toggle-label {
+  background-color: #4F46E5;
+}
+</style>

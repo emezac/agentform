@@ -1,0 +1,148 @@
+<div class="space-y-4">
+  <% items = config['items'] || [] %>
+  
+  <% if items.any? %>
+    <div class="space-y-2">
+      <p class="text-sm text-gray-600 mb-3">
+        Drag and drop to rank the items from most important (top) to least important (bottom).
+      </p>
+      
+      <div class="space-y-2 ranking-container" data-question-response-target="rankingContainer">
+        <% items.each_with_index do |item, index| %>
+          <div class="ranking-item flex items-center space-x-3 p-3 bg-white border border-gray-200 rounded-lg cursor-move hover:shadow-sm transition-shadow"
+               data-item-id="<%= item['id'] || index %>"
+               data-original-position="<%= index %>">
+            
+            <!-- Drag handle -->
+            <div class="flex-shrink-0 text-gray-400 hover:text-gray-600">
+              <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+              </svg>
+            </div>
+            
+            <!-- Rank number -->
+            <div class="flex-shrink-0 w-8 h-8 bg-indigo-100 text-indigo-800 rounded-full flex items-center justify-center text-sm font-medium rank-number">
+              <%= index + 1 %>
+            </div>
+            
+            <!-- Item content -->
+            <div class="flex-1">
+              <div class="text-sm font-medium text-gray-900">
+                <%= item['label'] || item %>
+              </div>
+              <% if item.is_a?(Hash) && item['description'] %>
+                <div class="text-xs text-gray-500 mt-1">
+                  <%= item['description'] %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+      
+      <!-- Hidden field to store ranking data -->
+      <%= form.hidden_field "answer[ranking]", 
+                           data: { "question-response-target": "rankingData" } %>
+    </div>
+  <% else %>
+    <div class="text-center py-8 text-gray-500">
+      <p class="text-sm">No items to rank.</p>
+      <p class="text-xs mt-1">Please configure ranking items in the question settings.</p>
+    </div>
+  <% end %>
+  
+  <% if config['help_text'] %>
+    <p class="text-xs text-gray-500"><%= config['help_text'] %></p>
+  <% end %>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const container = document.querySelector('.ranking-container');
+    const rankingData = document.querySelector('[data-question-response-target="rankingData"]');
+    
+    if (!container || !rankingData) return;
+    
+    let draggedElement = null;
+    
+    // Make items draggable
+    const items = container.querySelectorAll('.ranking-item');
+    items.forEach(item => {
+      item.draggable = true;
+      
+      item.addEventListener('dragstart', function(e) {
+        draggedElement = this;
+        this.classList.add('opacity-50');
+        e.dataTransfer.effectAllowed = 'move';
+      });
+      
+      item.addEventListener('dragend', function(e) {
+        this.classList.remove('opacity-50');
+        draggedElement = null;
+      });
+      
+      item.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+      
+      item.addEventListener('dragenter', function(e) {
+        e.preventDefault();
+        this.classList.add('border-indigo-400', 'bg-indigo-50');
+      });
+      
+      item.addEventListener('dragleave', function(e) {
+        this.classList.remove('border-indigo-400', 'bg-indigo-50');
+      });
+      
+      item.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('border-indigo-400', 'bg-indigo-50');
+        
+        if (draggedElement && draggedElement !== this) {
+          // Get all items
+          const allItems = Array.from(container.querySelectorAll('.ranking-item'));
+          const draggedIndex = allItems.indexOf(draggedElement);
+          const targetIndex = allItems.indexOf(this);
+          
+          // Reorder items
+          if (draggedIndex < targetIndex) {
+            this.parentNode.insertBefore(draggedElement, this.nextSibling);
+          } else {
+            this.parentNode.insertBefore(draggedElement, this);
+          }
+          
+          updateRankNumbers();
+          updateRankingData();
+        }
+      });
+    });
+    
+    function updateRankNumbers() {
+      const items = container.querySelectorAll('.ranking-item');
+      items.forEach((item, index) => {
+        const rankNumber = item.querySelector('.rank-number');
+        if (rankNumber) {
+          rankNumber.textContent = index + 1;
+        }
+      });
+    }
+    
+    function updateRankingData() {
+      const items = container.querySelectorAll('.ranking-item');
+      const ranking = Array.from(items).map((item, index) => ({
+        id: item.dataset.itemId,
+        position: index + 1,
+        original_position: parseInt(item.dataset.originalPosition)
+      }));
+      
+      rankingData.value = JSON.stringify(ranking);
+      
+      // Trigger validation
+      rankingData.dispatchEvent(new Event('input'));
+    }
+    
+    // Initialize ranking data
+    updateRankingData();
+  });
+</script>

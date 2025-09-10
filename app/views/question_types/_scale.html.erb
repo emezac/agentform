@@ -1,0 +1,71 @@
+<div class="space-y-4">
+  <% scale_min = config['min_value'] || 0 %>
+  <% scale_max = config['max_value'] || 10 %>
+  <% scale_labels = config['scale_labels'] || {} %>
+  <% show_numbers = config['show_numbers'] != false %>
+  
+  <div class="space-y-3">
+    <div class="flex items-center justify-between">
+      <% if scale_labels['min_label'] %>
+        <span class="text-sm text-gray-600"><%= scale_labels['min_label'] %></span>
+      <% end %>
+      
+      <% if scale_labels['max_label'] %>
+        <span class="text-sm text-gray-600"><%= scale_labels['max_label'] %></span>
+      <% end %>
+    </div>
+    
+    <div class="relative">
+      <%= form.range_field "answer[value]", 
+                          min: scale_min,
+                          max: scale_max,
+                          step: config['step'] || 1,
+                          value: config['default_value'] || scale_min,
+                          required: question.required?,
+                          class: "w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider",
+                          data: { 
+                            "question-response-target": "answerInput",
+                            "action": "input->question-response#validateInput change->question-response#updateSliderValue"
+                          } %>
+      
+      <% if show_numbers %>
+        <div class="flex justify-between text-xs text-gray-500 mt-1">
+          <span><%= scale_min %></span>
+          <span><%= scale_max %></span>
+        </div>
+      <% end %>
+    </div>
+    
+    <div class="text-center">
+      <span class="text-lg font-medium text-gray-900" data-question-response-target="sliderValue">
+        <%= config['default_value'] || scale_min %>
+      </span>
+    </div>
+  </div>
+  
+  <% if config['help_text'] %>
+    <p class="text-xs text-gray-500 text-center"><%= config['help_text'] %></p>
+  <% end %>
+</div>
+
+<style>
+  .slider::-webkit-slider-thumb {
+    appearance: none;
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #6366f1;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .slider::-moz-range-thumb {
+    height: 20px;
+    width: 20px;
+    border-radius: 50%;
+    background: #6366f1;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+</style>

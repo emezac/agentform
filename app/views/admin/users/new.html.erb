@@ -1,0 +1,163 @@
+<% content_for :title, "Create New User" %>
+
+<div class="min-h-screen bg-gray-50">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex items-center space-x-4">
+        <%= link_to admin_users_path, 
+            class: "text-gray-400 hover:text-gray-600" do %>
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        <% end %>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Create New User</h1>
+          <p class="mt-1 text-sm text-gray-500">
+            Add a new user to the system
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white shadow rounded-lg">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">User Information</h3>
+        <p class="mt-1 text-sm text-gray-500">
+          The user will receive an invitation email with a temporary password.
+        </p>
+      </div>
+      
+      <div class="px-6 py-6">
+        <%= form_with model: [:admin, @user], local: true, class: "space-y-6" do |form| %>
+          <% if @user.errors.any? %>
+            <div class="rounded-md bg-red-50 p-4">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <h3 class="text-sm font-medium text-red-800">
+                    There were <%= pluralize(@user.errors.count, "error") %> with your submission:
+                  </h3>
+                  <div class="mt-2 text-sm text-red-700">
+                    <ul class="list-disc pl-5 space-y-1">
+                      <% @user.errors.full_messages.each do |message| %>
+                        <li><%= message %></li>
+                      <% end %>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <!-- First Name -->
+            <div>
+              <%= form.label :first_name, class: "block text-sm font-medium text-gray-700" %>
+              <%= form.text_field :first_name, 
+                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                  required: true %>
+            </div>
+
+            <!-- Last Name -->
+            <div>
+              <%= form.label :last_name, class: "block text-sm font-medium text-gray-700" %>
+              <%= form.text_field :last_name, 
+                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                  required: true %>
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div>
+            <%= form.label :email, class: "block text-sm font-medium text-gray-700" %>
+            <%= form.email_field :email, 
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                required: true %>
+            <p class="mt-1 text-sm text-gray-500">
+              The user will use this email to log in to the system.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <!-- Role -->
+            <div>
+              <%= form.label :role, class: "block text-sm font-medium text-gray-700" %>
+              <%= form.select :role, 
+                  options_for_select([
+                    ['User', 'user'],
+                    ['Admin', 'admin'],
+                    ['Superadmin', 'superadmin']
+                  ], @user.role),
+                  {},
+                  { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
+              <p class="mt-1 text-sm text-gray-500">
+                Determines the user's access level in the system.
+              </p>
+            </div>
+
+            <!-- Subscription Tier -->
+            <div>
+              <%= form.label :subscription_tier, class: "block text-sm font-medium text-gray-700" %>
+              <%= form.select :subscription_tier, 
+                  options_for_select([
+                    ['Basic', 'basic'],
+                    ['Premium', 'premium']
+                  ], @user.subscription_tier || 'basic'),
+                  {},
+                  { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
+              <p class="mt-1 text-sm text-gray-500">
+                Sets the user's subscription level and feature access.
+              </p>
+            </div>
+          </div>
+
+          <!-- Password Section -->
+          <div class="border-t border-gray-200 pt-6">
+            <h4 class="text-lg font-medium text-gray-900 mb-4">Password Settings</h4>
+            <p class="text-sm text-gray-500 mb-4">
+              A temporary password will be automatically generated and sent to the user via email. 
+              They will be prompted to change it on first login.
+            </p>
+            
+            <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <h3 class="text-sm font-medium text-blue-800">
+                    Automatic Password Generation
+                  </h3>
+                  <div class="mt-2 text-sm text-blue-700">
+                    <p>
+                      The system will generate a secure temporary password and send it to the user's email address. 
+                      The user will be required to change this password when they first log in.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+            <%= link_to admin_users_path, 
+                class: "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+              Cancel
+            <% end %>
+            <%= form.submit "Create User", 
+                class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

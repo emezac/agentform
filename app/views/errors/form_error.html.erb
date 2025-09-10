@@ -1,0 +1,56 @@
+<% content_for :title, "Error" %>
+
+<div class="text-center py-12">
+  <!-- Error icon -->
+  <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-6">
+    <svg class="h-8 w-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+    </svg>
+  </div>
+  
+  <!-- Error message -->
+  <h1 class="text-2xl font-bold text-gray-900 mb-4">
+    <% case status %>
+    <% when :not_found %>
+      Form Not Found
+    <% when :gone %>
+      Form No Longer Available
+    <% else %>
+      Something Went Wrong
+    <% end %>
+  </h1>
+  
+  <div class="max-w-md mx-auto">
+    <p class="text-lg text-gray-600 mb-8">
+      <%= message %>
+    </p>
+    
+    <% case status %>
+    <% when :not_found %>
+      <p class="text-sm text-gray-500 mb-6">
+        The form you're looking for might have been moved, deleted, or the link might be incorrect.
+      </p>
+    <% when :gone %>
+      <p class="text-sm text-gray-500 mb-6">
+        This form has expired or is no longer accepting responses.
+      </p>
+    <% else %>
+      <p class="text-sm text-gray-500 mb-6">
+        Please try again in a few moments. If the problem persists, contact the form owner.
+      </p>
+    <% end %>
+    
+    <!-- Action buttons -->
+    <div class="space-y-3">
+      <button onclick="window.history.back()" 
+              class="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        Go Back
+      </button>
+      
+      <a href="https://agentform.com" 
+         class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+        Visit AgentForm
+      </a>
+    </div>
+  </div>
+</div>

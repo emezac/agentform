@@ -1,0 +1,74 @@
+<div class="space-y-3">
+  <% choices = config['options'] || [] %>
+  <% allow_multiple = config['allow_multiple'] == true %>
+  <% input_type = allow_multiple ? 'checkbox' : 'radio' %>
+  <% input_name = allow_multiple ? "answer[value][]" : "answer[value]" %>
+  
+  <div class="space-y-2">
+    <% choices.each_with_index do |choice, index| %>
+      <label class="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+        <%= form.send("#{input_type}_button", 
+                     input_name, 
+                     choice['value'] || choice,
+                     { 
+                       required: question.required? && !allow_multiple,
+                       class: "mt-0.5 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300",
+                       data: { 
+                         "question-response-target": "answerInput",
+                         "action": "change->question-response#validateInput"
+                       }
+                     }) %>
+        
+        <div class="flex-1">
+          <span class="text-sm font-medium text-gray-900">
+            <%= choice['label'] || choice %>
+          </span>
+          
+          <% if choice.is_a?(Hash) && choice['description'] %>
+            <p class="text-xs text-gray-500 mt-1"><%= choice['description'] %></p>
+          <% end %>
+        </div>
+      </label>
+    <% end %>
+    
+    <!-- Other option (if enabled) -->
+    <% if config['allow_other'] %>
+      <label class="flex items-start space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+        <%= form.send("#{input_type}_button", 
+                     input_name, 
+                     'other',
+                     { 
+                       class: "mt-0.5 h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300",
+                       data: { 
+                         "question-response-target": "otherCheckbox",
+                         "action": "change->question-response#toggleOtherInput"
+                       }
+                     }) %>
+        
+        <div class="flex-1">
+          <span class="text-sm font-medium text-gray-900">Other</span>
+          
+          <div class="mt-2 hidden" data-question-response-target="otherInputContainer">
+            <%= form.text_field "answer[other_value]", 
+                               placeholder: "Please specify...",
+                               class: "block w-full text-sm border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500",
+                               data: { 
+                                 "question-response-target": "otherInput",
+                                 "action": "input->question-response#validateInput"
+                               } %>
+          </div>
+        </div>
+      </label>
+    <% end %>
+  </div>
+  
+  <% if config['help_text'] %>
+    <p class="text-xs text-gray-500"><%= config['help_text'] %></p>
+  <% end %>
+  
+  <% if allow_multiple && config['max_selections'] %>
+    <p class="text-xs text-gray-500">
+      Select up to <%= config['max_selections'] %> options
+    </p>
+  <% end %>
+</div>

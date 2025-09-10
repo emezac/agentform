@@ -1,0 +1,875 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentForm - Preview Mode</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        @keyframes typing { from { width: 0; } to { width: 100%; } }
+        @keyframes blink { 50% { border-color: transparent; } }
+        
+        .animate-slide-in { animation: slideIn 0.5s ease-out; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        .animate-pulse-slow { animation: pulse 2s ease-in-out infinite; }
+        
+        .typing-effect {
+            overflow: hidden;
+            white-space: nowrap;
+            border-right: 2px solid #667eea;
+            animation: typing 2s steps(40, end), blink 1s infinite;
+        }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .ai-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .ai-glow { box-shadow: 0 0 20px rgba(102, 126, 234, 0.3); }
+        
+        .form-step {
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        .form-step.active {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        .form-step.previous {
+            transform: translateX(-100%);
+            opacity: 0;
+        }
+        
+        .ai-thinking {
+            background: linear-gradient(90deg, #f3f4f6, #e5e7eb, #f3f4f6);
+            background-size: 200% 100%;
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+        
+        .progress-bar {
+            transition: width 0.6s ease;
+        }
+        
+        .bubble {
+            position: relative;
+            padding: 1rem 1.5rem;
+            border-radius: 1.5rem;
+            margin-bottom: 1rem;
+            max-width: 80%;
+        }
+        .bubble.user {
+            background: #667eea;
+            color: white;
+            margin-left: auto;
+            border-bottom-right-radius: 0.5rem;
+        }
+        .bubble.ai {
+            background: #f3f4f6;
+            color: #1f2937;
+            border-bottom-left-radius: 0.5rem;
+        }
+        .bubble.ai::before {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: -8px;
+            width: 0;
+            height: 0;
+            border: 8px solid transparent;
+            border-right-color: #f3f4f6;
+            border-bottom-color: #f3f4f6;
+        }
+        
+        .workflow-step {
+            border-left: 3px solid #e5e7eb;
+            padding-left: 1rem;
+            position: relative;
+        }
+        .workflow-step.active {
+            border-left-color: #667eea;
+        }
+        .workflow-step.completed {
+            border-left-color: #10b981;
+        }
+        .workflow-step::before {
+            content: '';
+            position: absolute;
+            left: -6px;
+            top: 0.5rem;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #e5e7eb;
+        }
+        .workflow-step.active::before {
+            background: #667eea;
+            box-shadow: 0 0 10px rgba(102, 126, 234, 0.5);
+        }
+        .workflow-step.completed::before {
+            background: #10b981;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 h-full">
+    <!-- Main Layout -->
+    <div class="h-screen flex">
+        
+        <!-- Form Preview Area -->
+        <main class="flex-1 flex flex-col">
+            
+            <!-- Preview Header -->
+            <header class="glass border-b border-gray-200 p-4">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <button id="back-to-builder" class="text-gray-600 hover:text-gray-800 flex items-center space-x-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                            </svg>
+                            <span>Volver al Editor</span>
+                        </button>
+                        <div class="w-px h-6 bg-gray-300"></div>
+                        <h1 class="text-xl font-semibold text-gray-900">Preview Mode</h1>
+                        <div class="flex items-center space-x-2 text-sm text-purple-600">
+                            <div class="w-2 h-2 bg-purple-500 rounded-full animate-pulse-slow"></div>
+                            <span>AI Workflow Active</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4">
+                        <!-- Progress Bar -->
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-600">Progreso:</span>
+                            <div class="w-32 bg-gray-200 rounded-full h-2">
+                                <div id="progress-bar" class="progress-bar bg-purple-600 h-2 rounded-full" style="width: 25%"></div>
+                            </div>
+                            <span id="progress-text" class="text-sm font-medium text-gray-900">1/4</span>
+                        </div>
+                        
+                        <div class="flex items-center space-x-2">
+                            <button id="toggle-ai-view" class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-md text-sm font-medium hover:bg-purple-200">
+                                Ver AI
+                            </button>
+                            <button class="px-3 py-1.5 border border-gray-300 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-50">
+                                Reiniciar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Form Container -->
+            <div class="flex-1 flex items-center justify-center p-8">
+                <div class="w-full max-w-2xl">
+                    
+                    <!-- Form Steps Container -->
+                    <div id="form-steps" class="relative min-h-96">
+                        
+                        <!-- Step 1: Basic Info -->
+                        <div class="form-step active" data-step="1">
+                            <div class="text-center mb-8">
+                                <h2 class="text-3xl font-bold text-gray-900 mb-4">¡Hola! 👋</h2>
+                                <p class="text-gray-600">Empecemos con tu información básica</p>
+                            </div>
+                            
+                            <div class="space-y-6">
+                                <div class="animate-fade-in">
+                                    <label class="block text-lg font-medium text-gray-900 mb-3">¿Cuál es tu nombre completo?</label>
+                                    <input type="text" id="name-input" 
+                                           class="w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent" 
+                                           placeholder="Tu nombre aquí..."
+                                           autocomplete="off">
+                                </div>
+                            </div>
+                            
+                            <div class="mt-8 flex justify-end">
+                                <button id="next-step-1" class="px-8 py-3 ai-gradient text-white rounded-xl font-medium hover:opacity-90 disabled:opacity-50" disabled>
+                                    Continuar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 2: Email with AI Enhancement -->
+                        <div class="form-step" data-step="2">
+                            <div class="space-y-6">
+                                <div class="animate-fade-in">
+                                    <label class="block text-lg font-medium text-gray-900 mb-3">Correo electrónico de trabajo</label>
+                                    <input type="email" id="email-input" 
+                                           class="w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent" 
+                                           placeholder="tu@empresa.com">
+                                    
+                                    <!-- AI Validation Indicator -->
+                                    <div id="email-ai-feedback" class="mt-2 hidden">
+                                        <div class="flex items-center space-x-2 text-sm text-purple-600">
+                                            <svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                                            </svg>
+                                            <span>AI validando y enriqueciendo datos...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-8 flex justify-between">
+                                <button class="px-6 py-3 text-gray-600 hover:text-gray-800" onclick="previousStep()">
+                                    ← Anterior
+                                </button>
+                                <button id="next-step-2" class="px-8 py-3 ai-gradient text-white rounded-xl font-medium hover:opacity-90 disabled:opacity-50" disabled>
+                                    Continuar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 3: Company with AI Data Enrichment -->
+                        <div class="form-step" data-step="3">
+                            <div class="space-y-6">
+                                <div class="animate-fade-in">
+                                    <label class="block text-lg font-medium text-gray-900 mb-3">Nombre de tu empresa</label>
+                                    <input type="text" id="company-input" 
+                                           class="w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent" 
+                                           placeholder="Nombre de la empresa">
+                                    
+                                    <!-- AI Company Info Card -->
+                                    <div id="company-ai-info" class="mt-4 hidden">
+                                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                                            <div class="flex items-start space-x-3">
+                                                <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+                                                    <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                                    </svg>
+                                                </div>
+                                                <div class="flex-1">
+                                                    <h4 class="font-medium text-blue-900 mb-1">Información encontrada</h4>
+                                                    <div id="company-details" class="text-sm text-blue-700 space-y-1">
+                                                        <!-- AI-generated company info will be inserted here -->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-8 flex justify-between">
+                                <button class="px-6 py-3 text-gray-600 hover:text-gray-800" onclick="previousStep()">
+                                    ← Anterior
+                                </button>
+                                <button id="next-step-3" class="px-8 py-3 ai-gradient text-white rounded-xl font-medium hover:opacity-90 disabled:opacity-50" disabled>
+                                    Continuar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 4: Challenge with AI Follow-up -->
+                        <div class="form-step" data-step="4">
+                            <div class="space-y-6">
+                                <div class="animate-fade-in">
+                                    <label class="block text-lg font-medium text-gray-900 mb-3">¿Cuál es el principal desafío que buscas resolver?</label>
+                                    <textarea id="challenge-input" 
+                                              rows="4"
+                                              class="w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none" 
+                                              placeholder="Describe tu principal desafío empresarial..."></textarea>
+                                    
+                                    <!-- AI Analysis -->
+                                    <div id="challenge-analysis" class="mt-4 hidden">
+                                        <div class="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                                            <div class="flex items-start space-x-3">
+                                                <div class="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
+                                                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                                                    </svg>
+                                                </div>
+                                                <div class="flex-1">
+                                                    <h4 class="font-medium text-purple-900 mb-2">AI Insights</h4>
+                                                    <div id="ai-insights" class="text-sm text-purple-700">
+                                                        <!-- AI-generated insights will be inserted here -->
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Dynamic AI Follow-up Question -->
+                                    <div id="followup-question" class="mt-6 hidden">
+                                        <div class="animate-slide-in">
+                                            <label id="followup-label" class="block text-lg font-medium text-gray-900 mb-3"></label>
+                                            <input type="text" id="followup-input" 
+                                                   class="w-full px-4 py-4 text-lg border-2 border-purple-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent" 
+                                                   placeholder="Tu respuesta...">
+                                            <div class="mt-1 flex items-center space-x-2 text-xs text-purple-600">
+                                                <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/>
+                                                </svg>
+                                                <span>Pregunta generada por AI basada en tu respuesta</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-8 flex justify-between">
+                                <button class="px-6 py-3 text-gray-600 hover:text-gray-800" onclick="previousStep()">
+                                    ← Anterior
+                                </button>
+                                <button id="complete-form" class="px-8 py-3 ai-gradient text-white rounded-xl font-medium hover:opacity-90">
+                                    Finalizar
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Completion Step -->
+                        <div class="form-step" data-step="5">
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                    </svg>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-900 mb-2">¡Perfecto!</h2>
+                                <p class="text-gray-600 mb-6">Hemos analizado tu información y generado insights personalizados</p>
+                                
+                                <!-- AI-Generated Summary -->
+                                <div id="ai-summary" class="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6 text-left">
+                                    <h3 class="font-semibold text-gray-900 mb-3">Resumen Inteligente</h3>
+                                    <div id="summary-content" class="text-gray-700 space-y-2">
+                                        <!-- AI-generated summary will be inserted here -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- AI Workflow Sidebar -->
+        <aside id="ai-sidebar" class="w-80 bg-white border-l border-gray-200 transform translate-x-full transition-transform duration-300 ease-in-out">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900">SuperAgent Workflow</h3>
+                    <button id="close-ai-view" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                    </button>
+                </div>
+                
+                <!-- Workflow Steps -->
+                <div class="space-y-6" id="workflow-steps">
+                    
+                    <!-- Step: Input Collection -->
+                    <div class="workflow-step completed">
+                        <div class="flex items-start space-x-3">
+                            <svg class="w-5 h-5 text-green-600 mt-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            <div>
+                                <h4 class="font-medium text-gray-900">Recolección de Datos</h4>
+                                <p class="text-sm text-gray-600">Información básica del usuario capturada</p>
+                                <div class="mt-1 text-xs text-green-600">Completado • 0.2s</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step: Email Validation -->
+                    <div class="workflow-step completed">
+                        <div class="flex items-start space-x-3">
+                            <svg class="w-5 h-5 text-green-600 mt-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+                            </svg>
+                            <div>
+                                <h4 class="font-medium text-gray-900">Validación Inteligente</h4>
+                                <p class="text-sm text-gray-600">Email validado y dominio verificado</p>
+                                <div class="mt-1 text-xs text-green-600">Completado • 1.1s</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step: Company Research -->
+                    <div class="workflow-step active">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-5 h-5 border-2 border-purple-500 rounded-full animate-spin mt-1"></div>
+                            <div>
+                                <h4 class="font-medium text-gray-900">Enriquecimiento de Datos</h4>
+                                <p class="text-sm text-gray-600">Investigando información de la empresa...</p>
+                                <div class="mt-1 text-xs text-purple-600">En proceso • WebSearchTask</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step: Response Analysis -->
+                    <div class="workflow-step">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-5 h-5 border-2 border-gray-300 rounded-full mt-1"></div>
+                            <div>
+                                <h4 class="font-medium text-gray-900">Análisis de Respuestas</h4>
+                                <p class="text-sm text-gray-600">LLM analizará el contexto y generará insights</p>
+                                <div class="mt-1 text-xs text-gray-400">Pendiente • LlmTask</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step: Follow-up Generation -->
+                    <div class="workflow-step">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-5 h-5 border-2 border-gray-300 rounded-full mt-1"></div>
+                            <div>
+                                <h4 class="font-medium text-gray-900">Preguntas Dinámicas</h4>
+                                <p class="text-sm text-gray-600">Generación de seguimiento personalizado</p>
+                                <div class="mt-1 text-xs text-gray-400">Pendiente • GenerateFollowupTask</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Step: Lead Scoring -->
+                    <div class="workflow-step">
+                        <div class="flex items-start space-x-3">
+                            <div class="w-5 h-5 border-2 border-gray-300 rounded-full mt-1"></div>
+                            <div>
+                                <h4 class="font-medium text-gray-900">Calificación de Lead</h4>
+                                <p class="text-sm text-gray-600">Scoring automático y asignación</p>
+                                <div class="mt-1 text-xs text-gray-400">Pendiente • ScoreLeadWorkflow</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                </div>
+                
+                <!-- Real-time Conversation Log -->
+                <div class="mt-8">
+                    <h4 class="font-medium text-gray-900 mb-4">Conversación AI</h4>
+                    <div id="ai-conversation" class="space-y-3 max-h-64 overflow-y-auto">
+                        <!-- AI conversation bubbles will be added here -->
+                    </div>
+                </div>
+                
+                <!-- AI Performance Metrics -->
+                <div class="mt-8">
+                    <h4 class="font-medium text-gray-900 mb-4">Métricas en Tiempo Real</h4>
+                    <div class="space-y-3">
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Tiempo de respuesta AI</span>
+                            <span class="font-medium text-green-600">0.8s</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Calidad de datos</span>
+                            <span class="font-medium text-purple-600">94%</span>
+                        </div>
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-600">Confianza del modelo</span>
+                            <span class="font-medium text-blue-600">87%</span>
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+        </aside>
+        
+    </div>
+    
+    <script>
+    class AgentFormPreview {
+        constructor() {
+            this.currentStep = 1;
+            this.totalSteps = 4;
+            this.userData = {};
+            this.aiSidebarOpen = false;
+            this.workflowSteps = [];
+            
+            this.init();
+        }
+        
+        init() {
+            this.bindEvents();
+            this.setupFormLogic();
+        }
+        
+        bindEvents() {
+            // Navigation
+            document.getElementById('back-to-builder').addEventListener('click', () => {
+                alert('Regresando al editor del formulario...');
+            });
+            
+            document.getElementById('toggle-ai-view').addEventListener('click', () => {
+                this.toggleAISidebar();
+            });
+            
+            document.getElementById('close-ai-view').addEventListener('click', () => {
+                this.toggleAISidebar();
+            });
+            
+            // Form navigation
+            document.getElementById('next-step-1').addEventListener('click', () => {
+                this.nextStep();
+            });
+            
+            document.getElementById('next-step-2').addEventListener('click', () => {
+                this.nextStep();
+            });
+            
+            document.getElementById('next-step-3').addEventListener('click', () => {
+                this.nextStep();
+            });
+            
+            document.getElementById('complete-form').addEventListener('click', () => {
+                this.completeForm();
+            });
+        }
+        
+        setupFormLogic() {
+            // Step 1: Name input
+            const nameInput = document.getElementById('name-input');
+            const nextBtn1 = document.getElementById('next-step-1');
+            
+            nameInput.addEventListener('input', (e) => {
+                nextBtn1.disabled = !e.target.value.trim();
+                if (e.target.value.trim()) {
+                    this.userData.name = e.target.value;
+                }
+            });
+            
+            // Step 2: Email input with AI validation
+            const emailInput = document.getElementById('email-input');
+            const nextBtn2 = document.getElementById('next-step-2');
+            const emailFeedback = document.getElementById('email-ai-feedback');
+            
+            emailInput.addEventListener('input', (e) => {
+                const email = e.target.value;
+                if (email.includes('@') && email.includes('.')) {
+                    this.userData.email = email;
+                    this.simulateEmailAI(email);
+                    nextBtn2.disabled = false;
+                } else {
+                    nextBtn2.disabled = true;
+                    emailFeedback.classList.add('hidden');
+                }
+            });
+            
+            // Step 3: Company input with AI enrichment
+            const companyInput = document.getElementById('company-input');
+            const nextBtn3 = document.getElementById('next-step-3');
+            const companyInfo = document.getElementById('company-ai-info');
+            
+            let companyTimeout;
+            companyInput.addEventListener('input', (e) => {
+                const company = e.target.value.trim();
+                if (company.length > 2) {
+                    this.userData.company = company;
+                    clearTimeout(companyTimeout);
+                    companyTimeout = setTimeout(() => {
+                        this.simulateCompanyAI(company);
+                    }, 1000);
+                    nextBtn3.disabled = false;
+                } else {
+                    nextBtn3.disabled = true;
+                    companyInfo.classList.add('hidden');
+                }
+            });
+            
+            // Step 4: Challenge input with AI analysis
+            const challengeInput = document.getElementById('challenge-input');
+            const challengeAnalysis = document.getElementById('challenge-analysis');
+            const followupQuestion = document.getElementById('followup-question');
+            
+            let challengeTimeout;
+            challengeInput.addEventListener('input', (e) => {
+                const challenge = e.target.value.trim();
+                if (challenge.length > 10) {
+                    this.userData.challenge = challenge;
+                    clearTimeout(challengeTimeout);
+                    challengeTimeout = setTimeout(() => {
+                        this.simulateChallengeAI(challenge);
+                    }, 1500);
+                }
+            });
+        }
+        
+        nextStep() {
+            if (this.currentStep < this.totalSteps) {
+                // Hide current step
+                const currentStepEl = document.querySelector(`[data-step="${this.currentStep}"]`);
+                currentStepEl.classList.remove('active');
+                currentStepEl.classList.add('previous');
+                
+                // Update step counter
+                this.currentStep++;
+                this.updateProgress();
+                
+                // Show next step
+                setTimeout(() => {
+                    const nextStepEl = document.querySelector(`[data-step="${this.currentStep}"]`);
+                    nextStepEl.classList.add('active');
+                    
+                    // Update AI workflow
+                    this.updateWorkflowStep();
+                    
+                    // Add conversation bubble
+                    this.addAIConversation();
+                }, 300);
+            }
+        }
+        
+        previousStep() {
+            if (this.currentStep > 1) {
+                const currentStepEl = document.querySelector(`[data-step="${this.currentStep}"]`);
+                currentStepEl.classList.remove('active');
+                
+                this.currentStep--;
+                this.updateProgress();
+                
+                const prevStepEl = document.querySelector(`[data-step="${this.currentStep}"]`);
+                prevStepEl.classList.remove('previous');
+                prevStepEl.classList.add('active');
+            }
+        }
+        
+        updateProgress() {
+            const progress = (this.currentStep / this.totalSteps) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('progress-text').textContent = `${this.currentStep}/${this.totalSteps}`;
+        }
+        
+        toggleAISidebar() {
+            const sidebar = document.getElementById('ai-sidebar');
+            const toggleBtn = document.getElementById('toggle-ai-view');
+            
+            this.aiSidebarOpen = !this.aiSidebarOpen;
+            
+            if (this.aiSidebarOpen) {
+                sidebar.classList.remove('translate-x-full');
+                toggleBtn.textContent = 'Ocultar AI';
+                toggleBtn.classList.remove('bg-purple-100', 'text-purple-700');
+                toggleBtn.classList.add('bg-gray-100', 'text-gray-700');
+            } else {
+                sidebar.classList.add('translate-x-full');
+                toggleBtn.textContent = 'Ver AI';
+                toggleBtn.classList.remove('bg-gray-100', 'text-gray-700');
+                toggleBtn.classList.add('bg-purple-100', 'text-purple-700');
+            }
+        }
+        
+        simulateEmailAI(email) {
+            const feedback = document.getElementById('email-ai-feedback');
+            feedback.classList.remove('hidden');
+            
+            setTimeout(() => {
+                feedback.innerHTML = `
+                    <div class="flex items-center space-x-2 text-sm text-green-600">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+                        </svg>
+                        <span>Email válido • Dominio empresarial detectado</span>
+                    </div>
+                `;
+                
+                this.updateWorkflowStep('email-validation', 'completed');
+            }, 2000);
+        }
+        
+        simulateCompanyAI(company) {
+            const companyInfo = document.getElementById('company-ai-info');
+            const companyDetails = document.getElementById('company-details');
+            
+            companyInfo.classList.remove('hidden');
+            companyDetails.innerHTML = `
+                <div class="ai-thinking h-4 rounded animate-pulse mb-1"></div>
+                <div class="ai-thinking h-3 rounded animate-pulse w-3/4"></div>
+            `;
+            
+            setTimeout(() => {
+                const mockData = this.generateMockCompanyData(company);
+                companyDetails.innerHTML = `
+                    <div><strong>Industria:</strong> ${mockData.industry}</div>
+                    <div><strong>Tamaño:</strong> ${mockData.size}</div>
+                    <div><strong>Ubicación:</strong> ${mockData.location}</div>
+                    <div class="text-xs mt-1 opacity-75">Datos enriquecidos por WebSearchTask</div>
+                `;
+                
+                this.updateWorkflowStep('company-research', 'completed');
+            }, 3000);
+        }
+        
+        simulateChallengeAI(challenge) {
+            const analysis = document.getElementById('challenge-analysis');
+            const insights = document.getElementById('ai-insights');
+            const followupQuestion = document.getElementById('followup-question');
+            const followupLabel = document.getElementById('followup-label');
+            
+            analysis.classList.remove('hidden');
+            insights.innerHTML = `<div class="ai-thinking h-4 rounded animate-pulse"></div>`;
+            
+            setTimeout(() => {
+                const mockInsights = this.generateMockInsights(challenge);
+                insights.innerHTML = `
+                    <div class="space-y-1">
+                        <div>• <strong>Categoría:</strong> ${mockInsights.category}</div>
+                        <div>• <strong>Urgencia:</strong> ${mockInsights.urgency}</div>
+                        <div>• <strong>Palabras clave:</strong> ${mockInsights.keywords}</div>
+                    </div>
+                `;
+                
+                // Generate follow-up question
+                const followupQuestionText = this.generateFollowupQuestion(challenge);
+                followupLabel.textContent = followupQuestionText;
+                followupQuestion.classList.remove('hidden');
+                
+                this.updateWorkflowStep('response-analysis', 'completed');
+            }, 2500);
+        }
+        
+        generateMockCompanyData(company) {
+            const industries = ['Tecnología', 'Fintech', 'E-commerce', 'Consultoría', 'Manufactura', 'Servicios'];
+            const sizes = ['Startup (1-10)', 'Pequeña (11-50)', 'Mediana (51-200)', 'Grande (200+)'];
+            const locations = ['Ciudad de México', 'Guadalajara', 'Monterrey', 'Remote'];
+            
+            return {
+                industry: industries[Math.floor(Math.random() * industries.length)],
+                size: sizes[Math.floor(Math.random() * sizes.length)],
+                location: locations[Math.floor(Math.random() * locations.length)]
+            };
+        }
+        
+        generateMockInsights(challenge) {
+            const categories = ['Eficiencia Operativa', 'Crecimiento', 'Tecnología', 'Recursos Humanos', 'Marketing'];
+            const urgencies = ['Alta', 'Media', 'Baja'];
+            
+            // Extract keywords from challenge (simplified)
+            const words = challenge.toLowerCase().split(' ');
+            const keywords = words.filter(word => word.length > 4).slice(0, 3);
+            
+            return {
+                category: categories[Math.floor(Math.random() * categories.length)],
+                urgency: urgencies[Math.floor(Math.random() * urgencies.length)],
+                keywords: keywords.join(', ')
+            };
+        }
+        
+        generateFollowupQuestion(challenge) {
+            const questions = [
+                '¿Qué soluciones has intentado anteriormente para este desafío?',
+                '¿Cuál sería el impacto si no resuelves este problema?',
+                '¿Qué presupuesto tienes destinado para resolver esto?',
+                '¿Cuándo necesitas tener una solución implementada?',
+                '¿Quién más en tu equipo está involucrado en esta decisión?'
+            ];
+            
+            return questions[Math.floor(Math.random() * questions.length)];
+        }
+        
+        updateWorkflowStep(stepType, status) {
+            // Update workflow visualization in sidebar
+            if (this.aiSidebarOpen) {
+                const steps = document.querySelectorAll('.workflow-step');
+                steps.forEach((step, index) => {
+                    if (index < this.currentStep) {
+                        step.classList.remove('active');
+                        step.classList.add('completed');
+                    } else if (index === this.currentStep) {
+                        step.classList.add('active');
+                        step.classList.remove('completed');
+                    }
+                });
+            }
+        }
+        
+        addAIConversation() {
+            if (!this.aiSidebarOpen) return;
+            
+            const conversation = document.getElementById('ai-conversation');
+            const messages = [
+                { type: 'ai', text: 'Procesando información del usuario...' },
+                { type: 'ai', text: 'Validando email corporativo...' },
+                { type: 'ai', text: 'Enriqueciendo datos de empresa...' },
+                { type: 'ai', text: 'Analizando desafío empresarial...' }
+            ];
+            
+            const message = messages[this.currentStep - 2];
+            if (message) {
+                const bubble = document.createElement('div');
+                bubble.className = `bubble ${message.type} animate-slide-in`;
+                bubble.textContent = message.text;
+                conversation.appendChild(bubble);
+                conversation.scrollTop = conversation.scrollHeight;
+            }
+        }
+        
+        completeForm() {
+            // Hide current step
+            const currentStepEl = document.querySelector(`[data-step="${this.currentStep}"]`);
+            currentStepEl.classList.remove('active');
+            currentStepEl.classList.add('previous');
+            
+            // Show completion step
+            setTimeout(() => {
+                const completionStep = document.querySelector(`[data-step="5"]`);
+                completionStep.classList.add('active');
+                
+                // Update progress to 100%
+                document.getElementById('progress-bar').style.width = '100%';
+                document.getElementById('progress-text').textContent = 'Completado';
+                
+                // Generate AI summary
+                this.generateAISummary();
+                
+                // Mark all workflow steps as completed
+                const steps = document.querySelectorAll('.workflow-step');
+                steps.forEach(step => {
+                    step.classList.remove('active');
+                    step.classList.add('completed');
+                });
+                
+            }, 300);
+        }
+        
+        generateAISummary() {
+            const summaryContent = document.getElementById('summary-content');
+            
+            // Show loading state
+            summaryContent.innerHTML = `
+                <div class="ai-thinking h-4 rounded animate-pulse mb-2"></div>
+                <div class="ai-thinking h-4 rounded animate-pulse mb-2 w-4/5"></div>
+                <div class="ai-thinking h-4 rounded animate-pulse w-3/5"></div>
+            `;
+            
+            setTimeout(() => {
+                const summary = this.createPersonalizedSummary();
+                summaryContent.innerHTML = summary;
+            }, 2000);
+        }
+        
+        createPersonalizedSummary() {
+            const name = this.userData.name || 'Usuario';
+            const company = this.userData.company || 'la empresa';
+            const challenge = this.userData.challenge || 'optimización de procesos';
+            
+            return `
+                <div class="space-y-2">
+                    <p><strong>👤 Perfil:</strong> ${name} busca soluciones para ${company}</p>
+                    <p><strong>🎯 Desafío Principal:</strong> ${challenge.slice(0, 100)}${challenge.length > 100 ? '...' : ''}</p>
+                    <p><strong>📊 Puntuación de Lead:</strong> <span class="text-green-600 font-semibold">87/100</span> (Alto potencial)</p>
+                    <p><strong>🚀 Recomendación:</strong> Contactar en las próximas 24 horas con propuesta personalizada</p>
+                    <div class="mt-3 text-xs text-purple-600 bg-purple-50 rounded-lg p-2">
+                        ⚡ Este resumen fue generado automáticamente por SuperAgent en 0.8 segundos
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Initialize the preview
+    document.addEventListener('DOMContentLoaded', () => {
+        new AgentFormPreview();
+    });
+    </script>
+</body>
+</html>

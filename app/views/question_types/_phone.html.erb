@@ -1,0 +1,19 @@
+<div class="space-y-2">
+  <%= form.telephone_field "answer[value]", 
+                          placeholder: config['placeholder'] || "Enter your phone number...",
+                          required: question.required?,
+                          pattern: config['pattern'] || "[0-9\s\-\+\(\)]+",
+                          class: "block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm",
+                          data: { 
+                            "question-response-target": "answerInput",
+                            "action": "input->question-response#validateInput"
+                          } %>
+  
+  <% if config['help_text'] %>
+    <p class="text-xs text-gray-500"><%= config['help_text'] %></p>
+  <% end %>
+  
+  <% if config['format_hint'] %>
+    <p class="text-xs text-gray-400">Format: <%= config['format_hint'] %></p>
+  <% end %>
+</div>

@@ -1,0 +1,51 @@
+<div class="flex items-center justify-center min-h-screen bg-gray-50">
+  <div class="max-w-md w-full space-y-8 p-10 bg-white shadow-lg rounded-xl">
+    <div>
+      <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        Únete al Plan Premium
+      </h2>
+      <p class="mt-2 text-center text-sm text-gray-600">
+        Crea tu cuenta y obtén acceso a todas las funcionalidades avanzadas.
+      </p>
+    </div>
+    <%= form_for @user, url: subscriptions_path, data: { turbo: false } do |f| %>
+      <% if @user.errors.any? %>
+        <div class="bg-red-50 text-red-700 p-3 rounded-md mb-4">
+          <ul>
+            <% @user.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+      <div class="space-y-4">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <%= f.label :first_name, class: "block text-sm font-medium text-gray-700" %>
+            <%= f.text_field :first_name, required: true, class: "mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" %>
+          </div>
+          <div>
+            <%= f.label :last_name, class: "block text-sm font-medium text-gray-700" %>
+            <%= f.text_field :last_name, required: true, class: "mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" %>
+          </div>
+        </div>
+        <div>
+          <%= f.label :email, class: "block text-sm font-medium text-gray-700" %>
+          <%= f.email_field :email, required: true, autocomplete: "email", class: "mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" %>
+        </div>
+        <div>
+          <%= f.label :password, class: "block text-sm font-medium text-gray-700" %>
+          <%= f.password_field :password, required: true, autocomplete: "new-password", class: "mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" %>
+        </div>
+        <div>
+          <%= f.label :password_confirmation, class: "block text-sm font-medium text-gray-700" %>
+          <%= f.password_field :password_confirmation, required: true, autocomplete: "new-password", class: "mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500" %>
+        </div>
+      </div>
+
+      <div class="mt-6">
+        <%= f.submit "Proceder al Pago", class: "w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer" %>
+      </div>
+    <% end %>
+  </div>
+</div>

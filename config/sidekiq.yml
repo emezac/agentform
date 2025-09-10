@@ -1,0 +1,85 @@
+# Sidekiq Configuration
+# This file defines the queue configuration and processing priorities for AgentForm
+
+# Development environment
+development:
+  :concurrency: 5
+  :timeout: 25
+  :verbose: true
+  :queues:
+    - [critical, 10]      # Highest priority - payment processing, urgent notifications
+    - [ai_processing, 7]  # High priority - LLM calls, AI analysis tasks
+    - [integrations, 5]   # Medium priority - webhooks, third-party API calls
+    - [default, 3]        # Normal priority - general background tasks
+    - [analytics, 1]      # Lower priority - data processing, reporting
+
+# Test environment
+test:
+  :concurrency: 2
+  :timeout: 10
+  :verbose: false
+  :queues:
+    - [critical, 10]
+    - [ai_processing, 7]
+    - [integrations, 5]
+    - [default, 3]
+    - [analytics, 1]
+
+# Staging environment
+staging:
+  :concurrency: 10
+  :timeout: 30
+  :verbose: false
+  :queues:
+    - [critical, 10]
+    - [ai_processing, 7]
+    - [integrations, 5]
+    - [default, 3]
+    - [analytics, 1]
+
+# Production environment
+production:
+  :concurrency: 25
+  :timeout: 30
+  :verbose: false
+  :logfile: ./log/sidekiq.log
+  :pidfile: ./tmp/pids/sidekiq.pid
+  :queues:
+    - [critical, 10]      # Payment processing, critical notifications
+    - [ai_processing, 7]  # LLM calls, form analysis, dynamic questions
+    - [integrations, 5]   # Salesforce, Slack, webhook integrations
+    - [default, 3]        # General background processing
+    - [analytics, 1]      # Form analytics, usage tracking, reporting
+
+# Queue descriptions for reference:
+#
+# critical: 
+#   - Payment processing jobs
+#   - Critical system notifications
+#   - Security-related tasks
+#   - Time-sensitive operations
+#
+# ai_processing:
+#   - LLM API calls for response analysis
+#   - Dynamic question generation
+#   - Form intelligence processing
+#   - AI-powered lead qualification
+#
+# integrations:
+#   - Webhook deliveries
+#   - Salesforce synchronization
+#   - Slack notifications
+#   - Third-party API calls
+#   - Email delivery
+#
+# default:
+#   - General background tasks
+#   - File processing
+#   - Cache warming
+#   - Cleanup operations
+#
+# analytics:
+#   - Form performance analysis
+#   - Usage statistics calculation
+#   - Report generation
+#   - Data aggregation tasks

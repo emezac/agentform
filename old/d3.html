@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentForm - Response Management</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+code
+Code
+@keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+    
+    .animate-slide-in { animation: slideIn 0.5s ease-out forwards; }
+    .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+    
+    .glass {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(230, 230, 230, 0.5);
+    }
+    
+    .ai-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .ai-glow { box-shadow: 0 0 20px rgba(102, 126, 234, 0.3); }
+    
+    .response-row {
+        transition: all 0.2s ease-in-out;
+        border-left: 4px solid #e5e7eb; /* slate-200 */
+    }
+    .response-row:hover {
+        background: #f9fafb; /* gray-50 */
+        border-left-color: #6366f1; /* indigo-500 */
+        transform: translateX(4px);
+    }
+    .response-row.high-value { border-left-color: #10b981; /* green-500 */ }
+    .response-row.medium-value { border-left-color: #f59e0b; /* amber-500 */ }
+    .response-row.low-value { border-left-color: #ef4444; /* red-500 */ }
+    .response-row.selected { 
+        background: #eff6ff; /* blue-50 */
+        border-left-color: #4f46e5; /* indigo-600 */
+        box-shadow: inset 4px 0 0 #4f46e5;
+    }
+    
+    .score-badge { position: relative; overflow: hidden; }
+    .score-high { background: #10b981; color: white; }
+    .score-medium { background: #f59e0b; color: white; }
+    .score-low { background: #ef4444; color: white; }
+    
+    .ai-processing {
+        background: linear-gradient(90deg, #f3f4f6, #e5e7eb, #f3f4f6);
+        background-size: 200% 100%;
+        animation: shimmer 1.5s infinite;
+    }
+    
+    .sentiment-positive { color: #10b981; }
+    .sentiment-negative { color: #ef4444; }
+    .sentiment-neutral { color: #6b7280; }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 28px;
+        padding-bottom: 24px;
+    }
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: 5px;
+        top: 6px;
+        width: 10px;
+        height: 10px;
+        background: #6366f1;
+        border-radius: 50%;
+        border: 2px solid white;
+        box-shadow: 0 0 0 2px #a5b4fc;
+    }
+    .timeline-item::after {
+        content: '';
+        position: absolute;
+        left: 9px;
+        top: 18px;
+        width: 2px;
+        height: calc(100% - 10px);
+        background: #e5e7eb;
+    }
+    .timeline-item:last-child::after { display: none; }
+    
+    .workflow-step { transition: all 0.3s ease; }
+    .workflow-step.completed { background: #dcfce7; color: #166534; }
+    .workflow-step.processing { background: #fef3c7; color: #92400e; animation: pulse 2s infinite; }
+    .workflow-step.pending { background: #f3f4f6; color: #4b5563; }
+
+    .data-enrichment { background: #faf5ff; border: 1px solid #e9d5ff; }
+    .ai-insight { border-left: 4px solid #8b5cf6; background: #f5f3ff; }
+</style>
+</head>
+<body class="bg-gray-50 h-full">
+<!-- Main Layout -->
+<div class="h-screen flex flex-col">
+code
+Code
+<!-- Header -->
+    <header class="bg-white/80 backdrop-blur-md border-b border-gray-200 px-6 py-3 shrink-0">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-xl font-bold text-gray-900">Lead Qualification Responses</h1>
+                <p class="text-sm text-gray-500">AI-powered analysis and lead scoring in real-time</p>
+            </div>
+            <div class="flex items-center space-x-4">
+                <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <option>All Scores</option>
+                    <option>High Value</option>
+                    <option>Medium Value</option>
+                    <option>Low Value</option>
+                </select>
+                
+                <select class="px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    <option>Last 7 days</option>
+                    <option>Last 24 hours</option>
+                    <option>Last 30 days</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Sidebar (Navigation) -->
+        <nav class="w-64 bg-white border-r border-gray-200 overflow-y-auto hidden md:block">
+            <div class="p-4">
+                <div class="flex items-center space-x-3 mb-6">
+                    <div class="w-10 h-10 ai-gradient rounded-xl flex items-center justify-center">
+                       <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/></svg>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold text-gray-900">AgentForm</h1>
+                    </div>
+                </div>
+                
+                <div class="space-y-1">
+                    <a href="#" class="text-gray-600 hover:bg-gray-50 hover:text-gray-900 group flex items-center px-3 py-2 text-sm font-medium rounded-lg">
+                        <svg class="text-gray-400 mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"/></svg>
+                        Dashboard
+                    </a>
+                    <a href="#" class="bg-indigo-50 text-indigo-700 group flex items-center px-3 py-2 text-sm font-medium rounded-lg">
+                        <svg class="text-indigo-500 mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        Responses
+                        <span class="ml-auto bg-indigo-100 text-indigo-700 text-xs px-2 py-0.5 rounded-full">23 new</span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Main Content Grid -->
+        <main class="flex-1 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 overflow-hidden">
+            <!-- Response List -->
+            <div class="lg:col-span-1 xl:col-span-1 border-r border-gray-200 overflow-y-auto">
+                <div id="response-list" class="divide-y divide-gray-200">
+                    <!-- Response rows will be injected here by JS -->
+                </div>
+            </div>
+            
+            <!-- Response Detail Panel -->
+            <aside id="response-detail-panel" class="xl:col-span-2 lg:col-span-1 overflow-y-auto p-6 lg:p-8">
+                <!-- Initial or Loading State -->
+            </aside>
+        </main>
+    </div>
+</div>
+
+<!-- JS Templates -->
+<template id="response-row-template">
+    <div class="response-row p-4 cursor-pointer" role="button">
+        <div class="flex items-center justify-between">
+            <p class="text-sm font-semibold text-gray-900 truncate response-name"></p>
+            <span class="text-xs text-gray-500 response-date"></span>
+        </div>
+        <p class="text-sm text-gray-600 mt-1 truncate response-email"></p>
+        <div class="flex items-center justify-between mt-3">
+            <span class="score-badge text-xs font-bold px-2 py-1 rounded-full response-score"></span>
+            <span class="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-700 response-status"></span>
+        </div>
+    </div>
+</template>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // --- SIMULATED DATA ---
+    const sampleData = {
+        responses: [
+            { id: 1, name: 'Ana García', email: 'ana.garcia@innovatecorp.com', date: 'Hace 2 horas', leadScore: 92, status: 'Completed' },
+            { id: 2, name: 'Carlos Mendoza', email: 'carlos.m@startupdynamo.io', date: 'Hace 8 horas', leadScore: 78, status: 'Completed' },
+            { id: 3, name: 'Luisa Fernández', email: 'luisa.f@techsolutions.net', date: 'Hace 1 día', leadScore: 45, status: 'Completed' },
+            { id: 4, name: 'Javier Torres', email: 'javier.torres@global-ventures.org', date: 'Hace 2 días', leadScore: 85, status: 'In Progress' },
+            { id: 5, name: 'Sofia Reyes', email: 'sofia@datasciencelab.ai', date: 'Hace 3 días', leadScore: 65, status: 'Completed' },
+        ],
+        responseDetails: {
+            1: {
+                summary: "Lead de alto valor, CEO en una empresa de tecnología en crecimiento (InnovateCorp). Busca activamente una solución para optimizar flujos de trabajo. Muestra un sentimiento muy positivo y urgencia. Recomendar contacto inmediato por un ejecutivo de cuentas senior.",
+                enrichment: {
+                    company: "InnovateCorp",
+                    title: "CEO & Founder",
+                    location: "Ciudad de México, MX",
+                    linkedin: "linkedin.com/in/anagarcia-innovate"
+                },
+                timeline: [
+                    { time: "Hace 2h 15m", action: "Formulario iniciado desde un anuncio en LinkedIn." },
+                    { time: "Hace 2h 14m", action: "Respondió 'Nombre' y 'Email' rápidamente." },
+                    { time: "Hace 2h 12m", action: "IA generó pregunta de seguimiento sobre 'presupuesto'." },
+                    { time: "Hace 2h 10m", action: "Proporcionó un presupuesto detallado." },
+                    { time: "Hace 2h 05m", action: "Completó el formulario." }
+                ],
+                workflow: [
+                    { name: "Validate Contact Info", status: "completed" },
+                    { name: "Enrich Company Data", status: "completed" },
+                    { name: "Analyze Initial Need", status: "completed" },
+                    { name: "Generate Follow-up", status: "completed" },
+                    { name: "Calculate Lead Score", status: "processing" },
+                    { name: "Sync to CRM", status: "pending" },
+                ]
+            },
+            2: {
+                summary: "Buen prospecto de una startup. El CTO, Carlos Mendoza, está evaluando soluciones y tiene un problema claro que resolver. El sentimiento es positivo. Recomendado para seguimiento por el equipo de ventas BDR.",
+                enrichment: {
+                    company: "Startup Dynamo",
+                    title: "CTO",
+                    location: "Bogotá, CO",
+                    linkedin: "linkedin.com/in/carlos-mendoza-dynamo"
+                },
+                timeline: [
+                    { time: "Hace 8h 30m", action: "Formulario iniciado desde el sitio web." },
+                    { time: "Hace 8h 25m", action: "Completó el formulario de manera constante." }
+                ],
+                workflow: [
+                    { name: "Validate Contact Info", status: "completed" },
+                    { name: "Enrich Company Data", status: "completed" },
+                    { name: "Analyze Initial Need", status: "completed" },
+                    { name: "Calculate Lead Score", status: "completed" },
+                    { name: "Sync to CRM", status: "completed" },
+                ]
+            },
+            3: {
+                summary: "Lead de bajo potencial. Luisa parece estar en una fase muy temprana de investigación y no tiene un presupuesto definido. Sentimiento neutral. Se recomienda agregar a una secuencia de nurturing automatizada.",
+                enrichment: { company: "TechSolutions", title: "Analyst", location: "Madrid, ES", linkedin: null },
+                timeline: [{ time: "Hace 1 día", action: "Formulario iniciado y completado." }],
+                workflow: [
+                    { name: "Validate Contact Info", status: "completed" },
+                    { name: "Enrich Company Data", status: "completed" },
+                    { name: "Analyze Initial Need", status: "completed" },
+                    { name: "Calculate Lead Score", status: "completed" },
+                    { name: "Add to Nurturing List", status: "completed" },
+                ]
+            }
+        }
+    };
+
+    // --- APLICATION LOGIC ---
+    const responseListEl = document.getElementById('response-list');
+    const detailPanelEl = document.getElementById('response-detail-panel');
+    const rowTemplate = document.getElementById('response-row-template');
+
+    function getScoreClass(score) {
+        if (score >= 80) return { bg: 'score-high', border: 'high-value' };
+        if (score >= 60) return { bg: 'score-medium', border: 'medium-value' };
+        return { bg: 'score-low', border: 'low-value' };
+    }
+
+    function renderResponseList() {
+        responseListEl.innerHTML = '';
+        sampleData.responses.forEach(response => {
+            const clone = rowTemplate.content.cloneNode(true);
+            const row = clone.querySelector('.response-row');
+            const scoreClasses = getScoreClass(response.leadScore);
+
+            row.dataset.responseId = response.id;
+            row.classList.add(scoreClasses.border);
+            row.querySelector('.response-name').textContent = response.name;
+            row.querySelector('.response-email').textContent = response.email;
+            row.querySelector('.response-date').textContent = response.date;
+            row.querySelector('.response-score').textContent = `Score: ${response.leadScore}`;
+            row.querySelector('.response-score').classList.add(scoreClasses.bg);
+            row.querySelector('.response-status').textContent = response.status;
+            
+            responseListEl.appendChild(clone);
+        });
+    }
+
+    function renderResponseDetail(responseId) {
+        const details = sampleData.responseDetails[responseId];
+        const response = sampleData.responses.find(r => r.id === responseId);
+        if (!details || !response) {
+            renderInitialMessage("No se encontraron detalles para esta respuesta.");
+            return;
+        }
+
+        const scoreClasses = getScoreClass(response.leadScore);
+
+        detailPanelEl.innerHTML = `
+            <div class="animate-fade-in space-y-8">
+                <!-- Header -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="text-2xl font-bold text-gray-900">${response.name}</h2>
+                        <div class="score-badge text-lg font-bold px-4 py-2 rounded-lg ${scoreClasses.bg}">
+                            Lead Score: ${response.leadScore}
+                        </div>
+                    </div>
+                    <p class="text-gray-600">${details.enrichment.title || ''} at ${details.enrichment.company || ''}</p>
+                </div>
+
+                <!-- AI Summary -->
+                <div class="ai-insight p-4 rounded-lg">
+                    <h3 class="text-sm font-semibold text-purple-800 mb-2">AI Summary & Recommendation</h3>
+                    <p class="text-gray-700">${details.summary}</p>
+                </div>
+
+                <!-- Data Enrichment -->
+                <div class="data-enrichment">
+                    <h3 class="text-sm font-semibold text-white/90 mb-2">Data Enrichment</h3>
+                    <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div><strong>Company:</strong> ${details.enrichment.company}</div>
+                        <div><strong>Location:</strong> ${details.enrichment.location}</div>
+                        <div><strong>LinkedIn:</strong> <a href="#" class="underline hover:text-white/80">${details.enrichment.linkedin}</a></div>
+                    </div>
+                </div>
+
+                <!-- User Timeline -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">User Journey</h3>
+                    <div class="border-l-2 border-gray-200">
+                        ${details.timeline.map(item => `
+                            <div class="timeline-item">
+                                <p class="text-sm font-medium text-gray-800">${item.action}</p>
+                                <p class="text-xs text-gray-500">${item.time}</p>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <!-- Workflow Status -->
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800 mb-4">SuperAgent Workflow Status</h3>
+                    <div class="space-y-2">
+                        ${details.workflow.map(step => `
+                            <div class="workflow-step flex items-center p-2 rounded-lg ${step.status}">
+                                ${step.status === 'completed' ? '<svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>' : ''}
+                                ${step.status === 'processing' ? '<div class="w-4 h-4 mr-2 rounded-full border-2 border-t-transparent border-current animate-spin"></div>' : ''}
+                                ${step.status === 'pending' ? '<div class="w-4 h-4 mr-2 rounded-full border-2 border-gray-400"></div>' : ''}
+                                <span class="font-medium">${step.name}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center space-x-3 pt-6 border-t border-gray-200">
+                    <button class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">Contact Lead</button>
+                    <button class="flex-1 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-lg font-semibold hover:bg-gray-50 transition">Assign to Team</button>
+                    <button class="text-gray-500 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition">Archive</button>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderInitialMessage(message = "Selecciona una respuesta para ver los detalles") {
+        detailPanelEl.innerHTML = `
+            <div class="h-full flex flex-col items-center justify-center text-center text-gray-500 animate-fade-in">
+                <svg class="w-16 h-16 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+                </svg>
+                <h3 class="text-lg font-medium">${message}</h3>
+                <p class="text-sm">Los insights generados por IA aparecerán aquí.</p>
+            </div>`;
+    }
+    
+    function showLoadingIndicator() {
+        detailPanelEl.innerHTML = `
+            <div class="h-full flex items-center justify-center">
+                <div class="ai-processing w-full max-w-md p-6 rounded-lg space-y-4">
+                    <div class="h-8 bg-gray-300 rounded"></div>
+                    <div class="space-y-2">
+                        <div class="h-4 bg-gray-300 rounded"></div>
+                        <div class="h-4 bg-gray-300 rounded w-5/6"></div>
+                    </div>
+                    <div class="h-16 bg-gray-300 rounded"></div>
+                </div>
+            </div>
+        `;
+    }
+
+    // --- Event Listeners ---
+    responseListEl.addEventListener('click', (e) => {
+        const row = e.target.closest('.response-row');
+        if (!row) return;
+
+        const responseId = parseInt(row.dataset.responseId);
+        
+        // Update selection style
+        document.querySelectorAll('.response-row').forEach(r => r.classList.remove('selected'));
+        row.classList.add('selected');
+
+        // Render details
+        showLoadingIndicator();
+        setTimeout(() => { // Simulate API call
+            renderResponseDetail(responseId);
+        }, 500);
+    });
+
+    // --- Initial Load ---
+    renderResponseList();
+    renderInitialMessage();
+});
+</script>
+</body>
+</html>

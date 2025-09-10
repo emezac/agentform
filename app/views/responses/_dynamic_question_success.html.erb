@@ -1,0 +1,36 @@
+<div class="dynamic-question-success bg-green-50 border-l-4 border-green-400 p-6 rounded-lg shadow-sm mb-6" 
+     id="dynamic_question_success_<%= dynamic_question.id %>">
+  
+  <div class="flex items-start space-x-4">
+    <!-- Success Icon -->
+    <div class="flex-shrink-0">
+      <div class="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center shadow-sm">
+        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+        </svg>
+      </div>
+    </div>
+    
+    <!-- Content -->
+    <div class="flex-1 min-w-0">
+      <div class="mb-2">
+        <h3 class="text-sm font-medium text-green-700">Respuesta Recibida</h3>
+        <p class="text-xs text-green-600 mt-1">Tu información adicional ha sido registrada exitosamente.</p>
+      </div>
+      
+      <h4 class="text-base font-medium text-gray-900 mb-2">
+        <%= dynamic_question.title %>
+      </h4>
+      
+      <div class="bg-white border border-green-200 rounded-md p-3">
+        <p class="text-sm text-gray-700">
+          <strong>Tu respuesta:</strong> "<%= truncate(answer_value, length: 150) %>"
+        </p>
+      </div>
+      
+      <div class="mt-3 text-xs text-gray-500">
+        <span>Respondida el <%= Time.current.strftime("%d/%m/%Y a las %H:%M") %></span>
+      </div>
+    </div>
+  </div>
+</div>

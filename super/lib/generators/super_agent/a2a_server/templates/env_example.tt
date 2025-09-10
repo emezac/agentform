@@ -1,0 +1,44 @@
+# SuperAgent A2A Server Environment Variables
+# Copy this file to .env.a2a and customize your settings
+
+# Server Configuration
+A2A_PORT=<%= server_port %>
+A2A_HOST=<%= server_host %>
+A2A_BASE_URL=http<%= ssl_enabled? ? 's' : '' %>://<%= server_host %>:<%= server_port %>
+
+<% if auth_enabled? -%>
+# Authentication
+SUPER_AGENT_A2A_TOKEN=<%= secret_token %>
+<% end -%>
+
+<% if ssl_enabled? -%>
+# SSL Configuration
+SSL_CERT_PATH=config/ssl/cert.pem
+SSL_KEY_PATH=config/ssl/key.pem
+<% end -%>
+
+# Rails Environment
+RAILS_ENV=production
+RAILS_LOG_LEVEL=info
+
+# Database (if needed)
+# DATABASE_URL=postgresql://user:password@localhost:5432/<%= app_name %>_production
+
+# Redis (if using background jobs)
+# REDIS_URL=redis://localhost:6379/0
+
+# External A2A Agents (examples)
+# INVENTORY_SERVICE_URL=http://inventory-service:8080
+# INVENTORY_SERVICE_TOKEN=your-inventory-token
+# 
+# ANALYTICS_SERVICE_URL=http://analytics-service:8080
+# ANALYTICS_SERVICE_TOKEN=your-analytics-token
+
+# Monitoring and Logging
+# SENTRY_DSN=your-sentry-dsn
+# LOG_LEVEL=info
+
+# Performance Settings
+A2A_DEFAULT_TIMEOUT=30
+A2A_MAX_RETRIES=3
+A2A_CACHE_TTL=300

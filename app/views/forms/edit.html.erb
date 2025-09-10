@@ -1,0 +1,217 @@
+<%# app/views/forms/edit.html.erb %>
+<% content_for :layout_name, "form_builder" %>
+
+<div class="h-screen flex flex-col bg-gray-50" 
+     data-controller="form-builder payment-setup-status" 
+     data-form-builder-form-id-value="<%= @form.id %>" 
+     data-form-builder-csrf-token-value="<%= form_authenticity_token %>"
+     data-payment-setup-status-form-id-value="<%= @form.id %>"
+     data-payment-setup-status-has-payment-questions-value="<%= @form.has_payment_questions? %>"
+     data-payment-setup-status-stripe-configured-value="<%= @form.user.stripe_configured? %>"
+     data-payment-setup-status-is-premium-value="<%= @form.user.premium? %>"
+     data-payment-setup-status-setup-complete-value="<%= @form.payment_setup_complete? %>"
+     data-payment-setup-status-completion-percentage-value="<%= @form.user.payment_setup_status[:setup_completion_percentage] %>">
+
+  <!-- Form Header -->
+  <%= render 'forms/form_header', form: @form %>
+
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- Main Questions Panel -->
+    <main class="flex-1 p-6 overflow-y-auto">
+      <div class="max-w-4xl">
+        
+        <!-- Save Status Indicator -->
+        <div class="mb-4 flex items-center space-x-2">
+          <div class="w-2 h-2 rounded-full bg-green-400" data-form-builder-target="saveIndicator"></div>
+          <span class="text-sm text-gray-600" data-form-builder-target="saveStatus">Saved</span>
+        </div>
+
+        <!-- Payment Setup Notification Bar -->
+        <%= render 'forms/payment_notification_bar', form: @form %>
+
+        <!-- Workflow Summary Card -->
+        <div class="mb-6 bg-white/80 backdrop-blur-md rounded-xl p-6 border">
+          <h2 class="text-xl font-bold text-gray-900">AI Workflow Designer</h2>
+          <p class="text-gray-600">Powered by SuperAgent orchestration engine</p>
+          
+          <div class="mt-4 grid grid-cols-3 gap-4">
+            <div class="text-center">
+              <div class="text-2xl font-bold text-purple-600"><%= @form.questions_count %></div>
+              <div class="text-sm text-gray-600">Workflow Steps</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-green-600"><%= @form.form_responses.count %></div>
+              <div class="text-sm text-gray-600">Executions</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-blue-600">
+                <%= @form.ai_enabled? ? 'ON' : 'OFF' %>
+              </div>
+              <div class="text-sm text-gray-600">AI Processing</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Questions Container - FIXED TARGET NAME -->
+        <div class="space-y-3" 
+             id="questions-container" 
+             data-form-builder-target="questionsList">
+          <% @form.form_questions.each_with_index do |question, index| %>
+            <div class="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow" 
+                 data-question-id="<%= question.id %>"
+                 data-form-builder-target="questionCard">
+              
+              <!-- Drag Handle -->
+              <div class="flex items-start justify-between mb-4">
+                <div class="flex items-start space-x-3">
+                  <div class="drag-handle cursor-grab text-gray-400 hover:text-gray-600 mt-1">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
+                    </svg>
+                  </div>
+                  
+                  <div class="flex-1">
+                    <div class="flex items-center space-x-2 mb-1">
+                      <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
+                        Step <%= index + 1 %>
+                      </span>
+                      <% if question.ai_enhanced? %>
+                        <span class="ai-indicator inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+                          AI Enhanced
+                        </span>
+                      <% end %>
+                      <% if question.required? %>
+                        <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">
+                          Required
+                        </span>
+                      <% end %>
+                    </div>
+                    <h3 class="question-title font-semibold text-gray-900 mb-1"><%= question.title %></h3>
+                    <% if question.description.present? %>
+                      <p class="text-sm text-gray-600 mb-2"><%= question.description %></p>
+                    <% end %>
+                    <div class="text-xs text-gray-500">
+                      Type: <span class="font-medium"><%= question.question_type.humanize %></span>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="flex items-center space-x-1">
+                  <button type="button" 
+                          class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                          data-action="click->form-builder#editQuestion"
+                          title="Edit question">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                    </svg>
+                  </button>
+                  
+                  <button type="button" 
+                          class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                          data-action="click->form-builder#duplicateQuestion"
+                          title="Duplicate question">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                    </svg>
+                  </button>
+                  
+                  <button type="button" 
+                          class="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                          data-action="click->form-builder#enhanceWithAI"
+                          title="Enhance with AI">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                  </button>
+                  
+                  <button type="button" 
+                          class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          data-action="click->form-builder#deleteQuestion"
+                          title="Delete question">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              
+              <!-- Quick Required Toggle -->
+              <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+                <span class="text-sm text-gray-700">Required field</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" 
+                         class="sr-only peer" 
+                         <%= 'checked' if question.required? %>
+                         data-action="change->form-builder#toggleRequired">
+                  <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                </label>
+              </div>
+            </div>
+          <% end %>
+        </div>
+
+        <!-- Add Question Button -->
+        <div class="mt-6 space-y-2">
+          <!-- Main Add Button -->
+<button data-action="click->form-builder#addQuestion" 
+        class="mt-4 w-full p-4 border-2 border-dashed border-gray-300 rounded-xl text-gray-600 hover:border-purple-400 hover:text-purple-600 transition-colors group">
+  <div class="flex items-center justify-center space-x-2">
+    <svg class="w-5 h-5 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+    </svg>
+    <span class="font-medium">Add Step to Workflow</span>
+  </div>
+</button>
+          
+          <!-- Quick Add Buttons -->
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <button data-action="click->form-builder#addQuestion" 
+                    data-question-type="text_short"
+                    class="p-2 text-xs bg-white border border-gray-200 rounded-lg hover:border-purple-300 hover:text-purple-600 transition-colors">
+              Short Text
+            </button>
+            <button data-action="click->form-builder#addQuestion" 
+                    data-question-type="text_long"
+                    class="p-2 text-xs bg-white border border-gray-200 rounded-lg hover:border-purple-300 hover:text-purple-600 transition-colors">
+              Long Text
+            </button>
+            <button data-action="click->form-builder#addQuestion" 
+                    data-question-type="multiple_choice"
+                    class="p-2 text-xs bg-white border border-gray-200 rounded-lg hover:border-purple-300 hover:text-purple-600 transition-colors">
+              Multiple Choice
+            </button>
+            <button data-action="click->form-builder#addQuestion" 
+                    data-question-type="email"
+                    class="p-2 text-xs bg-white border border-gray-200 rounded-lg hover:border-purple-300 hover:text-purple-600 transition-colors">
+              Email
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Configuration Sidebar -->
+    <aside class="w-80 bg-white border-l border-gray-200 overflow-y-auto">
+      <%= render 'forms/configuration_panel', form: @form %>
+    </aside>
+
+  </div>
+</div>
+
+<!-- Modals (if needed by the controller) -->
+<div id="add-question-modal" 
+     class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+     data-form-builder-target="addQuestionModal">
+  <!-- Modal content will be loaded here -->
+</div>
+
+<div id="edit-question-modal" 
+     class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+     data-form-builder-target="editQuestionModal">
+  <!-- Modal content will be loaded here -->
+</div>
+
+<!-- Payment Setup Modal -->
+<%= render 'forms/payment_setup_modal', form: @form %>

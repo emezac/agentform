@@ -1,0 +1,163 @@
+<div class="space-y-4">
+  <div class="space-y-3">
+    <div class="flex items-center justify-between text-sm text-gray-600">
+      <span>Not at all likely</span>
+      <span>Extremely likely</span>
+    </div>
+    
+    <div class="flex items-center justify-between">
+      <% (0..10).each do |score| %>
+        <label class="flex flex-col items-center space-y-1 cursor-pointer group nps-option" data-score="<%= score %>">
+          <%= form.radio_button "answer[value]", 
+                               score,
+                               { 
+                                 required: question.required?,
+                                 class: "sr-only",
+                                 data: { 
+                                   "question-response-target": "answerInput",
+                                   "action": "change->question-response#validateInput"
+                                 }
+                               } %>
+          
+          <div class="w-10 h-10 rounded-full border-2 border-gray-300 flex items-center justify-center group-hover:border-indigo-400 transition-colors nps-circle">
+            <span class="text-sm font-medium text-gray-600 group-hover:text-indigo-600"><%= score %></span>
+          </div>
+        </label>
+      <% end %>
+    </div>
+    
+    <div class="flex justify-between text-xs text-gray-500">
+      <span>0</span>
+      <span>5</span>
+      <span>10</span>
+    </div>
+  </div>
+  
+  <!-- Score interpretation -->
+  <div class="hidden text-center p-3 rounded-lg" data-question-response-target="npsInterpretation">
+    <div class="text-sm font-medium" data-question-response-target="npsCategory"></div>
+    <div class="text-xs text-gray-600 mt-1" data-question-response-target="npsDescription"></div>
+  </div>
+  
+  <% if config['help_text'] %>
+    <p class="text-xs text-gray-500 text-center"><%= config['help_text'] %></p>
+  <% end %>
+</div>
+
+<style>
+  .nps-circle.selected {
+    @apply border-indigo-500 bg-indigo-500;
+  }
+  
+  .nps-circle.selected span {
+    @apply text-white;
+  }
+  
+  .nps-circle.detractor {
+    @apply border-red-500 bg-red-500;
+  }
+  
+  .nps-circle.passive {
+    @apply border-yellow-500 bg-yellow-500;
+  }
+  
+  .nps-circle.promoter {
+    @apply border-green-500 bg-green-500;
+  }
+</style>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const npsOptions = document.querySelectorAll('.nps-option');
+    const radioButtons = document.querySelectorAll('input[type="radio"][name="answer[value]"]');
+    const npsInterpretation = document.querySelector('[data-question-response-target="npsInterpretation"]');
+    const npsCategory = document.querySelector('[data-question-response-target="npsCategory"]');
+    const npsDescription = document.querySelector('[data-question-response-target="npsDescription"]');
+    
+    const interpretations = {
+      detractor: {
+        category: 'Detractor (0-6)',
+        description: 'Unhappy customers who can damage your brand through negative word-of-mouth.',
+        bgClass: 'bg-red-50',
+        textClass: 'text-red-800'
+      },
+      passive: {
+        category: 'Passive (7-8)',
+        description: 'Satisfied but unenthusiastic customers who are vulnerable to competitive offerings.',
+        bgClass: 'bg-yellow-50',
+        textClass: 'text-yellow-800'
+      },
+      promoter: {
+        category: 'Promoter (9-10)',
+        description: 'Loyal enthusiasts who will keep buying and refer others, fueling growth.',
+        bgClass: 'bg-green-50',
+        textClass: 'text-green-800'
+      }
+    };
+    
+    function updateSelection() {
+      const selectedRadio = document.querySelector('input[type="radio"][name="answer[value]"]:checked');
+      
+      // Reset all styles
+      npsOptions.forEach(option => {
+        const circle = option.querySelector('.nps-circle');
+        circle.classList.remove('selected', 'detractor', 'passive', 'promoter');
+      });
+      
+      if (selectedRadio) {
+        const score = parseInt(selectedRadio.value);
+        const selectedOption = document.querySelector(`.nps-option[data-score="${score}"]`);
+        const circle = selectedOption.querySelector('.nps-circle');
+        
+        circle.classList.add('selected');
+        
+        // Add category-specific styling
+        let category;
+        if (score <= 6) {
+          category = 'detractor';
+          circle.classList.add('detractor');
+        } else if (score <= 8) {
+          category = 'passive';
+          circle.classList.add('passive');
+        } else {
+          category = 'promoter';
+          circle.classList.add('promoter');
+        }
+        
+        // Show interpretation
+        if (npsInterpretation && npsCategory && npsDescription) {
+          const interpretation = interpretations[category];
+          npsCategory.textContent = interpretation.category;
+          npsDescription.textContent = interpretation.description;
+          
+          npsInterpretation.className = `text-center p-3 rounded-lg ${interpretation.bgClass} ${interpretation.textClass}`;
+          npsInterpretation.classList.remove('hidden');
+        }
+      } else {
+        if (npsInterpretation) {
+          npsInterpretation.classList.add('hidden');
+        }
+      }
+    }
+    
+    npsOptions.forEach(option => {
+      option.addEventListener('click', function() {
+        const score = this.dataset.score;
+        const radio = document.querySelector(`input[type="radio"][value="${score}"]`);
+        
+        if (radio) {
+          radio.checked = true;
+          radio.dispatchEvent(new Event('change'));
+          updateSelection();
+        }
+      });
+    });
+    
+    radioButtons.forEach(radio => {
+      radio.addEventListener('change', updateSelection);
+    });
+    
+    // Handle pre-selected values
+    updateSelection();
+  });
+</script>

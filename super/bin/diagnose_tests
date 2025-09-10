@@ -1,0 +1,152 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+puts "🔍 SuperAgent Test Diagnostics"
+puts "=" * 40
+
+# Check Ruby version
+puts "Ruby version: #{RUBY_VERSION}"
+puts "Ruby engine: #{RUBY_ENGINE}" if defined?(RUBY_ENGINE)
+
+# Check if we can load SuperAgent
+begin
+  require_relative '../lib/super_agent'
+  puts "✅ SuperAgent loads successfully"
+  puts "   Version: #{SuperAgent::VERSION}"
+rescue => e
+  puts "❌ Error loading SuperAgent: #{e.message}"
+  exit 1
+end
+
+# Check configuration
+begin
+  SuperAgent.configure do |config|
+    config.llm_provider = :openai
+    config.openai_api_key = 'test-key'
+    config.default_llm_model = 'gpt-4'
+  end
+  puts "✅ Configuration works"
+rescue => e
+  puts "❌ Configuration error: #{e.message}"
+end
+
+# Check if we can create basic objects
+begin
+  context = SuperAgent::Workflow::Context.new(test: 'value')
+  puts "✅ Context creation works"
+  puts "   Test value: #{context.get(:test)}"
+rescue => e
+  puts "❌ Context creation error: #{e.message}"
+end
+
+# Check workflow definition
+begin
+  workflow = Class.new(SuperAgent::WorkflowDefinition) do
+    workflow do
+      task :test_task do
+        process { "test result" }
+      end
+    end
+  end
+  puts "✅ Workflow definition works"
+  puts "   Steps count: #{workflow.all_steps.size}"
+rescue => e
+  puts "❌ Workflow definition error: #{e.message}"
+end
+
+# Check workflow engine
+begin
+  engine = SuperAgent::WorkflowEngine.new
+  puts "✅ Workflow engine creation works"
+rescue => e
+  puts "❌ Workflow engine error: #{e.message}"
+end
+
+# Check dependencies
+dependencies = {
+  'openai' => 'OpenAI gem',
+  'zeitwerk' => 'Zeitwerk autoloader',
+  'dry-struct' => 'Dry-struct',
+  'active_support' => 'ActiveSupport',
+  'active_job' => 'ActiveJob'
+}
+
+dependencies.each do |gem, description|
+  begin
+    require gem
+    puts "✅ #{description} available"
+  rescue LoadError
+    puts "⚠️  #{description} not available (#{gem})"
+  end
+end
+
+# Check optional dependencies
+optional_deps = {
+  'open_router' => 'OpenRouter gem',
+  'pundit' => 'Pundit authorization'
+}
+
+# Rails-specific dependencies (check carefully)
+rails_deps = {
+  'turbo-rails' => 'Turbo Rails',
+  'ruby-anthropic' => 'Anthropic gem'
+}
+
+optional_deps.each do |gem, description|
+  begin
+    require gem
+    puts "✅ #{description} available (optional)"
+  rescue LoadError
+    puts "ℹ️  #{description} not available (optional)"
+  end
+end
+
+puts "\nChecking Rails-specific dependencies..."
+rails_deps.each do |gem, description|
+  begin
+    # Try to require without causing initialization issues
+    if gem == 'turbo-rails'
+      # Don't actually require turbo-rails as it needs full Rails
+      puts "ℹ️  #{description} skipped (requires Rails environment)"
+    else
+      require gem
+      puts "✅ #{description} available (optional)"
+    end
+  rescue LoadError
+    puts "ℹ️  #{description} not available (optional)"
+  rescue => e
+    puts "⚠️  #{description} - #{e.message}"
+  end
+end
+
+puts "\n🎯 Diagnosis Summary:"
+puts "Ready to run tests!"
+
+# Test a simple workflow execution
+begin
+  puts "\n🧪 Testing simple workflow execution..."
+  
+  test_workflow = Class.new(SuperAgent::WorkflowDefinition) do
+    workflow do
+      task :simple_test do
+        process { { result: "success", timestamp: Time.now.to_i } }
+      end
+    end
+  end
+  
+  context = SuperAgent::Workflow::Context.new(input: "test")
+  engine = SuperAgent::WorkflowEngine.new
+  result = engine.execute(test_workflow, context)
+  
+  if result.completed?
+    puts "✅ Simple workflow execution successful!"
+    puts "   Output: #{result.final_output}"
+  else
+    puts "❌ Simple workflow failed: #{result.error_message}"
+  end
+rescue => e
+  puts "❌ Workflow execution error: #{e.message}"
+  puts "   Backtrace: #{e.backtrace.first(3).join("\n   ")}"
+end
+
+puts "\n🚀 Run tests with: bundle exec rspec"

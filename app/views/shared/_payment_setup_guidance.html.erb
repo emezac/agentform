@@ -1,0 +1,130 @@
+<% 
+  error ||= nil
+  show_actions ||= true
+  context ||= 'general'
+  compact ||= false
+%>
+
+<div class="payment-setup-guidance bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-lg <%= compact ? 'p-3' : 'p-6' %>" 
+     data-controller="payment-setup-guidance" 
+     data-payment-setup-guidance-context-value="<%= context %>"
+     data-payment-setup-guidance-error-type-value="<%= error&.error_type %>">
+  
+  <div class="flex items-start">
+    <div class="flex-shrink-0">
+      <div class="flex items-center justify-center h-8 w-8 rounded-full bg-indigo-100">
+        <svg class="h-5 w-5 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+    </div>
+    
+    <div class="ml-4 flex-1">
+      <h3 class="<%= compact ? 'text-sm' : 'text-lg' %> font-semibold text-indigo-900 mb-2">
+        Payment Setup Required
+      </h3>
+      
+      <div class="text-sm text-indigo-800 mb-4">
+        <% if error.present? %>
+          <%= error.user_guidance[:description] || error.message %>
+        <% else %>
+          Your form contains payment questions that require additional setup to function properly.
+        <% end %>
+      </div>
+      
+      <% if error&.user_guidance&.dig(:missing_requirements).present? %>
+        <div class="mb-4">
+          <h4 class="text-sm font-medium text-indigo-900 mb-2">Required Setup Steps:</h4>
+          <div class="space-y-2">
+            <% error.user_guidance[:missing_requirements].each do |requirement| %>
+              <div class="flex items-center text-sm text-indigo-700">
+                <svg class="mr-2 h-4 w-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <%= humanize_requirement(requirement) %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+      
+      <% if show_actions %>
+        <div class="flex flex-wrap gap-3">
+          <% if error&.primary_action_url.present? %>
+            <%= link_to error.primary_action_text || 'Complete Setup',
+                        error.primary_action_url,
+                        class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200",
+                        data: { 
+                          action: "click->payment-setup-guidance#trackSetupStart",
+                          payment_setup_guidance_action_type_param: "primary"
+                        } %>
+          <% else %>
+            <%= link_to 'Start Setup Guide',
+                        payment_setup_path,
+                        class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200",
+                        data: { 
+                          action: "click->payment-setup-guidance#trackSetupStart",
+                          payment_setup_guidance_action_type_param: "guide"
+                        } %>
+          <% end %>
+          
+          <button type="button" 
+                  class="inline-flex items-center px-4 py-2 border border-indigo-300 text-sm font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+                  data-action="click->payment-setup-guidance#showEducationalContent">
+            <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+            Learn More
+          </button>
+          
+          <% unless compact %>
+            <button type="button" 
+                    class="inline-flex items-center px-4 py-2 border border-indigo-300 text-sm font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors duration-200"
+                    data-action="click->payment-setup-guidance#contactSupport">
+              <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192L5.636 18.364M12 2.25a9.75 9.75 0 109.75 9.75A9.75 9.75 0 0012 2.25z" />
+              </svg>
+              Contact Support
+            </button>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<% content_for :helpers do %>
+  <% unless defined?(@payment_guidance_helpers_loaded) %>
+    <% @payment_guidance_helpers_loaded = true %>
+    <script>
+      window.PaymentGuidanceHelpers = {
+        humanizeRequirement: function(requirement) {
+          const requirements = {
+            'stripe_configuration': 'Configure Stripe for payment processing',
+            'premium_subscription': 'Upgrade to Premium subscription',
+            'payment_setup': 'Complete payment setup',
+            'stripe_config': 'Set up Stripe integration',
+            'premium': 'Premium subscription required'
+          };
+          return requirements[requirement] || requirement.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        }
+      };
+    </script>
+  <% end %>
+<% end %>
+
+<%# Helper method for requirement humanization %>
+<% 
+  def humanize_requirement(requirement)
+    case requirement.to_s
+    when 'stripe_configuration', 'stripe_config'
+      'Configure Stripe for payment processing'
+    when 'premium_subscription', 'premium'
+      'Upgrade to Premium subscription'
+    when 'payment_setup'
+      'Complete payment setup'
+    else
+      requirement.to_s.humanize
+    end
+  end
+%>

@@ -1,0 +1,504 @@
+<% content_for :head do %>
+  <!-- Custom Styles for Landing Page -->
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc; /* slate-50 */
+    }
+    .ai-gradient-text {
+      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .ai-gradient-bg {
+      background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+    }
+    .feature-card:hover .feature-icon {
+      transform: scale(1.1);
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.3);
+    }
+    .plan-card.recommended {
+      border-color: #6366f1;
+      transform: scale(1.05);
+    }
+    .faq-answer {
+      transition: max-height 0.3s ease-out, opacity 0.3s ease-in-out;
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+    }
+    .faq-question.open + .faq-answer {
+      max-height: 500px; /* A large enough value */
+      opacity: 1;
+    }
+    .faq-question.open svg {
+      transform: rotate(180deg);
+    }
+  </style>
+<% end %>
+
+<!-- Header -->
+<header class="bg-white/95 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-50 shadow-sm">
+  <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+    <a href="#" class="flex items-center space-x-2">
+      <div class="w-8 h-8 ai-gradient-bg rounded-lg flex items-center justify-center shadow-sm">
+        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+        </svg>
+      </div>
+      <span class="text-xl font-bold text-slate-900">mydialogform</span>
+    </a>
+    
+    <!-- Desktop Navigation -->
+    <nav class="hidden md:flex items-center space-x-8">
+      <a href="#features" class="text-slate-600 hover:text-indigo-600 transition-colors font-medium">Features</a>
+      <a href="#pricing" class="text-slate-600 hover:text-indigo-600 transition-colors font-medium">Pricing</a>
+      <a href="#faq" class="text-slate-600 hover:text-indigo-600 transition-colors font-medium">FAQ</a>
+    </nav>
+    
+    <div class="flex items-center space-x-4">
+      <% if user_signed_in? %>
+        <%= link_to "Dashboard", forms_path, class: "bg-indigo-600 text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition-all duration-200 shadow-sm hover:shadow-md" %>
+      <% else %>
+        <a href="/users/sign_in" class="hidden sm:block text-slate-600 hover:text-indigo-600 transition-colors font-medium">Log In</a>
+        <a href="/users/sign_up" class="bg-indigo-600 text-white font-semibold px-6 py-2.5 rounded-lg hover:bg-indigo-700 transition-all duration-200 shadow-sm hover:shadow-md">
+          Start Free Trial
+        </a>
+      <% end %>
+    </div>
+    
+    <!-- Mobile menu button -->
+    <div class="md:hidden">
+      <button type="button" class="mobile-menu-button text-slate-600 hover:text-indigo-600 focus:outline-none focus:text-indigo-600 p-2 rounded-lg hover:bg-slate-50 transition-colors">
+        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+      </button>
+    </div>
+  </div>
+  
+  <!-- Mobile Navigation -->
+  <div class="mobile-menu hidden md:hidden pb-4 border-t border-gray-100 mt-4 pt-4">
+    <div class="container mx-auto px-6">
+      <div class="flex flex-col space-y-3">
+        <a href="#features" class="text-slate-600 hover:text-indigo-600 transition-colors py-2 font-medium">Features</a>
+        <a href="#pricing" class="text-slate-600 hover:text-indigo-600 transition-colors py-2 font-medium">Pricing</a>
+        <a href="#faq" class="text-slate-600 hover:text-indigo-600 transition-colors py-2 font-medium">FAQ</a>
+        
+        <div class="pt-3 border-t border-gray-100 space-y-3">
+          <% if user_signed_in? %>
+            <%= link_to "Dashboard", forms_path, class: "bg-indigo-600 text-white px-4 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors text-center font-medium block" %>
+          <% else %>
+            <a href="/users/sign_in" class="text-slate-600 hover:text-indigo-600 transition-colors py-2 font-medium block">Log In</a>
+            <a href="/users/sign_up" class="bg-indigo-600 text-white px-4 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors text-center font-medium block">
+              Start Free Trial
+            </a>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+<!-- 
+Hero Section -->
+<section class="relative bg-white pt-20 pb-24 md:pt-32 md:pb-32">
+  <div class="container mx-auto px-6 text-center">
+    <span class="inline-block bg-indigo-100 text-indigo-700 text-sm font-semibold px-4 py-1 rounded-full mb-4">Powered by SuperAgent AI</span>
+    <h1 class="text-4xl md:text-6xl font-extrabold text-slate-900 leading-tight">
+      Build Forms That <span class="ai-gradient-text">Think</span>,<br> Not Just Collect.
+    </h1>
+    <p class="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-slate-600">
+      The AI-first form platform that turns every submission into an intelligent conversation. Automate lead qualification, analyze feedback in real-time, and build workflows that deliver results.
+    </p>
+    <div class="mt-10 flex flex-col sm:flex-row justify-center items-center space-y-4 sm:space-y-0 sm:space-x-4">
+      <a href="/users/sign_up" class="ai-gradient-bg text-white font-semibold px-8 py-4 rounded-lg hover:opacity-90 transition-opacity shadow-lg">
+        Start Your 14-Day Premium Trial
+      </a>
+      <div class="text-sm text-slate-600">
+        <span class="font-medium">No credit card required</span> • Cancel anytime
+      </div>
+    </div>
+    <div class="mt-6 flex justify-center">
+      <div class="bg-white/80 backdrop-blur-sm border border-slate-200 rounded-lg px-6 py-3 shadow-sm">
+        <p class="text-sm text-slate-700">
+          <span class="font-semibold text-green-600">💰 Average ROI:</span> Premium users see 3-5x return on investment within 30 days
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Social Proof -->
+<section class="bg-slate-50 py-12">
+  <div class="container mx-auto px-6">
+    <p class="text-center text-sm font-semibold text-slate-500">
+      TRUSTED BY INNOVATIVE TEAMS AT
+    </p>
+    <div class="mt-6 flex justify-center items-center flex-wrap gap-x-12 gap-y-4">
+      <svg class="h-8 text-slate-400" viewBox="0 0 125 29" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M40.23 28.5H30.76L16.81 12.3V28.5H7.32V0.5H16.81L30.76 16.7V0.5H40.23V28.5Z" fill="currentColor"></path>
+        <path d="M72.23 28.5H62.76L48.81 12.3V28.5H39.32V0.5H48.81L62.76 16.7V0.5H72.23V28.5Z" fill="currentColor"></path>
+        <path d="M124.24 28.5H114.77L100.82 12.3V28.5H91.33V0.5H100.82L114.77 16.7V0.5H124.24V28.5Z" fill="currentColor"></path>
+        <path d="M16.48 0.5H0V28.5H16.48V0.5Z" fill="currentColor"></path>
+        <path d="M88.48 0.5H72V28.5H88.48V0.5Z" fill="currentColor"></path>
+      </svg>
+      <p class="text-2xl font-bold text-slate-400 tracking-widest">NEXUS</p>
+      <p class="text-2xl font-bold text-slate-400">Quantum</p>
+      <p class="text-2xl font-bold text-slate-400 tracking-wider">Aperture</p>
+    </div>
+  </div>
+</section><!-
+- Success Stories Section -->
+<section class="py-16 bg-gradient-to-r from-indigo-600 to-purple-700 text-white">
+  <div class="container mx-auto px-6">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl md:text-4xl font-bold mb-4">Premium Users Are Winning</h2>
+      <p class="text-xl text-indigo-100">See what happens when you unlock the full power of mydialogform</p>
+    </div>
+    <div class="grid md:grid-cols-3 gap-8">
+      <!-- Success Story 1 -->
+      <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+        <div class="text-4xl font-bold text-green-300 mb-2">340%</div>
+        <div class="text-lg font-semibold mb-2">More Qualified Leads</div>
+        <p class="text-indigo-100 text-sm">
+          "Our AI qualification agent automatically scores leads using BANT criteria. We went from 20% qualified leads to 68% qualified leads."
+        </p>
+        <div class="mt-4 text-xs text-indigo-200">
+          — SaaS Startup, 50 employees
+        </div>
+      </div>
+      
+      <!-- Success Story 2 -->
+      <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+        <div class="text-4xl font-bold text-green-300 mb-2">$12K</div>
+        <div class="text-lg font-semibold mb-2">Monthly Revenue Added</div>
+        <p class="text-indigo-100 text-sm">
+          "Payment processing in forms was a game-changer. We now collect event registrations and course payments directly through our forms."
+        </p>
+        <div class="mt-4 text-xs text-indigo-200">
+          — Online Education Company
+        </div>
+      </div>
+      
+      <!-- Success Story 3 -->
+      <div class="bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20">
+        <div class="text-4xl font-bold text-green-300 mb-2">15hrs</div>
+        <div class="text-lg font-semibold mb-2">Saved Per Week</div>
+        <p class="text-indigo-100 text-sm">
+          "Salesforce integration eliminated manual data entry. Our team now focuses on closing deals instead of copying data."
+        </p>
+        <div class="mt-4 text-xs text-indigo-200">
+          — Digital Marketing Agency
+        </div>
+      </div>
+    </div>
+    <div class="text-center mt-12">
+      <a href="/users/sign_up" class="bg-white text-indigo-600 font-semibold px-8 py-4 rounded-lg hover:bg-gray-50 transition-colors shadow-lg">
+        Join the Premium Winners
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- Features Section -->
+<section id="features" class="py-20 md:py-28 bg-white">
+  <div class="container mx-auto px-6">
+    <div class="text-center max-w-3xl mx-auto">
+      <h2 class="text-3xl md:text-4xl font-bold text-slate-900">Your Forms, Now with a Brain</h2>
+      <p class="mt-4 text-lg text-slate-600">
+        mydialogform goes beyond simple data collection. It's an intelligent platform that understands, adapts, and automates your most critical business processes.
+      </p>
+    </div>
+    <div class="mt-16 grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+      <!-- Feature 1: AI Agents -->
+      <div class="feature-card bg-slate-50 p-8 rounded-xl border border-slate-200">
+        <div class="feature-icon w-12 h-12 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center transition-transform duration-300">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path>
+          </svg>
+        </div>
+        <h3 class="mt-4 text-xl font-semibold">AI Qualification Agents</h3>
+        <p class="mt-2 text-slate-600">Deploy pre-built BANT/CHAMP agents to automatically qualify leads, asking dynamic follow-up questions to uncover budget, authority, and need.</p>
+      </div>
+      
+      <!-- Feature 2: Visual Builder -->
+      <div class="feature-card bg-slate-50 p-8 rounded-xl border border-slate-200">
+        <div class="feature-icon w-12 h-12 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center transition-transform duration-300">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+          </svg>
+        </div>
+        <h3 class="mt-4 text-xl font-semibold">Build Without Limits</h3>
+        <p class="mt-2 text-slate-600">Create unlimited forms with unlimited questions and receive unlimited responses. From file uploads to payments, our builder handles it all.</p>
+      </div>
+      
+      <!-- Feature 3: Workflows -->
+      <div class="feature-card bg-slate-50 p-8 rounded-xl border border-slate-200">
+        <div class="feature-icon w-12 h-12 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center transition-transform duration-300">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9V3m0 18a9 9 0 009-9m-9 9a9 9 0 00-9-9"></path>
+          </svg>
+        </div>
+        <h3 class="mt-4 text-xl font-semibold">Automate Anything</h3>
+        <p class="mt-2 text-slate-600">Connect to your CRM, send Slack notifications, trigger webhooks, and sync to Google Sheets. Automate your entire data pipeline from a single form.</p>
+      </div>
+      
+      <!-- Feature 4: Analytics -->
+      <div class="feature-card bg-slate-50 p-8 rounded-xl border border-slate-200">
+        <div class="feature-icon w-12 h-12 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center transition-transform duration-300">
+          <svg class="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        <h3 class="mt-4 text-xl font-semibold">Actionable Insights</h3>
+        <p class="mt-2 text-slate-600">Pinpoint exactly where users drop off, analyze sentiment, and get AI-powered recommendations to boost your completion rates.</p>
+      </div>
+    </div>
+  </div>
+</section><!-- P
+ricing Section -->
+<section id="pricing" class="py-20 md:py-28 bg-slate-50">
+  <div class="container mx-auto px-6">
+    <div class="text-center max-w-3xl mx-auto">
+      <h2 class="text-3xl md:text-4xl font-bold text-slate-900">Choose Your Power Level</h2>
+      <p class="mt-4 text-lg text-slate-600">
+        Start with Basic or go Premium to unlock the full potential of intelligent forms. Both plans include a 14-day free trial.
+      </p>
+    </div>
+    <div class="mt-16 grid lg:grid-cols-2 gap-8 items-start max-w-5xl mx-auto">
+      <!-- Basic Plan -->
+      <div class="plan-card bg-white p-8 rounded-xl shadow-lg border h-full flex flex-col relative">
+        <div class="absolute top-4 right-4 bg-slate-100 text-slate-600 text-xs font-semibold px-3 py-1 rounded-full">
+          Limited Features
+        </div>
+        <h3 class="text-2xl font-bold text-gray-900">Basic</h3>
+        <p class="mt-2 text-gray-500">For simple forms and getting started</p>
+        <p class="mt-6"><span class="text-4xl font-bold">Free</span><span class="text-gray-500"> forever</span></p>
+        <a href="/users/sign_up" class="w-full mt-6 py-3 bg-slate-100 text-slate-700 font-semibold rounded-lg text-center hover:bg-slate-200 transition-colors">Start with Basic</a>
+        
+        <div class="mt-8 flex-1">
+          <h4 class="font-semibold text-gray-900 mb-4">What's Included:</h4>
+          <ul class="space-y-3 text-gray-600 text-sm">
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span>Unlimited forms & responses</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span>Basic conditional logic</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span>File uploads (100 MB storage)</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span>Basic integrations (Sheets, Slack, Webhooks)</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span>10 AI credits / month</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Premium Plan -->
+      <div class="plan-card bg-white p-8 rounded-xl shadow-2xl border-2 h-full flex flex-col recommended relative">
+        <div class="absolute top-0 -translate-y-1/2 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white text-xs font-semibold rounded-full uppercase tracking-wider">
+          🚀 Most Popular
+        </div>
+        <div class="absolute top-4 right-4 bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-full">
+          Full Power
+        </div>
+        <h3 class="text-2xl font-bold text-gray-900">Premium</h3>
+        <p class="mt-2 text-gray-500">For businesses that want to maximize results</p>
+        <div class="mt-6">
+          <span class="text-4xl font-bold">$35</span><span class="text-gray-500"> / month</span>
+          <div class="mt-2 text-sm text-green-600 font-medium">
+            💰 ROI: Typically pays for itself in the first week
+          </div>
+        </div>
+        <a href="/users/sign_up" class="w-full mt-6 py-3 ai-gradient-bg text-white font-semibold rounded-lg text-center hover:opacity-90 transition-opacity">Start 14-Day Free Trial</a>
+        
+        <div class="mt-8 flex-1">
+          <h4 class="font-semibold text-green-900 mb-4">Everything in Basic, PLUS:</h4>
+          <ul class="space-y-3 text-gray-600 text-sm">
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span><strong>💳 Stripe Payment Processing</strong> - Collect payments directly</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span><strong>🤖 AI Qualification Agents</strong> - Auto-qualify leads (BANT/CHAMP)</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span><strong>🎨 Remove mydialogform branding</strong> - Professional appearance</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span><strong>📊 Advanced Analytics</strong> - Deep insights and optimization</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mr-2 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <span><strong>🔗 Premium Integrations</strong> - Salesforce, HubSpot, and more</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FAQ Section -->
+<section id="faq" class="py-20 md:py-28 bg-white">
+  <div class="container mx-auto px-6">
+    <div class="text-center max-w-3xl mx-auto mb-16">
+      <h2 class="text-3xl md:text-4xl font-bold text-slate-900">Frequently Asked Questions</h2>
+      <p class="mt-4 text-lg text-slate-600">
+        Everything you need to know about mydialogform and our intelligent form platform.
+      </p>
+    </div>
+    
+    <div class="max-w-4xl mx-auto space-y-6">
+      <!-- FAQ Item 1 -->
+      <div class="border border-slate-200 rounded-lg">
+        <button class="faq-question w-full px-6 py-4 text-left flex justify-between items-center hover:bg-slate-50 transition-colors">
+          <span class="font-semibold text-slate-900">What makes mydialogform different from other form builders?</span>
+          <svg class="w-5 h-5 text-slate-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </button>
+        <div class="faq-answer hidden px-6 pb-4">
+          <p class="text-slate-600">mydialogform is the first AI-native form platform. While other tools just collect data, we turn every form into an intelligent agent that can qualify leads, analyze sentiment, ask dynamic follow-up questions, and automate complex workflows. Our SuperAgent AI framework makes forms truly conversational and intelligent.</p>
+        </div>
+      </div>
+      
+      <!-- FAQ Item 2 -->
+      <div class="border border-slate-200 rounded-lg">
+        <button class="faq-question w-full px-6 py-4 text-left flex justify-between items-center hover:bg-slate-50 transition-colors">
+          <span class="font-semibold text-slate-900">How does the 14-day free trial work?</span>
+          <svg class="w-5 h-5 text-slate-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </button>
+        <div class="faq-answer hidden px-6 pb-4">
+          <p class="text-slate-600">You get full access to all Premium features for 14 days, no credit card required. You can create unlimited forms, use AI agents, process payments, and access all integrations. If you don't upgrade, you'll automatically move to our generous Basic plan with unlimited forms and responses.</p>
+        </div>
+      </div>
+      
+      <!-- FAQ Item 3 -->
+      <div class="border border-slate-200 rounded-lg">
+        <button class="faq-question w-full px-6 py-4 text-left flex justify-between items-center hover:bg-slate-50 transition-colors">
+          <span class="font-semibold text-slate-900">Can I integrate mydialogform with my existing tools?</span>
+          <svg class="w-5 h-5 text-slate-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </button>
+        <div class="faq-answer hidden px-6 pb-4">
+          <p class="text-slate-600">Absolutely! We offer native integrations with Salesforce, HubSpot, Google Sheets, Slack, Stripe, and many more. Our API-first approach means you can also build custom integrations. Premium users get access to advanced integrations and webhook capabilities.</p>
+        </div>
+      </div>
+      
+      <!-- FAQ Item 4 -->
+      <div class="border border-slate-200 rounded-lg">
+        <button class="faq-question w-full px-6 py-4 text-left flex justify-between items-center hover:bg-slate-50 transition-colors">
+          <span class="font-semibold text-slate-900">Is my data secure with mydialogform?</span>
+          <svg class="w-5 h-5 text-slate-500 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+          </svg>
+        </button>
+        <div class="faq-answer hidden px-6 pb-4">
+          <p class="text-slate-600">Security is our top priority. We use enterprise-grade encryption, SOC 2 compliance, and follow GDPR guidelines. All data is encrypted in transit and at rest. We never share your data with third parties, and you maintain full ownership of all responses and analytics.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section><!-- 
+JavaScript for Landing Page Functionality -->
+<% content_for :scripts do %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Mobile Menu Toggle
+      const mobileMenuButton = document.querySelector('.mobile-menu-button');
+      const mobileMenu = document.querySelector('.mobile-menu');
+      
+      if (mobileMenuButton && mobileMenu) {
+        mobileMenuButton.addEventListener('click', function() {
+          mobileMenu.classList.toggle('hidden');
+        });
+      }
+      
+      // FAQ Toggle
+      document.querySelectorAll('.faq-question').forEach(button => {
+        button.addEventListener('click', function() {
+          const answer = this.nextElementSibling;
+          const icon = this.querySelector('svg');
+          
+          // Close all other FAQ items
+          document.querySelectorAll('.faq-answer').forEach(otherAnswer => {
+            if (otherAnswer !== answer && !otherAnswer.classList.contains('hidden')) {
+              otherAnswer.classList.add('hidden');
+              otherAnswer.previousElementSibling.querySelector('svg').classList.remove('rotate-180');
+            }
+          });
+          
+          // Toggle current FAQ item
+          answer.classList.toggle('hidden');
+          icon.classList.toggle('rotate-180');
+        });
+      });
+      
+      // Smooth scrolling for anchor links
+      document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+          e.preventDefault();
+          const target = document.querySelector(this.getAttribute('href'));
+          if (target) {
+            target.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+            });
+            // Close mobile menu if open
+            if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+              mobileMenu.classList.add('hidden');
+            }
+          }
+        });
+      });
+      
+      // Add scroll effect to header
+      const header = document.querySelector('header');
+      if (header) {
+        window.addEventListener('scroll', function() {
+          if (window.scrollY > 10) {
+            header.classList.add('shadow-md');
+          } else {
+            header.classList.remove('shadow-md');
+          }
+        });
+      }
+    });
+  </script>
+<% end %>

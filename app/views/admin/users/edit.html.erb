@@ -1,0 +1,248 @@
+<% content_for :title, "Edit User - #{@user.full_name}" %>
+
+<div class="min-h-screen bg-gray-50">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex items-center space-x-4">
+        <%= link_to admin_user_path(@user), 
+            class: "text-gray-400 hover:text-gray-600" do %>
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        <% end %>
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Edit User</h1>
+          <p class="mt-1 text-sm text-gray-500">
+            Update <%= @user.full_name %>'s information
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form -->
+    <div class="bg-white shadow rounded-lg">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">User Information</h3>
+        <p class="mt-1 text-sm text-gray-500">
+          Update the user's profile and access settings.
+        </p>
+      </div>
+      
+      <div class="px-6 py-6">
+        <%= form_with model: [:admin, @user], local: true, class: "space-y-6" do |form| %>
+          <% if @user.errors.any? %>
+            <div class="rounded-md bg-red-50 p-4">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <h3 class="text-sm font-medium text-red-800">
+                    There were <%= pluralize(@user.errors.count, "error") %> with your submission:
+                  </h3>
+                  <div class="mt-2 text-sm text-red-700">
+                    <ul class="list-disc pl-5 space-y-1">
+                      <% @user.errors.full_messages.each do |message| %>
+                        <li><%= message %></li>
+                      <% end %>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <!-- First Name -->
+            <div>
+              <%= form.label :first_name, class: "block text-sm font-medium text-gray-700" %>
+              <%= form.text_field :first_name, 
+                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                  required: true %>
+            </div>
+
+            <!-- Last Name -->
+            <div>
+              <%= form.label :last_name, class: "block text-sm font-medium text-gray-700" %>
+              <%= form.text_field :last_name, 
+                  class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                  required: true %>
+            </div>
+          </div>
+
+          <!-- Email -->
+          <div>
+            <%= form.label :email, class: "block text-sm font-medium text-gray-700" %>
+            <%= form.email_field :email, 
+                class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm",
+                required: true %>
+            <p class="mt-1 text-sm text-gray-500">
+              Changing the email will require the user to verify the new address.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 gap-6 sm:grid-cols-2">
+            <!-- Role -->
+            <div>
+              <%= form.label :role, class: "block text-sm font-medium text-gray-700" %>
+              <% if @user == current_user %>
+                <%= form.select :role, 
+                    options_for_select([
+                      ['User', 'user'],
+                      ['Admin', 'admin'],
+                      ['Superadmin', 'superadmin']
+                    ], @user.role),
+                    {},
+                    { class: "mt-1 block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm sm:text-sm", disabled: true } %>
+                <p class="mt-1 text-sm text-yellow-600">
+                  You cannot change your own role.
+                </p>
+              <% else %>
+                <%= form.select :role, 
+                    options_for_select([
+                      ['User', 'user'],
+                      ['Admin', 'admin'],
+                      ['Superadmin', 'superadmin']
+                    ], @user.role),
+                    {},
+                    { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
+                <p class="mt-1 text-sm text-gray-500">
+                  Determines the user's access level in the system.
+                </p>
+              <% end %>
+            </div>
+
+            <!-- Subscription Tier -->
+            <div>
+              <%= form.label :subscription_tier, class: "block text-sm font-medium text-gray-700" %>
+              <%= form.select :subscription_tier, 
+                  options_for_select([
+                    ['Basic', 'basic'],
+                    ['Premium', 'premium']
+                  ], @user.subscription_tier),
+                  {},
+                  { class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
+              <p class="mt-1 text-sm text-gray-500">
+                Sets the user's subscription level and feature access.
+              </p>
+            </div>
+          </div>
+
+          <!-- Account Status -->
+          <% if @user.suspended? %>
+            <div class="border border-red-200 rounded-md p-4 bg-red-50">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <h3 class="text-sm font-medium text-red-800">
+                    Account Suspended
+                  </h3>
+                  <div class="mt-2 text-sm text-red-700">
+                    <p>
+                      This account was suspended on <%= @user.suspended_at.strftime("%B %d, %Y at %I:%M %p") %>.
+                    </p>
+                    <% if @user.suspended_reason.present? %>
+                      <p class="mt-1">
+                        <strong>Reason:</strong> <%= @user.suspended_reason %>
+                      </p>
+                    <% end %>
+                  </div>
+                  <div class="mt-4">
+                    <%= link_to reactivate_admin_user_path(@user), 
+                        method: :post,
+                        data: { confirm: "Are you sure you want to reactivate this user?" },
+                        class: "inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500" do %>
+                      <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Reactivate Account
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            </div>
+          <% end %>
+
+          <!-- Password Reset Section -->
+          <div class="border-t border-gray-200 pt-6">
+            <h4 class="text-lg font-medium text-gray-900 mb-4">Password Management</h4>
+            
+            <div class="bg-blue-50 border border-blue-200 rounded-md p-4">
+              <div class="flex">
+                <div class="flex-shrink-0">
+                  <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3">
+                  <h3 class="text-sm font-medium text-blue-800">
+                    Password Reset
+                  </h3>
+                  <div class="mt-2 text-sm text-blue-700">
+                    <p>
+                      To reset the user's password, use the "Send Password Reset" button. 
+                      This will send a secure password reset link to their email address.
+                    </p>
+                  </div>
+                  <div class="mt-4">
+                    <button type="button" 
+                            onclick="sendPasswordReset('<%= @user.id %>')"
+                            class="inline-flex items-center px-3 py-2 border border-blue-300 text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                      <svg class="-ml-0.5 mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                      </svg>
+                      Send Password Reset
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Form Actions -->
+          <div class="flex justify-end space-x-3 pt-6 border-t border-gray-200">
+            <%= link_to admin_user_path(@user), 
+                class: "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+              Cancel
+            <% end %>
+            <%= form.submit "Update User", 
+                class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function sendPasswordReset(userId) {
+  if (confirm('Are you sure you want to send a password reset email to this user?')) {
+    fetch(`/admin/users/${userId}/send_password_reset`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        alert('Password reset email sent successfully!');
+      } else {
+        alert('Error sending password reset email: ' + data.error);
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('An error occurred while sending the password reset email.');
+    });
+  }
+}
+</script>

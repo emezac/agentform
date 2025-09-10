@@ -1,0 +1,40 @@
+<h2>¡Bienvenido a mydialogform, <%= @user.first_name %>!</h2>
+
+<p>¡Excelente! Tu período de prueba de <strong><%= @trial_days %> días</strong> ha comenzado y ya tienes acceso completo a todas las funciones premium de mydialogform.</p>
+
+<div class="highlight">
+  <h3>🎉 ¿Qué puedes hacer ahora?</h3>
+  <ul>
+    <li><strong>Crear formularios ilimitados</strong> con nuestro editor intuitivo</li>
+    <li><strong>Usar IA avanzada</strong> para generar formularios automáticamente</li>
+    <li><strong>Procesar pagos</strong> directamente en tus formularios</li>
+    <li><strong>Acceder a analíticas avanzadas</strong> y reportes detallados</li>
+    <li><strong>Integrar con Google Sheets</strong> y otras herramientas</li>
+    <li><strong>Remover la marca mydialogform</strong> de tus formularios</li>
+  </ul>
+</div>
+
+<div style="text-align: center;">
+  <a href="<%= @login_url %>" class="btn">Comenzar ahora</a>
+</div>
+
+<div class="warning">
+  <h4>📅 Información importante sobre tu trial</h4>
+  <p>
+    <% if @trial_end_date %>
+      Tu período de prueba expira el <strong><%= @trial_end_date %></strong>. 
+      Te enviaremos recordatorios antes de que expire para que puedas continuar sin interrupciones.
+    <% else %>
+      Tu período de prueba de <strong><%= @trial_days %> días</strong> está activo.
+      Te enviaremos recordatorios antes de que expire para que puedas continuar sin interrupciones.
+    <% end %>
+  </p>
+</div>
+
+<h3>¿Necesitas ayuda para comenzar?</h3>
+<p>Nuestro equipo está aquí para ayudarte. Simplemente responde a este email con cualquier pregunta que tengas.</p>
+
+<p>
+  ¡Gracias por elegir mydialogform!<br>
+  <strong>El equipo de mydialogform</strong>
+</p>

@@ -1,0 +1,48 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold text-gray-900">Form Questions</h1>
+    <%= link_to "Add Question", new_form_form_question_path(@form), 
+        class: "bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700" %>
+  </div>
+
+  <div class="bg-white shadow rounded-lg">
+    <% if @questions.any? %>
+      <div class="divide-y divide-gray-200">
+        <% @questions.each do |question| %>
+          <div class="p-6 hover:bg-gray-50">
+            <div class="flex items-center justify-between">
+              <div class="flex-1">
+                <h3 class="text-lg font-medium text-gray-900">
+                  <%= question.position %>. <%= question.title %>
+                </h3>
+                <p class="text-sm text-gray-500 mt-1">
+                  Type: <%= question.question_type.humanize %>
+                  <% if question.required? %>
+                    <span class="text-red-600 font-medium">• Required</span>
+                  <% end %>
+                  <% if question.ai_enhanced? %>
+                    <span class="text-purple-600 font-medium">• AI Enhanced</span>
+                  <% end %>
+                </p>
+              </div>
+              <div class="flex items-center space-x-2">
+                <%= link_to "Edit", edit_form_form_question_path(@form, question), 
+                    class: "text-indigo-600 hover:text-indigo-900" %>
+                <%= link_to "Delete", form_form_question_path(@form, question), 
+                    method: :delete, 
+                    confirm: "Are you sure?",
+                    class: "text-red-600 hover:text-red-900" %>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% else %>
+      <div class="p-6 text-center">
+        <p class="text-gray-500">No questions added yet.</p>
+        <%= link_to "Add your first question", new_form_form_question_path(@form), 
+            class: "text-indigo-600 hover:text-indigo-900" %>
+      </div>
+    <% end %>
+  </div>
+</div>

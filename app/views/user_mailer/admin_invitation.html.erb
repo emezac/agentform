@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Welcome to AgentForm</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        line-height: 1.6;
+        color: #333;
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #f8fafc;
+      }
+      .container {
+        background-color: white;
+        border-radius: 8px;
+        padding: 40px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+      }
+      .logo {
+        font-size: 24px;
+        font-weight: bold;
+        color: #6366f1;
+        margin-bottom: 10px;
+      }
+      .title {
+        font-size: 28px;
+        font-weight: bold;
+        color: #1f2937;
+        margin-bottom: 10px;
+      }
+      .subtitle {
+        font-size: 16px;
+        color: #6b7280;
+      }
+      .content {
+        margin-bottom: 30px;
+      }
+      .credentials-box {
+        background-color: #f3f4f6;
+        border: 1px solid #d1d5db;
+        border-radius: 6px;
+        padding: 20px;
+        margin: 20px 0;
+      }
+      .credential-item {
+        margin-bottom: 10px;
+      }
+      .credential-label {
+        font-weight: 600;
+        color: #374151;
+      }
+      .credential-value {
+        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+        background-color: white;
+        padding: 8px 12px;
+        border-radius: 4px;
+        border: 1px solid #d1d5db;
+        display: inline-block;
+        margin-left: 10px;
+      }
+      .button {
+        display: inline-block;
+        background-color: #6366f1;
+        color: white;
+        text-decoration: none;
+        padding: 12px 24px;
+        border-radius: 6px;
+        font-weight: 600;
+        text-align: center;
+        margin: 20px 0;
+      }
+      .button:hover {
+        background-color: #4f46e5;
+      }
+      .warning {
+        background-color: #fef3c7;
+        border: 1px solid #f59e0b;
+        border-radius: 6px;
+        padding: 15px;
+        margin: 20px 0;
+      }
+      .warning-title {
+        font-weight: 600;
+        color: #92400e;
+        margin-bottom: 5px;
+      }
+      .warning-text {
+        color: #92400e;
+        font-size: 14px;
+      }
+      .footer {
+        text-align: center;
+        margin-top: 40px;
+        padding-top: 20px;
+        border-top: 1px solid #e5e7eb;
+        color: #6b7280;
+        font-size: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="logo">AgentForm</div>
+        <h1 class="title">Welcome to AgentForm!</h1>
+        <p class="subtitle">Your account has been created by an administrator</p>
+      </div>
+
+      <div class="content">
+        <p>Hello <%= @user.first_name %>,</p>
+        
+        <p>
+          An administrator has created an AgentForm account for you. You can now access 
+          the platform to create intelligent forms and manage your data collection workflows.
+        </p>
+
+        <div class="credentials-box">
+          <h3 style="margin-top: 0; color: #374151;">Your Login Credentials</h3>
+          
+          <div class="credential-item">
+            <span class="credential-label">Email:</span>
+            <span class="credential-value"><%= @user.email %></span>
+          </div>
+          
+          <div class="credential-item">
+            <span class="credential-label">Temporary Password:</span>
+            <span class="credential-value"><%= @temporary_password %></span>
+          </div>
+        </div>
+
+        <div class="warning">
+          <div class="warning-title">⚠️ Important Security Notice</div>
+          <div class="warning-text">
+            This is a temporary password. You will be required to change it when you first log in. 
+            Please keep this email secure and delete it after you've successfully logged in and 
+            changed your password.
+          </div>
+        </div>
+
+        <div style="text-align: center;">
+          <a href="<%= @login_url %>" class="button">Log In to AgentForm</a>
+        </div>
+
+        <h3>What you can do with AgentForm:</h3>
+        <ul>
+          <li>Create intelligent, conversational forms</li>
+          <li>Analyze responses with AI-powered insights</li>
+          <li>Integrate with your existing workflows</li>
+          <li>Access comprehensive analytics and reporting</li>
+        </ul>
+
+        <p>
+          If you have any questions or need assistance getting started, please don't hesitate 
+          to contact our support team.
+        </p>
+      </div>
+
+      <div class="footer">
+        <p>
+          This email was sent because an administrator created an account for you.<br>
+          If you believe this was sent in error, please contact support immediately.
+        </p>
+        <p>
+          © <%= Date.current.year %> AgentForm. All rights reserved.
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

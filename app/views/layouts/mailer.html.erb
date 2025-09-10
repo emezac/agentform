@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <style>
+      /* Email styles */
+      body {
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+        color: #333333;
+        background-color: #f8fafc;
+        margin: 0;
+        padding: 0;
+      }
+      
+      .email-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+      
+      .email-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+      
+      .email-header h1 {
+        margin: 0;
+        font-size: 28px;
+        font-weight: 700;
+      }
+      
+      .email-body {
+        padding: 40px 30px;
+      }
+      
+      .email-footer {
+        background-color: #f1f5f9;
+        padding: 20px 30px;
+        text-align: center;
+        font-size: 14px;
+        color: #6b7280;
+      }
+      
+      .btn {
+        display: inline-block;
+        padding: 12px 24px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-decoration: none;
+        border-radius: 6px;
+        font-weight: 600;
+        margin: 20px 0;
+      }
+      
+      .btn:hover {
+        opacity: 0.9;
+      }
+      
+      .highlight {
+        background-color: #f0f9ff;
+        border-left: 4px solid #3b82f6;
+        padding: 16px;
+        margin: 20px 0;
+        border-radius: 4px;
+      }
+      
+      .warning {
+        background-color: #fef3c7;
+        border-left: 4px solid #f59e0b;
+        padding: 16px;
+        margin: 20px 0;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="email-container">
+      <div class="email-header">
+        <h1>mydialogform</h1>
+      </div>
+      
+      <div class="email-body">
+        <%= yield %>
+      </div>
+      
+      <div class="email-footer">
+        <p>
+          Este email fue enviado por mydialogform<br>
+          Si tienes preguntas, responde a este email o visita nuestro centro de ayuda.
+        </p>
+        <p>
+          <small>© <%= Date.current.year %> mydialogform. Todos los derechos reservados.</small>
+        </p>
+      </div>
+    </div>
+  </body>
+</html>

@@ -1,0 +1,36 @@
+<%# app/views/forms/analytics.html.erb %>
+<main class="p-6 lg:p-8">
+    <div class="max-w-7xl mx-auto space-y-8">
+        <!-- Key Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div class="bg-white p-5 rounded-lg shadow-sm border-l-4 border-indigo-500">
+                <h3 class="text-sm font-medium text-gray-500">Completion Rate</h3>
+                <p class="mt-2 text-3xl font-bold text-gray-900"><%= number_to_percentage(@analytics_data[:completion_rate], precision: 1) %></p>
+            </div>
+            <%# ... otras métricas ... %>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+            <div class="lg:col-span-3 bg-white p-6 rounded-lg shadow-sm">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Response Trends</h3>
+                <%# @response_trends debe ser un hash de Fecha -> Conteo %>
+                <%= line_chart @response_trends, height: "300px", library: { scales: { y: { beginAtZero: true } } } %>
+            </div>
+            <div class="lg:col-span-2 bg-white p-6 rounded-lg shadow-sm">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Drop-off Analysis</h3>
+                <%# @dropoff_data debe ser un hash de Pregunta -> Conteo %>
+                <%= bar_chart @dropoff_data, height: "300px", library: { indexAxis: 'y' } %>
+            </div>
+        </div>
+
+        <!-- Insights de IA -->
+        <div class="bg-purple-50 p-6 rounded-lg border border-purple-200">
+            <h3 class="text-lg font-semibold text-gray-800 mb-4 flex items-center">
+                <%= heroicon "sparkles", variant: :solid, options: { class: "w-6 h-6 mr-3 text-purple-600" } %>
+                Actionable AI Insights
+            </h3>
+            <%# ... renderizar insights de IA si existen ... %>
+        </div>
+    </div>
+</main>

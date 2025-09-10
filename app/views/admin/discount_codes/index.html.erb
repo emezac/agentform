@@ -1,0 +1,220 @@
+<% content_for :title, "Discount Codes" %>
+
+<div class="admin-content">
+  <div class="admin-header">
+    <div class="admin-header-content">
+      <h1 class="admin-title">Discount Codes</h1>
+      <p class="admin-subtitle">Manage promotional discount codes for new subscribers</p>
+    </div>
+    <div class="admin-header-actions">
+      <%= link_to "Create New Code", new_admin_discount_code_path, 
+                  class: "btn btn-primary" %>
+    </div>
+  </div>
+
+  <!-- Analytics Overview -->
+  <div class="analytics-overview mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div class="admin-card">
+        <div class="admin-card-body">
+          <div class="stat-item">
+            <div class="stat-value"><%= @analytics[:total_codes] %></div>
+            <div class="stat-label">Total Codes</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="admin-card">
+        <div class="admin-card-body">
+          <div class="stat-item">
+            <div class="stat-value text-green-600"><%= @analytics[:active_codes] %></div>
+            <div class="stat-label">Active Codes</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="admin-card">
+        <div class="admin-card-body">
+          <div class="stat-item">
+            <div class="stat-value"><%= @analytics[:total_usage] %></div>
+            <div class="stat-label">Total Uses</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="admin-card">
+        <div class="admin-card-body">
+          <div class="stat-item">
+            <div class="stat-value text-red-600">
+              <%= number_to_currency(@analytics[:total_revenue_impact] / 100.0) %>
+            </div>
+            <div class="stat-label">Total Discounts Given</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="admin-filters">
+    <%= form_with url: admin_discount_codes_path, method: :get, local: true, class: "filter-form" do |form| %>
+      <div class="filter-group">
+        <%= form.text_field :search, 
+                           placeholder: "Search by code...", 
+                           value: params[:search],
+                           class: "form-input" %>
+      </div>
+      
+      <div class="filter-group">
+        <%= form.select :status, 
+                       options_for_select([
+                         ['All Codes', ''],
+                         ['Active', 'active'],
+                         ['Inactive', 'inactive']
+                       ], params[:status]),
+                       {},
+                       { class: "form-select" } %>
+      </div>
+      
+      <div class="filter-actions">
+        <%= form.submit "Filter", class: "btn btn-secondary" %>
+        <%= link_to "Clear", admin_discount_codes_path, class: "btn btn-ghost" %>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Discount Codes Table -->
+  <div class="admin-table-container">
+    <% if @discount_codes.any? %>
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Discount</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Usage</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expires</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @discount_codes.each do |code| %>
+            <tr class="hover:bg-gray-50 <%= 'opacity-60' unless code.active? %>">
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex flex-col space-y-1">
+                  <span class="font-mono font-semibold text-gray-900 text-lg"><%= code.code %></span>
+                  <% unless code.available? %>
+                    <div class="flex space-x-2">
+                      <% if code.expired? %>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Expired</span>
+                      <% elsif code.usage_limit_reached? %>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Exhausted</span>
+                      <% elsif !code.active? %>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Inactive</span>
+                      <% end %>
+                    </div>
+                  <% end %>
+                </div>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="text-lg font-semibold text-green-600"><%= code.discount_percentage %>%</span>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap">
+                <div class="flex flex-col space-y-2">
+                  <span class="text-sm font-medium text-gray-900">
+                    <%= code.current_usage_count %>
+                    <% if code.max_usage_count %>
+                      / <%= code.max_usage_count %>
+                    <% else %>
+                      / ∞
+                    <% end %>
+                  </span>
+                  <% if code.max_usage_count %>
+                    <div class="w-full bg-gray-200 rounded-full h-2">
+                      <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" 
+                           style="width: <%= code.usage_percentage %>%"></div>
+                    </div>
+                    <span class="text-xs text-gray-500"><%= code.usage_percentage %>% used</span>
+                  <% end %>
+                </div>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <% if code.expires_at %>
+                  <span class="<%= 'text-red-600 font-medium' if code.expired? %>">
+                    <%= code.expires_at.strftime("%b %d, %Y") %>
+                  </span>
+                <% else %>
+                  <span class="text-gray-500">Never</span>
+                <% end %>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium <%= code.active? ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800' %>">
+                  <%= code.active? ? 'Active' : 'Inactive' %>
+                </span>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <%= code.created_at.strftime("%b %d, %Y") %>
+              </td>
+              
+              <td>
+                <div class="action-buttons">
+                  <%= link_to "View", admin_discount_code_path(code), 
+                             class: "btn btn-sm btn-ghost" %>
+                  <%= link_to "Edit", edit_admin_discount_code_path(code), 
+                             class: "btn btn-sm btn-secondary" %>
+                  <%= link_to code.active? ? "Deactivate" : "Activate", 
+                             toggle_status_admin_discount_code_path(code),
+                             method: :patch,
+                             class: "btn btn-sm #{code.active? ? 'btn-warning' : 'btn-success'}",
+                             data: { 
+                               confirm: "Are you sure you want to #{code.active? ? 'deactivate' : 'activate'} this code?" 
+                             } %>
+                  <% unless code.discount_code_usages.exists? %>
+                    <%= link_to "Delete", admin_discount_code_path(code), 
+                               method: :delete,
+                               class: "btn btn-sm btn-danger",
+                               data: { 
+                                 confirm: "Are you sure? This action cannot be undone." 
+                               } %>
+                  <% end %>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+      
+      <!-- Pagination -->
+      <div class="admin-pagination">
+        <%= paginate @discount_codes if respond_to?(:paginate) %>
+      </div>
+    <% else %>
+      <div class="empty-state">
+        <div class="empty-state-icon">
+          <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+          </svg>
+        </div>
+        <h3 class="empty-state-title">No discount codes found</h3>
+        <p class="empty-state-description">
+          <% if params[:search].present? || params[:status].present? %>
+            Try adjusting your filters or search terms.
+          <% else %>
+            Get started by creating your first discount code.
+          <% end %>
+        </p>
+        <% unless params[:search].present? || params[:status].present? %>
+          <%= link_to "Create First Code", new_admin_discount_code_path, 
+                     class: "btn btn-primary" %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+</div>

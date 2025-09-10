@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title><%= @form&.name || "Form" %> | mydialogform</title>
+    <meta name="description" content="<%= @form&.description %>">
+    
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+    
+    <!-- Custom form styling -->
+    <% if @form&.style_configuration.present? %>
+      <style>
+        :root {
+          <% if @form.style_configuration['primary_color'] %>
+            --primary-color: <%= @form.style_configuration['primary_color'] %>;
+          <% end %>
+          <% if @form.style_configuration['accent_color'] %>
+            --accent-color: <%= @form.style_configuration['accent_color'] %>;
+          <% end %>
+          <% if @form.style_configuration['background_color'] %>
+            --background-color: <%= @form.style_configuration['background_color'] %>;
+          <% end %>
+        }
+        
+        <% if @form.style_configuration['custom_css'] %>
+          <%= raw @form.style_configuration['custom_css'] %>
+        <% end %>
+      </style>
+    <% end %>
+    
+    <!-- Font loading -->
+    <% if @form&.style_configuration&.dig('font_family') && @form.style_configuration['font_family'] != 'Inter' %>
+      <link href="https://fonts.googleapis.com/css2?family=<%= @form.style_configuration['font_family'] %>:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+      <style>
+        body { font-family: '<%= @form.style_configuration['font_family'] %>', 'Inter', sans-serif; }
+      </style>
+    <% end %>
+  </head>
+
+  <body class="h-full bg-gray-50 font-sans antialiased" 
+        data-controller="form-response"
+        data-form-response-form-id-value="<%= @form&.id %>"
+        data-form-response-session-id-value="<%= session[:form_session_id] %>"
+        style="<%= "background-color: var(--background-color);" if @form&.style_configuration&.dig('background_color') %>">
+    
+    <!-- Progress bar (if enabled and not in preview mode) -->
+    <% unless @preview_mode || @form&.form_settings&.dig('hide_progress_bar') %>
+      <div class="fixed top-0 left-0 right-0 z-50 bg-white border-b border-gray-200">
+        <div class="h-1 bg-gray-200">
+          <div class="h-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-all duration-500 ease-out" 
+               style="width: <%= @progress_percentage || 0 %>%"
+               data-form-response-target="progressBar"></div>
+        </div>
+      </div>
+    <% end %>
+    
+    <!-- Main content -->
+    <div class="min-h-full flex flex-col justify-center py-12 sm:px-6 lg:px-8" 
+         style="<%= 'padding-top: 4rem;' unless @preview_mode || @form&.form_settings&.dig('hide_progress_bar') %>">
+      
+      <!-- Form header (if logo or branding is configured) -->
+      <% if @form&.style_configuration&.dig('show_logo') && @form.style_configuration['logo_url'] %>
+        <div class="sm:mx-auto sm:w-full sm:max-w-md mb-8 animate-fade-in">
+          <div class="text-center">
+            <img class="mx-auto h-12 w-auto" 
+                 src="<%= @form.style_configuration['logo_url'] %>" 
+                 alt="<%= @form.name %>"
+                 loading="lazy">
+          </div>
+        </div>
+      <% end %>
+      
+      <!-- Main form container -->
+      <div class="sm:mx-auto sm:w-full sm:max-w-2xl animate-slide-in-up">
+        <div class="bg-white py-8 px-4 shadow-lg sm:rounded-xl sm:px-10 border border-gray-100">
+          <%= yield %>
+        </div>
+      </div>
+      
+      <!-- Footer -->
+      <div class="mt-8 text-center animate-fade-in">
+        <% unless @form&.form_settings&.dig('hide_branding') %>
+          <p class="text-sm text-gray-500">
+            Powered by 
+            <a href="https://mydialogform.com" 
+               class="text-indigo-600 hover:text-indigo-500 transition-colors font-medium" 
+               target="_blank">
+              mydialogform
+            </a>
+          </p>
+        <% end %>
+      </div>
+    </div>
+    
+    <!-- Loading overlay -->
+    <div id="loading-overlay" 
+         class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center"
+         data-form-response-target="loadingOverlay">
+      <div class="bg-white rounded-xl p-6 flex items-center space-x-3 shadow-2xl">
+        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+        <span class="text-gray-900 font-medium">Processing your response...</span>
+      </div>
+    </div>
+    
+    <!-- AI Processing indicator -->
+    <div id="ai-processing" 
+         class="hidden fixed bottom-4 right-4 bg-white border border-purple-200 rounded-xl p-4 shadow-lg z-40"
+         data-form-response-target="aiProcessing">
+      <div class="flex items-center space-x-3">
+        <div class="flex space-x-1">
+          <div class="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+          <div class="w-2 h-2 bg-purple-500 rounded-full animate-pulse" style="animation-delay: 0.2s;"></div>
+          <div class="w-2 h-2 bg-purple-500 rounded-full animate-pulse" style="animation-delay: 0.4s;"></div>
+        </div>
+        <span class="text-sm text-gray-700 font-medium">AI is analyzing your response...</span>
+      </div>
+    </div>
+    
+    <!-- Flash messages -->
+    <% if flash.any? %>
+      <div class="fixed top-4 right-4 z-50 space-y-2">
+        <% flash.each do |type, message| %>
+          <div class="bg-white border-l-4 <%= type.to_s == 'error' || type.to_s == 'alert' ? 'border-red-400' : 'border-green-400' %> p-4 shadow-lg rounded-r-xl max-w-sm animate-slide-in-up">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <% if type.to_s == 'error' || type.to_s == 'alert' %>
+                  <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                  </svg>
+                <% else %>
+                  <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                <% end %>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-gray-700"><%= message %></p>
+              </div>
+              <div class="ml-auto pl-3">
+                <button type="button" 
+                        class="text-gray-400 hover:text-gray-600 transition-colors" 
+                        onclick="this.parentElement.parentElement.parentElement.remove()">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <!-- Conversational bubbles container (for AI interactions) -->
+    <div id="conversation-bubbles" 
+         class="fixed bottom-4 left-4 space-y-3 max-w-sm z-30"
+         data-form-response-target="conversationBubbles">
+      <!-- AI and user response bubbles will be dynamically inserted here -->
+    </div>
+  </body>
+</html>

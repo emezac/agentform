@@ -1,0 +1,412 @@
+<% content_for :title, "User Management" %>
+
+<div class="min-h-screen bg-gray-50">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="flex justify-between items-center">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">User Management</h1>
+          <p class="mt-1 text-sm text-gray-500">
+            Manage all users in the system
+          </p>
+        </div>
+        <%= link_to new_admin_user_path, 
+            class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+          <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          New User
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-white shadow rounded-lg mb-6">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Filters</h3>
+      </div>
+      <div class="p-6">
+        <%= form_with url: admin_users_path, method: :get, local: true, class: "space-y-4" do |form| %>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Search -->
+            <div>
+              <%= form.label :search, "Search", class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= form.text_field :search, 
+                  value: params[:search],
+                  placeholder: "Email, name...",
+                  class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+            </div>
+
+            <!-- Role Filter -->
+            <div>
+              <%= form.label :role, "Role", class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= form.select :role, 
+                  options_for_select([
+                    ['All Roles', ''],
+                    ['User', 'user'],
+                    ['Admin', 'admin'],
+                    ['Superadmin', 'superadmin']
+                  ], params[:role]),
+                  {},
+                  { class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
+            </div>
+
+            <!-- Tier Filter -->
+            <div>
+              <%= form.label :tier, "Subscription Tier", class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= form.select :tier, 
+                  options_for_select([
+                    ['All Tiers', ''],
+                    ['Basic', 'basic'],
+                    ['Premium', 'premium']
+                  ], params[:tier]),
+                  {},
+                  { class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
+            </div>
+
+            <!-- Status Filter -->
+            <div>
+              <%= form.label :status, "Status", class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= form.select :status, 
+                  options_for_select([
+                    ['All Statuses', ''],
+                    ['Active', 'active'],
+                    ['Suspended', 'suspended']
+                  ], params[:status]),
+                  {},
+                  { class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" } %>
+            </div>
+          </div>
+
+          <div class="flex justify-between items-center">
+            <div class="flex space-x-3">
+              <%= form.submit "Apply Filters", 
+                  class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+              <%= link_to "Clear Filters", admin_users_path, 
+                  class: "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+            </div>
+            <div class="text-sm text-gray-500">
+              Showing <%= @users.count %> of <%= @total_count %> users
+            </div>
+          </div>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Users Table -->
+    <div class="bg-white shadow rounded-lg overflow-hidden">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h3 class="text-lg font-medium text-gray-900">Users</h3>
+      </div>
+      
+      <% if @users.any? %>
+        <div class="overflow-x-auto">
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead class="bg-gray-50">
+              <tr>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  User
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Role
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Subscription
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Joined
+                </th>
+                <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+              <% @users.each do |user| %>
+                <tr class="hover:bg-gray-50">
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <div class="flex items-center">
+                      <div class="flex-shrink-0 h-10 w-10">
+                        <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center">
+                          <span class="text-sm font-medium text-indigo-700">
+                            <%= user.first_name&.first&.upcase %><%= user.last_name&.first&.upcase %>
+                          </span>
+                        </div>
+                      </div>
+                      <div class="ml-4">
+                        <div class="text-sm font-medium text-gray-900">
+                          <%= user.full_name %>
+                        </div>
+                        <div class="text-sm text-gray-500">
+                          <%= user.email %>
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full <%= user.role == 'superadmin' ? 'bg-purple-100 text-purple-800' : user.role == 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800' %>">
+                      <%= user.role.humanize %>
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full <%= user.subscription_tier == 'premium' ? 'bg-green-100 text-green-800' : user.subscription_tier == 'basic' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-800' %>">
+                      <%= user.subscription_tier.humanize %>
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <% if user.suspended? %>
+                      <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">
+                        Suspended
+                      </span>
+                    <% else %>
+                      <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                        Active
+                      </span>
+                    <% end %>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <%= user.created_at.strftime("%b %d, %Y") %>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div class="flex justify-end space-x-2">
+                      <%= link_to admin_user_path(user), 
+                          class: "text-indigo-600 hover:text-indigo-900" do %>
+                        View
+                      <% end %>
+                      <%= link_to edit_admin_user_path(user), 
+                          class: "text-indigo-600 hover:text-indigo-900" do %>
+                        Edit
+                      <% end %>
+                      <% unless user == current_user %>
+                        <% if user.suspended? %>
+                          <%= link_to reactivate_admin_user_path(user), 
+                              method: :post,
+                              data: { confirm: "Are you sure you want to reactivate this user?" },
+                              class: "text-green-600 hover:text-green-900" do %>
+                            Reactivate
+                          <% end %>
+                        <% else %>
+                          <button type="button" 
+                                  onclick="openSuspensionModal('<%= user.id %>', '<%= user.full_name %>')"
+                                  class="text-yellow-600 hover:text-yellow-900">
+                            Suspend
+                          </button>
+                        <% end %>
+                        <% unless user.superadmin? %>
+                          <button type="button" 
+                                  onclick="openDeletionModal('<%= user.id %>', '<%= user.full_name %>')"
+                                  class="text-red-600 hover:text-red-900">
+                            Delete
+                          </button>
+                        <% end %>
+                      <% end %>
+                    </div>
+                  </td>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        <% if @total_pages > 1 %>
+          <div class="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
+            <div class="flex-1 flex justify-between sm:hidden">
+              <% if @current_page > 1 %>
+                <%= link_to admin_users_path(params.permit!.merge(page: @current_page - 1)), 
+                    class: "relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50" do %>
+                  Previous
+                <% end %>
+              <% end %>
+              <% if @current_page < @total_pages %>
+                <%= link_to admin_users_path(params.permit!.merge(page: @current_page + 1)), 
+                    class: "ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50" do %>
+                  Next
+                <% end %>
+              <% end %>
+            </div>
+            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+              <div>
+                <p class="text-sm text-gray-700">
+                  Showing
+                  <span class="font-medium"><%= (@current_page - 1) * @per_page + 1 %></span>
+                  to
+                  <span class="font-medium"><%= [@current_page * @per_page, @total_count].min %></span>
+                  of
+                  <span class="font-medium"><%= @total_count %></span>
+                  results
+                </p>
+              </div>
+              <div>
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                  <% if @current_page > 1 %>
+                    <%= link_to admin_users_path(params.permit!.merge(page: @current_page - 1)), 
+                        class: "relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50" do %>
+                      <span class="sr-only">Previous</span>
+                      <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                      </svg>
+                    <% end %>
+                  <% end %>
+                  
+                  <% (1..@total_pages).each do |page| %>
+                    <% if page == @current_page %>
+                      <span class="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-indigo-50 text-sm font-medium text-indigo-600">
+                        <%= page %>
+                      </span>
+                    <% else %>
+                      <%= link_to admin_users_path(params.permit!.merge(page: page)), 
+                          class: "relative inline-flex items-center px-4 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50" do %>
+                        <%= page %>
+                      <% end %>
+                    <% end %>
+                  <% end %>
+                  
+                  <% if @current_page < @total_pages %>
+                    <%= link_to admin_users_path(params.permit!.merge(page: @current_page + 1)), 
+                        class: "relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50" do %>
+                      <span class="sr-only">Next</span>
+                      <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                      </svg>
+                    <% end %>
+                  <% end %>
+                </nav>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      <% else %>
+        <div class="text-center py-12">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+          </svg>
+          <h3 class="mt-2 text-sm font-medium text-gray-900">No users found</h3>
+          <p class="mt-1 text-sm text-gray-500">
+            Try adjusting your search or filter criteria.
+          </p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<!-- Suspension Modal -->
+<div id="suspensionModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="mt-3 text-center">
+      <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
+        <svg class="h-6 w-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+        </svg>
+      </div>
+      <h3 class="text-lg font-medium text-gray-900 mt-2">Suspend User</h3>
+      <div class="mt-2 px-7 py-3">
+        <p class="text-sm text-gray-500">
+          Are you sure you want to suspend <span id="suspensionUserName" class="font-medium"></span>?
+        </p>
+        <%= form_with url: "", method: :post, id: "suspensionForm", class: "mt-4" do |form| %>
+          <%= form.text_area :suspension_reason, 
+              placeholder: "Reason for suspension...",
+              required: true,
+              class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm" %>
+        <% end %>
+      </div>
+      <div class="items-center px-4 py-3">
+        <button id="suspendButton" 
+                class="px-4 py-2 bg-yellow-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-yellow-600 focus:outline-none focus:ring-2 focus:ring-yellow-300">
+          Suspend User
+        </button>
+        <button onclick="closeSuspensionModal()" 
+                class="mt-3 px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Deletion Modal -->
+<div id="deletionModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+  <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+    <div class="mt-3 text-center">
+      <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+        <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+      </div>
+      <h3 class="text-lg font-medium text-gray-900 mt-2">Delete User</h3>
+      <div class="mt-2 px-7 py-3">
+        <p class="text-sm text-gray-500">
+          Are you sure you want to delete <span id="deletionUserName" class="font-medium"></span>? This action cannot be undone.
+        </p>
+        <%= form_with url: "", method: :delete, id: "deletionForm", class: "mt-4", local: true do |form| %>
+          <%= form.hidden_field :authenticity_token, value: form_authenticity_token %>
+          <div class="flex items-center">
+            <%= form.check_box :transfer_data, class: "h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" %>
+            <%= form.label :transfer_data, "Archive user's forms instead of deleting them", class: "ml-2 block text-sm text-gray-900" %>
+          </div>
+        <% end %>
+      </div>
+      <div class="items-center px-4 py-3">
+        <button id="deleteButton" 
+                class="px-4 py-2 bg-red-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-300">
+          Delete User
+        </button>
+        <button onclick="closeDeletionModal()" 
+                class="mt-3 px-4 py-2 bg-gray-300 text-gray-800 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-300">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function openSuspensionModal(userId, userName) {
+  document.getElementById('suspensionUserName').textContent = userName;
+  document.getElementById('suspensionForm').action = `/admin/users/${userId}/suspend`;
+  document.getElementById('suspensionModal').classList.remove('hidden');
+}
+
+function closeSuspensionModal() {
+  document.getElementById('suspensionModal').classList.add('hidden');
+}
+
+function openDeletionModal(userId, userName) {
+  document.getElementById('deletionUserName').textContent = userName;
+  document.getElementById('deletionForm').action = `/admin/users/${userId}`;
+  document.getElementById('deletionModal').classList.remove('hidden');
+}
+
+function closeDeletionModal() {
+  document.getElementById('deletionModal').classList.add('hidden');
+}
+
+document.getElementById('suspendButton').addEventListener('click', function() {
+  document.getElementById('suspensionForm').submit();
+});
+
+document.getElementById('deleteButton').addEventListener('click', function() {
+  const form = document.getElementById('deletionForm');
+  
+  // Ensure CSRF token is present
+  const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+  let csrfInput = form.querySelector('input[name="authenticity_token"]');
+  
+  if (!csrfInput) {
+    csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'authenticity_token';
+    form.appendChild(csrfInput);
+  }
+  
+  csrfInput.value = csrfToken;
+  
+  form.submit();
+});
+</script>

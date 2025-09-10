@@ -1,0 +1,129 @@
+<div class="space-y-4">
+  <div class="space-y-3">
+    <!-- Location input field -->
+    <div>
+      <%= form.text_field "answer[location]", 
+                         placeholder: config['placeholder'] || "Enter a location or address...",
+                         required: question.required?,
+                         class: "block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm",
+                         data: { 
+                           "question-response-target": "answerInput",
+                           "action": "input->question-response#validateInput"
+                         } %>
+    </div>
+    
+    <!-- Coordinates (hidden fields) -->
+    <%= form.hidden_field "answer[latitude]", data: { "question-response-target": "latitude" } %>
+    <%= form.hidden_field "answer[longitude]", data: { "question-response-target": "longitude" } %>
+    
+    <!-- Get current location button -->
+    <div class="flex items-center space-x-3">
+      <button type="button" 
+              class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              data-action="click->question-response#getCurrentLocation">
+        <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+        Use Current Location
+      </button>
+      
+      <span class="text-xs text-gray-500" data-question-response-target="locationStatus"></span>
+    </div>
+    
+    <!-- Map preview (if enabled) -->
+    <% if config['show_map'] == true %>
+      <div class="hidden border border-gray-300 rounded-lg overflow-hidden" data-question-response-target="mapContainer">
+        <div id="location-map" class="w-full h-48 bg-gray-100"></div>
+      </div>
+    <% end %>
+    
+    <!-- Coordinates display -->
+    <div class="hidden text-xs text-gray-500" data-question-response-target="coordinatesDisplay">
+      <span>Coordinates: </span>
+      <span data-question-response-target="coordinatesText"></span>
+    </div>
+  </div>
+  
+  <% if config['help_text'] %>
+    <p class="text-xs text-gray-500"><%= config['help_text'] %></p>
+  <% end %>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const locationInput = document.querySelector('input[name*="[location]"]');
+    const latitudeInput = document.querySelector('input[name*="[latitude]"]');
+    const longitudeInput = document.querySelector('input[name*="[longitude]"]');
+    const locationStatus = document.querySelector('[data-question-response-target="locationStatus"]');
+    const coordinatesDisplay = document.querySelector('[data-question-response-target="coordinatesDisplay"]');
+    const coordinatesText = document.querySelector('[data-question-response-target="coordinatesText"]');
+    const getCurrentLocationBtn = document.querySelector('[data-action*="getCurrentLocation"]');
+    
+    if (!locationInput || !getCurrentLocationBtn) return;
+    
+    getCurrentLocationBtn.addEventListener('click', function() {
+      if (!navigator.geolocation) {
+        locationStatus.textContent = 'Geolocation is not supported by this browser.';
+        return;
+      }
+      
+      locationStatus.textContent = 'Getting your location...';
+      getCurrentLocationBtn.disabled = true;
+      
+      navigator.geolocation.getCurrentPosition(
+        function(position) {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          
+          latitudeInput.value = lat;
+          longitudeInput.value = lng;
+          
+          // Reverse geocode to get address
+          reverseGeocode(lat, lng);
+          
+          updateCoordinatesDisplay(lat, lng);
+          locationStatus.textContent = 'Location found!';
+          getCurrentLocationBtn.disabled = false;
+          
+          // Trigger validation
+          locationInput.dispatchEvent(new Event('input'));
+        },
+        function(error) {
+          let errorMessage = 'Unable to get your location.';
+          switch(error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Location access denied by user.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Location information is unavailable.';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'Location request timed out.';
+              break;
+          }
+          locationStatus.textContent = errorMessage;
+          getCurrentLocationBtn.disabled = false;
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 10000,
+          maximumAge: 60000
+        }
+      );
+    });
+    
+    function reverseGeocode(lat, lng) {
+      // This is a simplified implementation
+      // In a real app, you'd use a geocoding service like Google Maps API
+      locationInput.value = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+    }
+    
+    function updateCoordinatesDisplay(lat, lng) {
+      if (coordinatesDisplay && coordinatesText) {
+        coordinatesText.textContent = `${lat.toFixed(6)}, ${lng.toFixed(6)}`;
+        coordinatesDisplay.classList.remove('hidden');
+      }
+    }
+  });
+</script>

@@ -1,0 +1,29 @@
+mydialogform Account Suspended
+
+Hello <%= @user.first_name %>,
+
+Your mydialogform account (<%= @user.email %>) has been suspended by an administrator. You will not be able to log in or access your forms until this suspension is lifted.
+
+<% if @suspension_reason.present? %>
+Reason for Suspension:
+<%= @suspension_reason %>
+<% end %>
+
+During the suspension period:
+- You cannot log in to your mydialogform account
+- Your forms are temporarily inaccessible
+- Form responses will not be collected
+- API access is disabled
+
+Need to Appeal or Get More Information?
+If you believe this suspension was made in error or if you'd like to discuss the situation, please contact our support team at <%= @contact_email %>.
+
+Please include your account email (<%= @user.email %>) in your message for faster assistance.
+
+We appreciate your understanding and look forward to resolving this matter promptly.
+
+---
+This is an automated notification from mydialogform.
+Please do not reply to this email.
+
+© <%= Date.current.year %> mydialogform. All rights reserved.

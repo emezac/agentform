@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentForm - The Agent Canvas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .canvas-bg { background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 20px 20px; }
+        
+        .agent-node {
+            transition: all 0.2s ease-out;
+            cursor: pointer;
+            position: absolute;
+            width: 280px;
+        }
+        .agent-node:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 10px 25px rgba(0,0,0,0.1); }
+        .agent-node.selected { box-shadow: 0 0 0 3px #6366f1; }
+
+        .node-header { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1rem; border-bottom: 1px solid #e5e7eb; }
+        .node-body { padding: 1rem; }
+        .node-footer { padding: 0.5rem 1rem; background-color: #f9fafb; font-size: 0.75rem; color: #6b7280; }
+        
+        .node-icon { width: 2.25rem; height: 2.25rem; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; }
+        
+        /* Node types */
+        .node-type-trigger { border-top: 4px solid #10b981; } /* green-500 */
+        .node-type-input { border-top: 4px solid #3b82f6; }   /* blue-500 */
+        .node-type-ai { border-top: 4px solid #8b5cf6; }     /* violet-500 */
+        .node-type-action { border-top: 4px solid #f59e0b; }  /* amber-500 */
+
+        .add-action-btn {
+            position: absolute; bottom: -12px; left: 50%; transform: translateX(-50%);
+            width: 24px; height: 24px; background: white; border-radius: 50%; border: 1px solid #d1d5db;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s ease;
+        }
+        .add-action-btn:hover { transform: translateX(-50%) scale(1.2); background: #6366f1; color: white; border-color: #6366f1; }
+
+        .inspector-panel {
+            position: fixed; right: 0; top: 0; bottom: 0;
+            width: 384px;
+            background: white;
+            box-shadow: -10px 0 30px rgba(0,0,0,0.1);
+            transform: translateX(100%);
+            transition: transform 0.3s ease-in-out;
+        }
+        .inspector-panel.visible { transform: translateX(0); }
+    </style>
+</head>
+<body class="overflow-hidden">
+    <!-- Main Canvas Layout -->
+    <div id="canvas-container" class="relative w-screen h-screen canvas-bg">
+
+        <!-- SVG Layer for Connections -->
+        <svg id="connections-svg" class="absolute top-0 left-0 w-full h-full" style="pointer-events: none; z-index: 1;">
+            <!-- Connections drawn by JS -->
+        </svg>
+
+        <!-- Nodes Layer -->
+        <div id="nodes-layer" class="absolute top-0 left-0">
+            <!-- Trigger Node -->
+            <div id="node-trigger" class="agent-node bg-white rounded-xl shadow-md node-type-trigger" style="top: 80px; left: 100px;">
+                <div class="node-header">
+                    <div class="node-icon bg-green-100 text-green-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></div>
+                    <div><h3 class="font-semibold text-gray-900">Trigger</h3><p class="text-sm text-gray-500">Cuando un usuario responde</p></div>
+                </div>
+                <div class="node-footer flex justify-between">
+                    <span>1,247 Invocaciones</span>
+                    <span class="font-semibold text-green-600">87.2% Éxito</span>
+                </div>
+                <button class="add-action-btn">+</button>
+            </div>
+
+            <!-- Collect Email Node -->
+            <div id="node-email" class="agent-node bg-white rounded-xl shadow-md node-type-input selected" style="top: 250px; left: 300px;">
+                 <div class="node-header">
+                    <div class="node-icon bg-blue-100 text-blue-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"></path></svg></div>
+                    <div><h3 class="font-semibold text-gray-900">Recopilar Email</h3><p class="text-sm text-gray-500">Pregunta de tipo Email</p></div>
+                </div>
+                <div class="node-body">
+                    <p class="text-sm text-gray-700"><strong>Pregunta:</strong> "Tu correo de trabajo"</p>
+                    <p class="text-sm text-gray-700 mt-1"><strong>Validación:</strong> Requerido, formato de email</p>
+                </div>
+                 <div class="node-footer flex justify-between">
+                    <span>98% Tasa de finalización</span>
+                    <span class="font-semibold text-red-600">2% Abandono</span>
+                </div>
+                <button class="add-action-btn">+</button>
+            </div>
+            
+            <!-- AI Analysis Node -->
+            <div id="node-ai" class="agent-node bg-white rounded-xl shadow-md node-type-ai" style="top: 80px; left: 550px;">
+                <div class="node-header">
+                    <div class="node-icon bg-violet-100 text-violet-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-12v4m-2-2h4m5 4h4m-2-2v4M12 3v1m0 16v1m-6.364-2.364l.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M17.657 17.657l.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg></div>
+                    <div><h3 class="font-semibold text-gray-900">Cualificar Lead (BANT)</h3><p class="text-sm text-gray-500">Tarea de LLM</p></div>
+                </div>
+                <div class="node-body">
+                    <p class="text-sm text-gray-700"><strong>Modelo:</strong> gpt-4o-mini</p>
+                    <p class="text-sm text-gray-700 mt-1"><strong>Prompt:</strong> Analiza la respuesta del usuario para determinar Presupuesto, Autoridad...</p>
+                </div>
+                <div class="node-footer flex justify-between">
+                    <span>Costo Promedio: 0.02 cr.</span>
+                </div>
+                <button class="add-action-btn">+</button>
+            </div>
+            
+            <!-- Slack Notification Node -->
+             <div id="node-slack" class="agent-node bg-white rounded-xl shadow-md node-type-action" style="top: 250px; left: 800px;">
+                <div class="node-header">
+                    <div class="node-icon bg-amber-100 text-amber-600"><svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a8 8 0 100 16 8 8 0 000-16zM2 10a8 8 0 1116 0 8 8 0 01-16 0z" /><path d="M12.95 10.707a1 1 0 010-1.414l3-3a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0zM7.05 10.707a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0zM10 12a2 2 0 100-4 2 2 0 000 4z" /></svg></div>
+                    <div><h3 class="font-semibold text-gray-900">Notificar a Slack</h3><p class="text-sm text-gray-500">Acción de Comunicación</p></div>
+                </div>
+                <div class="node-body">
+                    <p class="text-sm text-gray-700"><strong>Canal:</strong> #leads-calificados</p>
+                    <p class="text-sm text-gray-700 mt-1"><strong>Condición:</strong> Si Puntuación > 80</p>
+                </div>
+             </div>
+        </div>
+    </div>
+
+    <!-- Inspector Panel -->
+    <div id="inspector-panel" class="inspector-panel">
+        <!-- Content will be injected by JS -->
+    </div>
+
+    <script>
+    class AgentCanvas {
+        constructor() {
+            this.nodes = {
+                'node-trigger': { name: 'Trigger', type: 'trigger', config: {} },
+                'node-email': { name: 'Recopilar Email', type: 'input', config: { question: 'Tu correo de trabajo', required: true } },
+                'node-ai': { name: 'Cualificar Lead (BANT)', type: 'ai', config: { model: 'gpt-4o-mini', prompt: '...' } },
+                'node-slack': { name: 'Notificar a Slack', type: 'action', config: { channel: '#leads-calificados' } },
+            };
+            this.connections = [
+                { from: 'node-trigger', to: 'node-email' },
+                { from: 'node-email', to: 'node-ai' },
+                { from: 'node-ai', to: 'node-slack' },
+            ];
+            this.selectedNodeId = 'node-email';
+            this.init();
+        }
+
+        init() {
+            this.canvas = document.getElementById('canvas-container');
+            this.svg = document.getElementById('connections-svg');
+            this.nodesLayer = document.getElementById('nodes-layer');
+            this.inspectorPanel = document.getElementById('inspector-panel');
+
+            this.drawConnections();
+            this.updateInspector();
+            this.bindEvents();
+        }
+
+        bindEvents() {
+            window.addEventListener('resize', () => this.drawConnections());
+            this.nodesLayer.addEventListener('click', e => {
+                const nodeEl = e.target.closest('.agent-node');
+                if (nodeEl) {
+                    this.selectNode(nodeEl.id);
+                }
+            });
+            this.canvas.addEventListener('click', e => {
+                 if (e.target === this.canvas) {
+                    this.deselectAllNodes();
+                }
+            });
+        }
+        
+        selectNode(nodeId) {
+            if (this.selectedNodeId === nodeId) return;
+            
+            // Deselect previous
+            if (this.selectedNodeId) {
+                 document.getElementById(this.selectedNodeId)?.classList.remove('selected');
+            }
+            
+            // Select new
+            this.selectedNodeId = nodeId;
+            document.getElementById(nodeId).classList.add('selected');
+            this.updateInspector();
+        }
+        
+        deselectAllNodes() {
+            if (!this.selectedNodeId) return;
+             document.getElementById(this.selectedNodeId)?.classList.remove('selected');
+            this.selectedNodeId = null;
+            this.updateInspector();
+        }
+        
+        drawConnections() {
+            this.svg.innerHTML = ''; // Clear
+            this.connections.forEach(conn => {
+                const fromNode = document.getElementById(conn.from);
+                const toNode = document.getElementById(conn.to);
+                if (!fromNode || !toNode) return;
+
+                const fromRect = fromNode.getBoundingClientRect();
+                const toRect = toNode.getBoundingClientRect();
+                
+                const startX = fromRect.left + fromRect.width / 2;
+                const startY = fromRect.bottom;
+                const endX = toRect.left + toRect.width / 2;
+                const endY = toRect.top;
+                
+                const controlY1 = startY + 50;
+                const controlY2 = endY - 50;
+
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                const d = `M ${startX} ${startY} C ${startX} ${controlY1}, ${endX} ${controlY2}, ${endX} ${endY}`;
+                path.setAttribute('d', d);
+                path.setAttribute('stroke', '#94a3b8');
+                path.setAttribute('stroke-width', '2');
+                path.setAttribute('fill', 'none');
+                this.svg.appendChild(path);
+            });
+        }
+        
+        updateInspector() {
+            if (!this.selectedNodeId) {
+                this.inspectorPanel.classList.remove('visible');
+                return;
+            }
+
+            const nodeData = this.nodes[this.selectedNodeId];
+            this.inspectorPanel.innerHTML = `
+                <div class="p-6 h-full flex flex-col">
+                    <div class="flex items-center justify-between pb-4 border-b">
+                        <h3 class="text-lg font-semibold text-gray-900">${nodeData.name}</h3>
+                        <button onclick="app.deselectAllNodes()" class="text-gray-400 hover:text-gray-600">&times;</button>
+                    </div>
+                    <div class="flex-1 mt-4 overflow-y-auto">
+                        <div class="space-y-4">
+                             <div>
+                                <label class="text-sm font-medium text-gray-700">Node Type</label>
+                                <p class="text-gray-900 bg-gray-100 p-2 rounded-md">${nodeData.type}</p>
+                            </div>
+                            <div>
+                                <label class="text-sm font-medium text-gray-700">Configuration</label>
+                                <textarea class="w-full h-48 font-mono text-xs p-2 border rounded-md">${JSON.stringify(nodeData.config, null, 2)}</textarea>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-900 mb-2">Generated SuperAgent Code</h4>
+                                <div class="font-mono text-xs p-3 bg-gray-800 text-white rounded-md">
+                                    <pre><code># Code for ${nodeData.name}...\nllm :qualify_lead do\n  model "${nodeData.config.model}"\n  ...\nend</code></pre>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-4 pt-4 border-t">
+                        <button class="w-full py-2 bg-red-50 text-red-700 rounded-md hover:bg-red-100">Delete Node</button>
+                    </div>
+                </div>
+            `;
+            this.inspectorPanel.classList.add('visible');
+        }
+    }
+
+    const app = new AgentCanvas();
+    </script>
+</body>
+</html>

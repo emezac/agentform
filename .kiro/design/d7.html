@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentForm - BANT/CHAMP Qualification Demo</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes slideInUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .animate-slide-in-up { animation: slideInUp 0.5s ease-out forwards; }
+        
+        .ai-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        
+        .form-step {
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            position: absolute; width: 100%; opacity: 0; transform: translateX(100%);
+        }
+        .form-step.active { position: relative; opacity: 1; transform: translateX(0); }
+        .form-step.previous { opacity: 0; transform: translateX(-100%); }
+        
+        .progress-bar { transition: width 0.6s ease; }
+        
+        .choice-option { border: 2px solid #e5e7eb; border-radius: 0.75rem; padding: 1rem; cursor: pointer; transition: all 0.2s ease; }
+        .choice-option:hover { border-color: #a5b4fc; background-color: #f5f3ff; }
+        .choice-option.selected { border-color: #667eea; background-color: #eef2ff; box-shadow: 0 0 0 2px #c7d2fe; }
+
+        .workflow-step { border-left: 3px solid #e5e7eb; padding-left: 1rem; position: relative; }
+        .workflow-step.active { border-left-color: #667eea; }
+        .workflow-step.completed { border-left-color: #10b981; }
+        .workflow-step::before { content: ''; position: absolute; left: -7.5px; top: 0.5rem; width: 12px; height: 12px; border-radius: 50%; background-color: #e5e7eb; border: 2px solid white; }
+        .workflow-step.active::before { background-color: #667eea; }
+        .workflow-step.completed::before { background-color: #10b981; }
+    </style>
+</head>
+<body class="bg-gray-100 h-full">
+    <div class="h-screen flex">
+        
+        <!-- Form Area -->
+        <main class="flex-1 flex flex-col items-center justify-center p-8">
+            <div class="w-full max-w-2xl">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center space-x-2">
+                        <div class="w-8 h-8 ai-gradient rounded-lg flex items-center justify-center">
+                            <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/></svg>
+                        </div>
+                        <span class="text-lg font-semibold text-gray-900">AgentForm Demo</span>
+                    </div>
+                     <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-600">Progreso:</span>
+                        <div class="w-32 bg-gray-200 rounded-full h-2"><div id="progress-bar" class="progress-bar bg-purple-600 h-2 rounded-full"></div></div>
+                        <span id="progress-text" class="text-sm font-medium text-gray-900"></span>
+                    </div>
+                </div>
+
+                <!-- Form Card -->
+                <div class="bg-white rounded-xl shadow-lg border p-8 md:p-12 relative overflow-hidden">
+                    <div id="form-steps" class="relative min-h-[350px]">
+                        
+                        <!-- Step 1: The "Need" -->
+                        <div class="form-step active" data-step="1">
+                            <h2 class="text-2xl font-bold text-gray-900 mb-2">Cuéntanos sobre tu principal desafío.</h2>
+                            <p class="text-gray-600 mb-6">¿Qué problema buscas resolver con una nueva solución de software?</p>
+                            <textarea id="challenge-input" rows="5" class="w-full p-3 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500" placeholder="Ej: Nuestro software actual es demasiado caro y no se integra con nuestras herramientas..."></textarea>
+                            <div class="mt-8 flex justify-end">
+                                <button id="next-step-1" class="px-8 py-3 ai-gradient text-white rounded-xl font-medium" disabled>Analizar Respuesta</button>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: The AI-Generated "Budget" Question -->
+                        <div class="form-step" data-step="2">
+                             <div class="animate-slide-in-up">
+                                <div class="p-3 bg-purple-50 border border-purple-200 rounded-lg mb-6">
+                                    <p class="text-sm text-purple-800"><span class="font-semibold">AI Insight:</span> Has mencionado que tu solución actual es "demasiado cara". El costo parece ser un factor clave.</p>
+                                </div>
+                                <h2 class="text-2xl font-bold text-gray-900 mb-2">Pregunta de Seguimiento (IA)</h2>
+                                <p class="text-gray-600 mb-6">Entiendo. Para poder ofrecerte el plan más adecuado, ¿podrías indicarnos el presupuesto que tienen en mente?</p>
+                                <div id="budget-options" class="space-y-3">
+                                    <!-- Options will be injected by JS -->
+                                </div>
+                                <div class="mt-8 flex justify-between">
+                                    <button onclick="app.previousStep()" class="px-6 py-3 text-gray-600 hover:bg-gray-100 rounded-lg">← Anterior</button>
+                                    <button id="next-step-2" class="px-8 py-3 ai-gradient text-white rounded-xl font-medium" disabled>Siguiente</button>
+                                </div>
+                             </div>
+                        </div>
+
+                         <!-- Step 3: Completion -->
+                        <div class="form-step" data-step="3">
+                             <div class="text-center">
+                                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>
+                                <h2 class="text-2xl font-bold text-gray-900 mb-2">¡Gracias!</h2>
+                                <p class="text-gray-600 mb-6">Hemos cualificado tu solicitud. Un especialista adecuado para tu presupuesto se pondrá en contacto pronto.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- AI Workflow Sidebar -->
+        <aside class="w-80 bg-gray-800 text-white p-6 hidden md:flex flex-col">
+            <h3 class="text-lg font-semibold mb-6">Vista del Agente (SuperAgent)</h3>
+            <div id="workflow-steps-container" class="space-y-6 flex-1 overflow-y-auto pr-2"></div>
+        </aside>
+    </div>
+    
+    <script>
+    class BantDemo {
+        constructor() {
+            this.currentStep = 1;
+            this.totalSteps = 3;
+            this.userData = {};
+            this.workflowSteps = [
+                { id: 'need-analysis', name: 'Análisis de Necesidad', task: 'LlmTask', status: 'pending' },
+                { id: 'bant-qualification', name: 'Cualificación BANT', task: 'LlmTask', status: 'pending' },
+                { id: 'authority-check', name: 'Verificación de Autoridad', task: 'DataEnrichment', status: 'pending' },
+                { id: 'timeline-probe', name: 'Sondeo de Cronograma', task: 'GenerateFollowupTask', status: 'pending' },
+                { id: 'lead-routing', name: 'Enrutamiento de Lead', task: 'CrmSyncTask', status: 'pending' },
+            ];
+            this.init();
+        }
+        
+        init() { this.bindEvents(); this.updateProgress(); this.renderWorkflow(); }
+        
+        bindEvents() {
+            document.getElementById('next-step-1').addEventListener('click', () => this.handleNeedAnalysis());
+            document.getElementById('next-step-2').addEventListener('click', () => this.nextStep());
+            
+            document.getElementById('challenge-input').addEventListener('input', e => {
+                document.getElementById('next-step-1').disabled = e.target.value.trim().length < 15;
+            });
+        }
+        
+        handleNeedAnalysis() {
+            this.userData.need = document.getElementById('challenge-input').value;
+            this.updateWorkflowStatus('need-analysis', 'active');
+            
+            // Simulate AI thinking
+            setTimeout(() => {
+                this.updateWorkflowStatus('need-analysis', 'completed');
+                this.updateWorkflowStatus('bant-qualification', 'active');
+                
+                setTimeout(() => {
+                    this.updateWorkflowStatus('bant-qualification', 'completed');
+                    this.renderBudgetQuestion();
+                    this.nextStep();
+                }, 1000);
+            }, 1500);
+        }
+
+        renderBudgetQuestion() {
+            const optionsContainer = document.getElementById('budget-options');
+            const budgetRanges = [
+                { label: 'Menos de $5,000', value: '<5k' },
+                { label: '$5,000 - $10,000', value: '5k-10k' },
+                { label: '$10,000 - $25,000', value: '10k-25k' },
+                { label: 'Más de $25,000', value: '>25k' },
+                { label: 'Aún no lo hemos definido', value: 'undefined' }
+            ];
+
+            optionsContainer.innerHTML = budgetRanges.map(opt => `
+                <div class="choice-option" data-value="${opt.value}">
+                    <span class="font-medium text-gray-800">${opt.label}</span>
+                </div>
+            `).join('');
+
+            optionsContainer.addEventListener('click', e => {
+                const selected = e.target.closest('.choice-option');
+                if (!selected) return;
+                
+                document.querySelectorAll('.choice-option').forEach(el => el.classList.remove('selected'));
+                selected.classList.add('selected');
+                this.userData.budget = selected.dataset.value;
+                document.getElementById('next-step-2').disabled = false;
+            });
+        }
+        
+        nextStep() {
+            if (this.currentStep >= this.totalSteps) return;
+            const currentEl = document.querySelector(`[data-step="${this.currentStep}"]`);
+            currentEl.classList.remove('active');
+            currentEl.classList.add('previous');
+            this.currentStep++;
+            this.updateProgress();
+            const nextEl = document.querySelector(`[data-step="${this.currentStep}"]`);
+            nextEl.classList.add('active');
+        }
+        
+        previousStep() {
+            if (this.currentStep <= 1) return;
+            const currentEl = document.querySelector(`[data-step="${this.currentStep}"]`);
+            currentEl.classList.remove('active');
+            this.currentStep--;
+            this.updateProgress();
+            const prevEl = document.querySelector(`[data-step="${this.currentStep}"]`);
+            prevEl.classList.add('active');
+            prevEl.classList.remove('previous');
+        }
+        
+        updateProgress() {
+            const progress = (this.currentStep / this.totalSteps) * 100;
+            document.getElementById('progress-bar').style.width = `${progress}%`;
+            document.getElementById('progress-text').textContent = `${this.currentStep}/${this.totalSteps}`;
+        }
+
+        renderWorkflow() {
+            const container = document.getElementById('workflow-steps-container');
+            let logHtml = `<div class="text-xs text-gray-400 mb-4">[${new Date().toLocaleTimeString()}] Agente iniciado. Esperando entrada del usuario.</div>`;
+            
+            container.innerHTML = this.workflowSteps.map(step => {
+                if (step.status === 'active') {
+                    logHtml += `<div class="text-xs text-yellow-400 animate-fade-in">[${new Date().toLocaleTimeString()}] Ejecutando: ${step.name}...</div>`;
+                }
+                if (step.status === 'completed') {
+                    logHtml += `<div class="text-xs text-green-400 animate-fade-in">[${new Date().toLocaleTimeString()}] Completado: ${step.name}.</div>`;
+                }
+
+                return `
+                <div class="workflow-step ${step.status}">
+                    <div class="flex items-start space-x-3">
+                        <div class="mt-1 shrink-0">${this.getIconForStatus(step.status)}</div>
+                        <div><h4 class="font-medium text-white text-sm">${step.name}</h4>
+                            <div class="mt-1 text-xs ${step.status === 'active' ? 'text-yellow-400' : 'text-gray-400'}">${this.getTaskText(step)}</div>
+                        </div>
+                    </div>
+                </div>`;
+            }).join('');
+            
+            container.innerHTML += `<div class="mt-6 border-t border-gray-700 pt-4"><h4 class="font-medium text-white text-sm mb-2">Log del Agente</h4><div id="ai-log" class="space-y-1">${logHtml}</div></div>`;
+        }
+        
+        getIconForStatus(status) {
+            const icons = {
+                completed: '<svg class="w-5 h-5 text-green-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
+                active: '<div class="w-5 h-5 flex items-center justify-center"><div class="w-3 h-3 border-2 border-yellow-400 rounded-full animate-spin"></div></div>',
+                pending: '<div class="w-5 h-5 flex items-center justify-center"><div class="w-3 h-3 bg-gray-600 rounded-full"></div></div>',
+            };
+            return icons[status];
+        }
+
+        getTaskText(step) {
+            if (step.status === 'active') return `En proceso • ${step.task}`;
+            if (step.status === 'completed') return `Completado`;
+            return `Pendiente • ${step.task}`;
+        }
+
+        updateWorkflowStatus(id, newStatus) {
+            const step = this.workflowSteps.find(s => s.id === id);
+            if (step) step.status = newStatus;
+            this.renderWorkflow();
+        }
+    }
+    
+    const app = new BantDemo();
+    </script>
+</body>
+</html>

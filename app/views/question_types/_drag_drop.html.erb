@@ -1,0 +1,207 @@
+<div class="space-y-4">
+  <% items = config['items'] || [] %>
+  <% categories = config['categories'] || [] %>
+  
+  <% if items.any? && categories.any? %>
+    <div class="space-y-4">
+      <p class="text-sm text-gray-600">
+        Drag items from the list below and drop them into the appropriate categories.
+      </p>
+      
+      <!-- Categories (Drop Zones) -->
+      <div class="grid grid-cols-1 md:grid-cols-<%= [categories.length, 3].min %> gap-4">
+        <% categories.each_with_index do |category, index| %>
+          <div class="category-zone border-2 border-dashed border-gray-300 rounded-lg p-4 min-h-32 bg-gray-50"
+               data-category-id="<%= category['id'] || index %>"
+               data-question-response-target="dropZone">
+            
+            <h4 class="text-sm font-medium text-gray-900 mb-2 text-center">
+              <%= category['label'] || category %>
+            </h4>
+            
+            <% if category.is_a?(Hash) && category['description'] %>
+              <p class="text-xs text-gray-500 text-center mb-3">
+                <%= category['description'] %>
+              </p>
+            <% end %>
+            
+            <div class="space-y-2 dropped-items" data-category="<%= category['id'] || index %>">
+              <!-- Dropped items will appear here -->
+            </div>
+          </div>
+        <% end %>
+      </div>
+      
+      <!-- Items to Drag -->
+      <div class="border border-gray-200 rounded-lg p-4 bg-white">
+        <h4 class="text-sm font-medium text-gray-900 mb-3">Items to categorize:</h4>
+        
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 draggable-items" data-question-response-target="itemsContainer">
+          <% items.each_with_index do |item, index| %>
+            <div class="draggable-item bg-indigo-100 text-indigo-800 px-3 py-2 rounded-md text-sm font-medium cursor-move hover:bg-indigo-200 transition-colors"
+                 data-item-id="<%= item['id'] || index %>"
+                 draggable="true">
+              <%= item['label'] || item %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+      
+      <!-- Hidden field to store categorization data -->
+      <%= form.hidden_field "answer[categorization]", 
+                           data: { "question-response-target": "categorizationData" } %>
+    </div>
+  <% else %>
+    <div class="text-center py-8 text-gray-500">
+      <p class="text-sm">Drag and drop configuration is incomplete.</p>
+      <p class="text-xs mt-1">Please configure items and categories in the question settings.</p>
+    </div>
+  <% end %>
+  
+  <% if config['help_text'] %>
+    <p class="text-xs text-gray-500"><%= config['help_text'] %></p>
+  <% end %>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const itemsContainer = document.querySelector('[data-question-response-target="itemsContainer"]');
+    const dropZones = document.querySelectorAll('[data-question-response-target="dropZone"]');
+    const categorizationData = document.querySelector('[data-question-response-target="categorizationData"]');
+    
+    if (!itemsContainer || !categorizationData) return;
+    
+    let draggedElement = null;
+    
+    // Make items draggable
+    function setupDraggableItems() {
+      const items = document.querySelectorAll('.draggable-item');
+      items.forEach(item => {
+        item.addEventListener('dragstart', function(e) {
+          draggedElement = this;
+          this.classList.add('opacity-50');
+          e.dataTransfer.effectAllowed = 'move';
+        });
+        
+        item.addEventListener('dragend', function(e) {
+          this.classList.remove('opacity-50');
+          draggedElement = null;
+        });
+      });
+    }
+    
+    // Setup drop zones
+    dropZones.forEach(zone => {
+      zone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+      });
+      
+      zone.addEventListener('dragenter', function(e) {
+        e.preventDefault();
+        this.classList.add('border-indigo-400', 'bg-indigo-50');
+      });
+      
+      zone.addEventListener('dragleave', function(e) {
+        // Only remove highlight if we're actually leaving the zone
+        if (!this.contains(e.relatedTarget)) {
+          this.classList.remove('border-indigo-400', 'bg-indigo-50');
+        }
+      });
+      
+      zone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.classList.remove('border-indigo-400', 'bg-indigo-50');
+        
+        if (draggedElement) {
+          const droppedItems = this.querySelector('.dropped-items');
+          
+          // Create a new item in the drop zone
+          const newItem = draggedElement.cloneNode(true);
+          newItem.classList.remove('cursor-move', 'hover:bg-indigo-200');
+          newItem.classList.add('cursor-pointer', 'hover:bg-red-100');
+          newItem.draggable = false;
+          
+          // Add remove functionality
+          newItem.addEventListener('click', function() {
+            // Move back to original container
+            const originalItem = draggedElement.cloneNode(true);
+            itemsContainer.appendChild(originalItem);
+            setupDraggableItems();
+            
+            // Remove from drop zone
+            this.remove();
+            
+            updateCategorizationData();
+          });
+          
+          droppedItems.appendChild(newItem);
+          
+          // Remove from original container
+          draggedElement.remove();
+          
+          updateCategorizationData();
+        }
+      });
+    });
+    
+    // Setup items container as a drop zone (for returning items)
+    itemsContainer.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+    });
+    
+    itemsContainer.addEventListener('dragenter', function(e) {
+      e.preventDefault();
+      this.classList.add('border-indigo-400', 'bg-indigo-50');
+    });
+    
+    itemsContainer.addEventListener('dragleave', function(e) {
+      if (!this.contains(e.relatedTarget)) {
+        this.classList.remove('border-indigo-400', 'bg-indigo-50');
+      }
+    });
+    
+    itemsContainer.addEventListener('drop', function(e) {
+      e.preventDefault();
+      this.classList.remove('border-indigo-400', 'bg-indigo-50');
+      
+      if (draggedElement && !this.contains(draggedElement)) {
+        // Return item to original container
+        const returnedItem = draggedElement.cloneNode(true);
+        returnedItem.classList.remove('cursor-pointer', 'hover:bg-red-100');
+        returnedItem.classList.add('cursor-move', 'hover:bg-indigo-200');
+        returnedItem.draggable = true;
+        
+        this.appendChild(returnedItem);
+        draggedElement.remove();
+        
+        setupDraggableItems();
+        updateCategorizationData();
+      }
+    });
+    
+    function updateCategorizationData() {
+      const categorization = {};
+      
+      dropZones.forEach(zone => {
+        const categoryId = zone.dataset.categoryId;
+        const droppedItems = zone.querySelectorAll('.dropped-items .draggable-item');
+        
+        categorization[categoryId] = Array.from(droppedItems).map(item => ({
+          id: item.dataset.itemId,
+          label: item.textContent.trim()
+        }));
+      });
+      
+      categorizationData.value = JSON.stringify(categorization);
+      
+      // Trigger validation
+      categorizationData.dispatchEvent(new Event('input'));
+    }
+    
+    // Initialize
+    setupDraggableItems();
+    updateCategorizationData();
+  });
+</script>

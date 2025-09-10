@@ -1,0 +1,28 @@
+<div class="space-y-2">
+  <%= form.number_field "answer[value]", 
+                       placeholder: config['placeholder'] || "Enter a number...",
+                       min: config['min_value'],
+                       max: config['max_value'],
+                       step: config['step'] || 'any',
+                       required: question.required?,
+                       class: "block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm",
+                       data: { 
+                         "question-response-target": "answerInput",
+                         "action": "input->question-response#validateInput"
+                       } %>
+  
+  <% if config['min_value'] || config['max_value'] %>
+    <div class="flex justify-between text-xs text-gray-500">
+      <% if config['min_value'] %>
+        <span>Min: <%= config['min_value'] %></span>
+      <% end %>
+      <% if config['max_value'] %>
+        <span>Max: <%= config['max_value'] %></span>
+      <% end %>
+    </div>
+  <% end %>
+  
+  <% if config['help_text'] %>
+    <p class="text-xs text-gray-500"><%= config['help_text'] %></p>
+  <% end %>
+</div>

@@ -1,0 +1,19 @@
+--markup markdown
+--markup-provider kramdown
+--output-dir doc
+--protected
+--private
+--title "SuperAgent - AI Workflow Framework for Rails"
+--readme README.md
+--exclude spec
+--exclude tmp
+--exclude log
+--exclude coverage
+--exclude .git
+--exclude node_modules
+--exclude vendor
+lib/**/*.rb
+-
+CHANGELOG.md
+LICENSE.txt
+README.md

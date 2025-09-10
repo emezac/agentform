@@ -1,0 +1,159 @@
+<div class="space-y-4" data-controller="rating"
+     data-rating-question-id-value="<%= question.id %>"
+     data-rating-required-value="<%= question.required? %>">
+  <% scale_min = config['min_value'] || 1 %>
+  <% scale_max = config['max_value'] || 5 %>
+  <% scale_labels = config['scale_labels'] || {} %>
+  <% show_numbers = config['show_numbers'] != false %>
+  
+  <div class="flex items-center justify-between">
+    <% if scale_labels['min_label'] %>
+      <span class="text-sm text-gray-600"><%= scale_labels['min_label'] %></span>
+    <% end %>
+    
+    <div class="flex items-center space-x-2" data-rating-target="container">
+      <% (scale_min..scale_max).each do |value| %>
+        <label class="flex flex-col items-center space-y-1 cursor-pointer group"
+               onclick="handleRatingClick(this, '<%= value %>')"
+               onmouseover="handleRatingHover(this, true)"
+               onmouseout="handleRatingHover(this, false)">
+          <%= form.radio_button "answer[value]", 
+                               value,
+                               required: question.required?,
+                               class: "sr-only",
+                               data: { 
+                                 "question-response-target": "answerInput",
+                                 "action": "change->question-response#validateInput"
+                               },
+                               onclick: "this.checked = true; this.dispatchEvent(new Event('change')); return true;" %>
+          
+          <div class="w-10 h-10 rounded-full border-2 border-gray-300 flex items-center justify-center transition-all duration-200 rating-option hover:scale-110"
+               data-value="<%= value %>"
+               data-rating-target="option">
+            <% if show_numbers %>
+              <span class="text-sm font-medium text-gray-600 group-hover:text-indigo-600"><%= value %></span>
+            <% end %>
+          </div>
+          
+          <% if scale_labels[value.to_s] %>
+            <span class="text-xs text-gray-500 text-center max-w-16">
+              <%= scale_labels[value.to_s] %>
+            </span>
+          <% end %>
+        </label>
+      <% end %>
+    </div>
+    
+    <% if scale_labels['max_label'] %>
+      <span class="text-sm text-gray-600"><%= scale_labels['max_label'] %></span>
+    <% end %>
+  </div>
+  
+  <% if config['help_text'] %>
+    <p class="text-xs text-gray-500 text-center"><%= config['help_text'] %></p>
+  <% end %>
+</div>
+
+<script>
+  // Simple inline functions for rating interaction (fallback approach)
+  function handleRatingClick(label, value) {
+    // Find all rating options in this container
+    const container = label.closest('[data-rating-target="container"]');
+    if (!container) return;
+    
+    const allOptions = container.querySelectorAll('.rating-option');
+    const clickedOption = label.querySelector('.rating-option');
+    
+    // Remove selected class from all options
+    allOptions.forEach(option => {
+      option.classList.remove('selected', 'border-indigo-500', 'bg-indigo-500', 'scale-110');
+      option.classList.add('border-gray-300');
+      
+      // Reset text color
+      const span = option.querySelector('span');
+      if (span) {
+        span.classList.remove('text-white', 'font-bold');
+        span.classList.add('text-gray-600');
+      }
+    });
+    
+    // Add selected class to clicked option
+    if (clickedOption) {
+      clickedOption.classList.add('selected', 'border-indigo-500', 'bg-indigo-500', 'scale-110');
+      clickedOption.classList.remove('border-gray-300');
+      
+      // Update text color
+      const span = clickedOption.querySelector('span');
+      if (span) {
+        span.classList.add('text-white', 'font-bold');
+        span.classList.remove('text-gray-600');
+      }
+      
+      // Add animation
+      clickedOption.style.animation = 'none';
+      clickedOption.offsetHeight; // Trigger reflow
+      clickedOption.style.animation = 'pulse 0.3s ease-in-out';
+    }
+  }
+  
+  function handleRatingHover(label, isHovering) {
+    const option = label.querySelector('.rating-option');
+    if (!option) return;
+    
+    // Don't apply hover effects if already selected
+    if (option.classList.contains('selected')) return;
+    
+    if (isHovering) {
+      option.classList.add('border-indigo-400', 'bg-indigo-50', 'scale-110');
+      const span = option.querySelector('span');
+      if (span) {
+        span.classList.add('text-indigo-600');
+        span.classList.remove('text-gray-600');
+      }
+    } else {
+      option.classList.remove('border-indigo-400', 'bg-indigo-50', 'scale-110');
+      const span = option.querySelector('span');
+      if (span) {
+        span.classList.remove('text-indigo-600');
+        span.classList.add('text-gray-600');
+      }
+    }
+  }
+  
+  // Initialize any pre-selected values when the page loads
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.rating-option').forEach(option => {
+      const value = option.dataset.value;
+      const radio = option.closest('label').querySelector('input[type="radio"]');
+      if (radio && radio.checked) {
+        handleRatingClick(option.closest('label'), value);
+      }
+    });
+  });
+</script>
+
+<style>
+  .rating-option {
+    transition: all 0.2s ease-in-out;
+  }
+  
+  .rating-option.selected {
+    @apply border-indigo-500 bg-indigo-500 scale-110;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  }
+  
+  .rating-option.selected span {
+    @apply text-white font-bold;
+  }
+  
+  /* Animation for selection */
+  .rating-option.selected {
+    animation: pulse 0.3s ease-in-out;
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+    100% { transform: scale(1.1); }
+  }
+</style>

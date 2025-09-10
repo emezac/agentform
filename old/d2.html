@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentForm - Workflow Configuration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        @keyframes slideIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        @keyframes flow { 0% { transform: translateX(-10px); opacity: 0.5; } 50% { opacity: 1; } 100% { transform: translateX(10px); opacity: 0.5; } }
+        
+        .animate-slide-in { animation: slideIn 0.5s ease-out; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        .animate-pulse-slow { animation: pulse 2s ease-in-out infinite; }
+        .animate-flow { animation: flow 2s ease-in-out infinite; }
+        
+        .glass {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .ai-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .ai-glow { box-shadow: 0 0 20px rgba(102, 126, 234, 0.3); }
+        
+        .workflow-node {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .workflow-node:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .workflow-node.selected {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .workflow-connection {
+            position: absolute;
+            background: #d1d5db;
+            height: 2px;
+            z-index: 1;
+        }
+        .workflow-connection.active {
+            background: #667eea;
+            box-shadow: 0 0 8px rgba(102, 126, 234, 0.4);
+        }
+        .workflow-connection::before {
+            content: '';
+            position: absolute;
+            right: -6px;
+            top: -2px;
+            width: 0;
+            height: 0;
+            border-left: 6px solid #667eea;
+            border-top: 3px solid transparent;
+            border-bottom: 3px solid transparent;
+        }
+        
+        .task-type-llm { border-left-color: #8b5cf6; }
+        .task-type-validation { border-left-color: #10b981; }
+        .task-type-email { border-left-color: #f59e0b; }
+        .task-type-webhook { border-left-color: #ef4444; }
+        .task-type-conditional { border-left-color: #6366f1; }
+        
+        .drag-handle:hover { cursor: grab; }
+        .drag-handle:active { cursor: grabbing; }
+        
+        .code-editor {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            background: #1e293b;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 16px;
+            overflow-x: auto;
+        }
+        
+        .ruby-keyword { color: #f472b6; }
+        .ruby-method { color: #60a5fa; }
+        .ruby-string { color: #34d399; }
+        .ruby-comment { color: #64748b; font-style: italic; }
+    </style>
+</head>
+<body class="bg-gray-50 h-full">
+    <!-- Main Layout -->
+    <div class="h-screen flex">
+        
+        <!-- Sidebar -->
+        <nav class="w-64 bg-white border-r border-gray-200 overflow-y-auto">
+            <div class="p-6">
+                <!-- Brand -->
+                <div class="flex items-center space-x-3 mb-8">
+                    <div class="w-10 h-10 ai-gradient rounded-xl flex items-center justify-center ai-glow">
+                        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold text-gray-900">AgentForm</h1>
+                        <p class="text-xs text-gray-500">Workflow Designer</p>
+                    </div>
+                </div>
+                
+                <!-- Navigation -->
+                <div class="space-y-2">
+                    <a href="#" class="text-gray-700 hover:bg-gray-50 group flex items-center px-3 py-2 text-sm font-medium rounded-lg">
+                        <svg class="text-gray-400 mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"/>
+                        </svg>
+                        Dashboard
+                    </a>
+                    <a href="#" class="bg-purple-50 text-purple-700 group flex items-center px-3 py-2 text-sm font-medium rounded-lg">
+                        <svg class="text-purple-500 mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                        Workflows
+                    </a>
+                </div>
+                
+                <!-- Task Palette -->
+                <div class="mt-8">
+                    <h3 class="text-sm font-semibold text-gray-900 mb-4">SuperAgent Tasks</h3>
+                    <div class="space-y-2">
+                        <!-- LLM Task -->
+                        <div class="p-3 border border-gray-200 rounded-lg cursor-grab hover:bg-gray-50" draggable="true" data-task-type="llm">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-6 h-6 bg-purple-100 rounded flex items-center justify-center">
+                                    <svg class="w-3 h-3 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-medium text-gray-900">LLM Task</p>
+                                    <p class="text-xs text-gray-500">AI processing</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Validation Task -->
+                        <div class="p-3 border border-gray-200 rounded-lg cursor-grab hover:bg-gray-50" draggable="true" data-task-type="validation">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-6 h-6 bg-green-100 rounded flex items-center justify-center">
+                                    <svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-medium text-gray-900">Validate</p>
+                                    <p class="text-xs text-gray-500">Data validation</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Email Task -->
+                        <div class="p-3 border border-gray-200 rounded-lg cursor-grab hover:bg-gray-50" draggable="true" data-task-type="email">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-6 h-6 bg-yellow-100 rounded flex items-center justify-center">
+                                    <svg class="w-3 h-3 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-medium text-gray-900">Email</p>
+                                    <p class="text-xs text-gray-500">Send notification</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Webhook Task -->
+                        <div class="p-3 border border-gray-200 rounded-lg cursor-grab hover:bg-gray-50" draggable="true" data-task-type="webhook">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-6 h-6 bg-red-100 rounded flex items-center justify-center">
+                                    <svg class="w-3 h-3 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-medium text-gray-900">Webhook</p>
+                                    <p class="text-xs text-gray-500">External API</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Conditional Task -->
+                        <div class="p-3 border border-gray-200 rounded-lg cursor-grab hover:bg-gray-50" draggable="true" data-task-type="conditional">
+                            <div class="flex items-center space-x-2">
+                                <div class="w-6 h-6 bg-indigo-100 rounded flex items-center justify-center">
+                                    <svg class="w-3 h-3 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <p class="text-xs font-medium text-gray-900">Conditional</p>
+                                    <p class="text-xs text-gray-500">If/then logic</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Main Content -->
+        <div class="flex-1 flex flex-col">
+            <!-- Header -->
+            <header class="bg-white border-b border-gray-200 px-6 py-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-900">Lead Qualification Workflow</h1>
+                        <p class="text-gray-600">Design and configure your SuperAgent workflow</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <!-- Status -->
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse-slow"></div>
+                            <span class="text-sm text-gray-600">Auto-saved 2 min ago</span>
+                        </div>
+                        
+                        <!-- Actions -->
+                        <button class="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Test Workflow
+                        </button>
+                        <button class="px-4 py-2 ai-gradient text-white rounded-lg hover:opacity-90">
+                            Deploy
+                        </button>
+                    </div>
+                </div>
+            </header>
+            
+            <!-- Workflow Canvas -->
+            <div class="flex-1 flex">
+                <!-- Visual Workflow Designer -->
+                <div class="flex-1 p-6 bg-gray-50 overflow-auto" id="workflow-canvas">
+                    <div class="relative min-h-screen">
+                        <!-- Start Node -->
+                        <div class="workflow-node absolute bg-white rounded-xl p-4 border-2 border-green-500 shadow-sm" style="top: 50px; left: 100px;">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-gray-900">Form Start</h3>
+                                    <p class="text-xs text-gray-500">User begins form</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Connection Line -->
+                        <div class="workflow-connection active animate-flow" style="top: 80px; left: 280px; width: 80px;"></div>
+                        
+                        <!-- Validate Input Node -->
+                        <div class="workflow-node absolute bg-white rounded-xl p-4 border-2 border-l-4 task-type-validation border-gray-200 shadow-sm" style="top: 50px; left: 380px;" data-task-id="validate_input">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                                        <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-sm font-semibold text-gray-900">validate :basic_info</h3>
+                                        <p class="text-xs text-gray-500">Email & company validation</p>
+                                    </div>
+                                </div>
+                                <div class="drag-handle text-gray-400 hover:text-gray-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Connection Line -->
+                        <div class="workflow-connection active" style="top: 80px; left: 580px; width: 80px;"></div>
+                        
+                        <!-- LLM Analysis Node -->
+                        <div class="workflow-node absolute bg-white rounded-xl p-4 border-2 border-l-4 task-type-llm border-gray-200 shadow-sm selected" style="top: 50px; left: 680px;" data-task-id="llm_analysis">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center">
+                                        <svg class="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-sm font-semibold text-gray-900">llm :analyze_lead</h3>
+                                        <p class="text-xs text-gray-500">Score & categorize lead</p>
+                                    </div>
+                                </div>
+                                <div class="drag-handle text-gray-400 hover:text-gray-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Branch - High Value Lead -->
+                        <div class="workflow-connection active" style="top: 120px; left: 780px; width: 2px; height: 60px; transform: rotate(90deg); transform-origin: left;"></div>
+                        
+                        <!-- Email High Value Node -->
+                        <div class="workflow-node absolute bg-white rounded-xl p-4 border-2 border-l-4 task-type-email border-gray-200 shadow-sm" style="top: 180px; left: 580px;" data-task-id="email_high_value">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                                        <svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-sm font-semibold text-gray-900">email :notify_sales</h3>
+                                        <p class="text-xs text-gray-500">Alert sales team</p>
+                                        <div class="mt-1">
+                                            <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">run_if: high_value?</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="drag-handle text-gray-400 hover:text-gray-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Webhook CRM Node -->
+                        <div class="workflow-node absolute bg-white rounded-xl p-4 border-2 border-l-4 task-type-webhook border-gray-200 shadow-sm" style="top: 180px; left: 780px;" data-task-id="crm_webhook">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-3">
+                                    <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                                        <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                                        </svg>
+                                    </div>
+                                    <div>
+                                        <h3 class="text-sm font-semibold text-gray-900">webhook :update_crm</h3>
+                                        <p class="text-xs text-gray-500">Sync to Salesforce</p>
+                                    </div>
+                                </div>
+                                <div class="drag-handle text-gray-400 hover:text-gray-600">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
+                                    </svg>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- End Node -->
+                        <div class="workflow-node absolute bg-white rounded-xl p-4 border-2 border-red-500 shadow-sm" style="top: 320px; left: 680px;">
+                            <div class="flex items-center space-x-3">
+                                <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                                    <svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-gray-900">Workflow Complete</h3>
+                                    <p class="text-xs text-gray-500">Form processing done</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Drop Zone Indicator -->
+                        <div id="drop-zone" class="hidden absolute border-2 border-dashed border-purple-300 bg-purple-50 rounded-xl p-4">
+                            <div class="flex items-center justify-center text-purple-600">
+                                <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Properties Panel -->
+                <div class="w-96 bg-white border-l border-gray-200 overflow-y-auto" id="properties-panel">
+                    <div class="p-6">
+                        <div class="flex items-center justify-between mb-6">
+                            <h3 class="text-lg font-semibold text-gray-900">Task Properties</h3>
+                            <div class="flex items-center space-x-2">
+                                <div class="w-2 h-2 bg-purple-500 rounded-full animate-pulse-slow"></div>
+                                <span class="text-xs text-purple-600">llm :analyze_lead</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Task Configuration -->
+                        <div class="space-y-6">
+                            <!-- Basic Settings -->
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-900 mb-3">Basic Configuration</h4>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Task Name</label>
+                                        <input type="text" value="analyze_lead" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Input Fields</label>
+                                        <input type="text" value="basic_info, challenge_response" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Output Field</label>
+                                        <input type="text" value="lead_analysis" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- LLM Settings -->
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-900 mb-3">LLM Configuration</h4>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Model</label>
+                                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                            <option>gpt-4o-mini</option>
+                                            <option>gpt-4o</option>
+                                            <option>claude-3-sonnet</option>
+                                            <option>claude-3-haiku</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Temperature</label>
+                                        <input type="range" min="0" max="1" step="0.1" value="0.3" class="w-full">
+                                        <div class="flex justify-between text-xs text-gray-500 mt-1">
+                                            <span>Focused</span>
+                                            <span class="text-purple-600 font-medium">0.3</span>
+                                            <span>Creative</span>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Response Format</label>
+                                        <select class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                            <option>JSON</option>
+                                            <option>Text</option>
+                                            <option>Structured</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Prompt Configuration -->
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-900 mb-3">Prompt Template</h4>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">System Prompt</label>
+                                        <textarea rows="3" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent" placeholder="You are an expert lead qualification analyst...">You are an expert lead qualification analyst specializing in B2B software sales. Analyze the provided information and score the lead quality from 1-10.</textarea>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">User Prompt</label>
+                                        <textarea rows="4" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">Analyze this lead:
+
+Contact: {{basic_info.email}}
+Company: {{basic_info.company}}
+Challenge: {{challenge_response}}
+
+Provide JSON with: score (1-10), category (hot/warm/cold), reasoning, and suggested_followup.</textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Conditional Logic -->
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-900 mb-3">Execution Conditions</h4>
+                                <div class="space-y-3">
+                                    <div class="flex items-center">
+                                        <input type="checkbox" id="run-if-enabled" class="h-4 w-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500">
+                                        <label for="run-if-enabled" class="ml-2 text-sm text-gray-700">Enable conditional execution</label>
+                                    </div>
+                                    <div class="hidden" id="conditional-config">
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Run If Condition</label>
+                                        <input type="text" placeholder="e.g., basic_info.company.present?" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Error Handling -->
+                            <div>
+                                <h4 class="text-sm font-semibold text-gray-900 mb-3">Error Handling</h4>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Max Retries</label>
+                                        <input type="number" value="3" min="0" max="5" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs font-medium text-gray-700 mb-1">Timeout (seconds)</label>
+                                        <input type="number" value="30" min="5" max="300" class="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                                    </div>
+                                    <div class="flex items-center">
+                                        <input type="checkbox" id="fail-on-error" class="h-4 w-4 text-purple-600 rounded border-gray-300 focus:ring-purple-500" checked>
+                                        <label for="fail-on-error" class="ml-2 text-sm text-gray-700">Fail workflow on error</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Generated Code Preview -->
+                        <div class="mt-8">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-sm font-semibold text-gray-900">Generated SuperAgent Code</h4>
+                                <button class="text-xs text-purple-600 hover:text-purple-800">Copy</button>
+                            </div>
+                            <div class="code-editor text-xs">
+<span class="ruby-comment"># Lead analysis task with AI scoring</span>
+<span class="ruby-keyword">llm</span> <span class="ruby-method">:analyze_lead</span> <span class="ruby-keyword">do</span>
+  <span class="ruby-method">input</span> <span class="ruby-method">:basic_info</span>, <span class="ruby-method">:challenge_response</span>
+  <span class="ruby-method">output</span> <span class="ruby-method">:lead_analysis</span>
+  
+  <span class="ruby-method">model</span> <span class="ruby-string">"gpt-4o-mini"</span>
+  <span class="ruby-method">temperature</span> <span class="ruby-string">0.3</span>
+  <span class="ruby-method">response_format</span> <span class="ruby-method">:json</span>
+  
+  <span class="ruby-method">system_prompt</span> <span class="ruby-string">"You are an expert lead qualification analyst..."</span>
+  
+  <span class="ruby-method">prompt</span> <span class="ruby-string">"""
+  Analyze this lead:
+  
+  Contact: {{basic_info.email}}
+  Company: {{basic_info.company}}
+  Challenge: {{challenge_response}}
+  
+  Provide JSON with: score (1-10), category, reasoning, suggested_followup.
+  """</span>
+  
+  <span class="ruby-method">retry_policy</span> <span class="ruby-method">max_retries:</span> <span class="ruby-string">3</span>, <span class="ruby-method">delay:</span> <span class="ruby-string">1</span>
+  <span class="ruby-method">timeout</span> <span class="ruby-string">30</span>
+<span class="ruby-keyword">end</span>
+                            </div>
+                        </div>
+                        
+                        <!-- Task Actions -->
+                        <div class="mt-6 pt-6 border-t border-gray-200">
+                            <div class="flex space-x-3">
+                                <button class="flex-1 px-3 py-2 bg-purple-100 text-purple-700 rounded-md text-sm font-medium hover:bg-purple-200">
+                                    Test Task
+                                </button>
+                                <button class="flex-1 px-3 py-2 bg-gray-100 text-gray-700 rounded-md text-sm font-medium hover:bg-gray-200">
+                                    Duplicate
+                                </button>
+                                <button class="px-3 py-2 text-red-600 hover:bg-red-50 rounded-md">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    class WorkflowDesigner {
+        constructor() {
+            this.selectedTask = null;
+            this.init();
+        }
+        
+        init() {
+            this.bindEvents();
+            this.setupDragAndDrop();
+        }
+        
+        bindEvents() {
+            // Task selection
+            document.querySelectorAll('.workflow-node[data-task-id]').forEach(node => {
+                node.addEventListener('click', (e) => {
+                    this.selectTask(e.currentTarget);
+                });
+            });
+            
+            // Conditional logic toggle
+            const conditionalToggle = document.getElementById('run-if-enabled');
+            const conditionalConfig = document.getElementById('conditional-config');
+            
+            conditionalToggle.addEventListener('change', (e) => {
+                conditionalConfig.classList.toggle('hidden', !e.target.checked);
+            });
+            
+            // Real-time code generation
+            const inputs = document.querySelectorAll('#properties-panel input, #properties-panel select, #properties-panel textarea');
+            inputs.forEach(input => {
+                input.addEventListener('input', () => this.updateCodePreview());
+            });
+        }
+        
+        selectTask(taskNode) {
+            // Remove previous selection
+            document.querySelectorAll('.workflow-node').forEach(node => {
+                node.classList.remove('selected');
+            });
+            
+            // Select new task
+            taskNode.classList.add('selected');
+            this.selectedTask = taskNode.dataset.taskId;
+            
+            // Update properties panel based on task
+            this.updatePropertiesPanel(this.selectedTask);
+        }
+        
+        setupDragAndDrop() {
+            const canvas = document.getElementById('workflow-canvas');
+            const dropZone = document.getElementById('drop-zone');
+            
+            // Drag start
+            document.querySelectorAll('[draggable="true"]').forEach(item => {
+                item.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', e.target.dataset.taskType);
+                });
+            });
+            
+            // Canvas drop events
+            canvas.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const rect = canvas.getBoundingClientRect();
+                dropZone.style.left = (e.clientX - rect.left - 100) + 'px';
+                dropZone.style.top = (e.clientY - rect.top - 50) + 'px';
+                dropZone.classList.remove('hidden');
+            });
+            
+            canvas.addEventListener('dragleave', (e) => {
+                if (!canvas.contains(e.relatedTarget)) {
+                    dropZone.classList.add('hidden');
+                }
+            });
+            
+            canvas.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const taskType = e.dataTransfer.getData('text/plain');
+                const rect = canvas.getBoundingClientRect();
+                
+                this.createTaskNode(taskType, {
+                    x: e.clientX - rect.left - 100,
+                    y: e.clientY - rect.top - 50
+                });
+                
+                dropZone.classList.add('hidden');
+            });
+        }
+        
+        createTaskNode(taskType, position) {
+            const taskId = `${taskType}_${Date.now()}`;
+            const taskConfig = this.getTaskConfig(taskType);
+            
+            const node = document.createElement('div');
+            node.className = `workflow-node absolute bg-white rounded-xl p-4 border-2 border-l-4 task-type-${taskType} border-gray-200 shadow-sm`;
+            node.style.top = position.y + 'px';
+            node.style.left = position.x + 'px';
+            node.dataset.taskId = taskId;
+            
+            node.innerHTML = `
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-8 h-8 ${taskConfig.bgColor} rounded-lg flex items-center justify-center">
+                            ${taskConfig.icon}
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-semibold text-gray-900">${taskConfig.title}</h3>
+                            <p class="text-xs text-gray-500">${taskConfig.description}</p>
+                        </div>
+                    </div>
+                    <div class="drag-handle text-gray-400 hover:text-gray-600">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
+                        </svg>
+                    </div>
+                </div>
+            `;
+            
+            // Add click handler
+            node.addEventListener('click', (e) => {
+                this.selectTask(e.currentTarget);
+            });
+            
+            document.getElementById('workflow-canvas').appendChild(node);
+        }
+        
+        getTaskConfig(taskType) {
+            const configs = {
+                llm: {
+                    title: 'llm :new_task',
+                    description: 'AI processing task',
+                    bgColor: 'bg-purple-100',
+                    icon: '<svg class="w-4 h-4 text-purple-600" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/></svg>'
+                },
+                validation: {
+                    title: 'validate :new_check',
+                    description: 'Data validation',
+                    bgColor: 'bg-green-100',
+                    icon: '<svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+                },
+                email: {
+                    title: 'email :send_notification',
+                    description: 'Email notification',
+                    bgColor: 'bg-yellow-100',
+                    icon: '<svg class="w-4 h-4 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>'
+                },
+                webhook: {
+                    title: 'webhook :api_call',
+                    description: 'External API call',
+                    bgColor: 'bg-red-100',
+                    icon: '<svg class="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>'
+                },
+                conditional: {
+                    title: 'conditional logic',
+                    description: 'Branch execution',
+                    bgColor: 'bg-indigo-100',
+                    icon: '<svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+                }
+            };
+            
+            return configs[taskType] || configs.llm;
+        }
+        
+        updatePropertiesPanel(taskId) {
+            // This would update the properties panel based on the selected task
+            // For now, we keep the current LLM task configuration
+        }
+        
+        updateCodePreview() {
+            // This would regenerate the Ruby code based on current settings
+            // For demo purposes, the code is static
+        }
+    }
+    
+    // Initialize the workflow designer
+    document.addEventListener('DOMContentLoaded', () => {
+        new WorkflowDesigner();
+    });
+    </script>
+</body>
+</html>

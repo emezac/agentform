@@ -1,0 +1,41 @@
+[Unit]
+Description=SuperAgent A2A Server
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=<%= app_name %>
+Group=<%= app_name %>
+WorkingDirectory=/var/www/<%= app_name %>/current
+ExecStart=/var/www/<%= app_name %>/current/bin/super_agent_a2a
+ExecReload=/bin/kill -USR1 $MAINPID
+KillMode=mixed
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=superagent-a2a
+
+# Environment variables
+Environment=RAILS_ENV=production
+Environment=A2A_PORT=<%= server_port %>
+Environment=A2A_HOST=<%= server_host %>
+<% if auth_enabled? -%>
+Environment=SUPER_AGENT_A2A_TOKEN=your-token-here
+<% end -%>
+
+# Security settings
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ReadWritePaths=/var/www/<%= app_name %>/current/tmp
+ReadWritePaths=/var/www/<%= app_name %>/current/log
+
+# Resource limits
+LimitNOFILE=65536
+LimitNPROC=4096
+
+[Install]
+WantedBy=multi-user.target

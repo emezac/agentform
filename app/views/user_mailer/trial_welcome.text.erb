@@ -1,0 +1,27 @@
+¡Bienvenido a mydialogform, <%= @user.first_name %>!
+
+¡Excelente! Tu período de prueba de <%= @trial_days %> días ha comenzado y ya tienes acceso completo a todas las funciones premium de mydialogform.
+
+¿Qué puedes hacer ahora?
+- Crear formularios ilimitados con nuestro editor intuitivo
+- Usar IA avanzada para generar formularios automáticamente  
+- Procesar pagos directamente en tus formularios
+- Acceder a analíticas avanzadas y reportes detallados
+- Integrar con Google Sheets y otras herramientas
+- Remover la marca mydialogform de tus formularios
+
+Comenzar ahora: <%= @login_url %>
+
+INFORMACIÓN IMPORTANTE SOBRE TU TRIAL
+<% if @trial_end_date %>
+Tu período de prueba expira el <%= @trial_end_date %>. 
+<% else %>
+Tu período de prueba de <%= @trial_days %> días está activo.
+<% end %>
+Te enviaremos recordatorios antes de que expire para que puedas continuar sin interrupciones.
+
+¿Necesitas ayuda para comenzar?
+Nuestro equipo está aquí para ayudarte. Simplemente responde a este email con cualquier pregunta que tengas.
+
+¡Gracias por elegir mydialogform!
+El equipo de mydialogform

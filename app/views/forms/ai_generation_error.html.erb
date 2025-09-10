@@ -1,0 +1,274 @@
+<% content_for :title, "AI Form Generation" %>
+
+<div class="min-h-screen bg-gray-50 py-8">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="text-center mb-8">
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">AI Form Generation</h1>
+      <p class="text-lg text-gray-600">Create intelligent forms with AI assistance</p>
+    </div>
+
+    <!-- Error Alert -->
+    <div class="mb-8">
+      <div class="bg-white rounded-lg shadow-sm border-l-4 <%= error_border_color(@error_info[:severity]) %> p-6">
+        <div class="flex items-start">
+          <div class="flex-shrink-0">
+            <%= error_icon(@error_info[:severity]) %>
+          </div>
+          <div class="ml-3 flex-1">
+            <h3 class="text-lg font-medium <%= error_text_color(@error_info[:severity]) %>">
+              <%= @error_info[:title] %>
+            </h3>
+            <div class="mt-2 text-sm text-gray-700">
+              <p><%= @error_info[:message] %></p>
+            </div>
+            
+            <% if @error_info[:guidance].present? %>
+              <div class="mt-3 text-sm text-gray-600">
+                <p class="font-medium">What you can do:</p>
+                <p><%= @error_info[:guidance] %></p>
+              </div>
+            <% end %>
+
+            <!-- Action Buttons -->
+            <% if @error_info[:actions].present? %>
+              <div class="mt-4 flex flex-wrap gap-3">
+                <% @error_info[:actions].each do |action| %>
+                  <% if action[:primary] %>
+                    <%= link_to action[:label], 
+                        Ai::ErrorMessageService.get_action_url(action[:action], { current_url: request.url }),
+                        class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500",
+                        data: { action: action[:action] } %>
+                  <% else %>
+                    <%= link_to action[:label], 
+                        Ai::ErrorMessageService.get_action_url(action[:action], { current_url: request.url }),
+                        class: "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500",
+                        data: { action: action[:action] } %>
+                  <% end %>
+                <% end %>
+              </div>
+            <% end %>
+
+            <!-- Retry Information -->
+            <% if @retry_plan.present? && @retry_plan[:can_retry] %>
+              <div class="mt-4 p-3 bg-blue-50 rounded-md">
+                <div class="flex items-center">
+                  <svg class="w-5 h-5 text-blue-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                  </svg>
+                  <div class="text-sm text-blue-800">
+                    <p class="font-medium">Automatic Retry Available</p>
+                    <p><%= @retry_plan[:user_guidance] %></p>
+                    <% if @retry_plan[:estimated_success_rate] %>
+                      <p class="mt-1">Estimated success rate: <%= @retry_plan[:estimated_success_rate] %>%</p>
+                    <% end %>
+                  </div>
+                </div>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form with Preserved Input -->
+    <div class="bg-white rounded-lg shadow-sm">
+      <div class="px-6 py-4 border-b border-gray-200">
+        <h2 class="text-lg font-medium text-gray-900">Try Again</h2>
+        <p class="mt-1 text-sm text-gray-600">Your previous input has been preserved. Make any adjustments and try again.</p>
+      </div>
+
+      <%= form_with url: generate_from_ai_forms_path, method: :post, multipart: true, 
+                    data: { controller: "ai-form-generator tabs form-preview" }, 
+                    class: "space-y-6 p-6" do |form| %>
+        
+        <!-- Input Method Tabs -->
+        <div data-controller="tabs" data-tabs-default-tab-value="<%= @document.present? ? 'document' : 'prompt' %>">
+          <div class="border-b border-gray-200">
+            <nav class="-mb-px flex space-x-8">
+              <button type="button" 
+                      data-action="click->tabs#switch" 
+                      data-tabs-target="tab" 
+                      data-tab-name="prompt"
+                      class="py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap">
+                Text Prompt
+              </button>
+              <button type="button" 
+                      data-action="click->tabs#switch" 
+                      data-tabs-target="tab" 
+                      data-tab-name="document"
+                      class="py-2 px-1 border-b-2 font-medium text-sm whitespace-nowrap">
+                Upload Document
+              </button>
+            </nav>
+          </div>
+
+          <!-- Prompt Tab -->
+          <div data-tabs-target="content" data-tab-name="prompt" class="mt-6">
+            <div class="space-y-4">
+              <div>
+                <%= form.label :prompt, "Describe your form", class: "block text-sm font-medium text-gray-700" %>
+                <p class="mt-1 text-sm text-gray-500">
+                  Tell us about the form you want to create. Include the purpose, target audience, and what information you need to collect.
+                </p>
+                <%= form.text_area :prompt, 
+                    value: @prompt,
+                    placeholder: "Example: I need a customer feedback form for my restaurant. I want to collect ratings for food quality, service, atmosphere, and get suggestions for improvement. The form should be quick to complete and mobile-friendly.",
+                    rows: 6,
+                    class: "mt-2 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500",
+                    data: { 
+                      action: "input->form-preview#updatePreview",
+                      "form-preview-target": "promptInput"
+                    } %>
+              </div>
+
+              <!-- Word Count Display -->
+              <div class="flex justify-between text-sm text-gray-500">
+                <span>Word count: <span data-form-preview-target="wordCount">0</span></span>
+                <span>10-5000 words recommended</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Document Tab -->
+          <div data-tabs-target="content" data-tab-name="document" class="mt-6 hidden">
+            <div class="space-y-4">
+              <div>
+                <%= form.label :document, "Upload Document", class: "block text-sm font-medium text-gray-700" %>
+                <p class="mt-1 text-sm text-gray-500">
+                  Upload a PDF, Markdown, or text file that describes your form requirements.
+                </p>
+                
+                <div class="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md hover:border-gray-400 transition-colors"
+                     data-controller="file-upload"
+                     data-action="dragover->file-upload#dragOver dragenter->file-upload#dragEnter dragleave->file-upload#dragLeave drop->file-upload#drop">
+                  <div class="space-y-1 text-center">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                      <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <div class="flex text-sm text-gray-600">
+                      <label for="document" class="relative cursor-pointer bg-white rounded-md font-medium text-indigo-600 hover:text-indigo-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-indigo-500">
+                        <span>Upload a file</span>
+                        <%= form.file_field :document, 
+                            class: "sr-only",
+                            accept: ".pdf,.md,.txt,text/plain,text/markdown,application/pdf",
+                            data: { 
+                              action: "change->file-upload#fileSelected",
+                              "file-upload-target": "fileInput"
+                            } %>
+                      </label>
+                      <p class="pl-1">or drag and drop</p>
+                    </div>
+                    <p class="text-xs text-gray-500">PDF, MD, TXT up to 10MB</p>
+                  </div>
+                </div>
+
+                <!-- File Info Display -->
+                <div data-file-upload-target="fileInfo" class="hidden mt-2 p-3 bg-gray-50 rounded-md">
+                  <div class="flex items-center">
+                    <svg class="w-5 h-5 text-gray-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"></path>
+                    </svg>
+                    <div class="flex-1">
+                      <p class="text-sm font-medium text-gray-900" data-file-upload-target="fileName"></p>
+                      <p class="text-xs text-gray-500" data-file-upload-target="fileSize"></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Advanced Options -->
+        <div class="border-t border-gray-200 pt-6">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">Options</h3>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <%= form.label :max_questions, "Maximum Questions", class: "block text-sm font-medium text-gray-700" %>
+              <%= form.select :max_questions, 
+                  options_for_select([
+                    ['5 questions', 5],
+                    ['10 questions', 10],
+                    ['15 questions', 15],
+                    ['20 questions', 20]
+                  ], @max_questions || 10),
+                  {},
+                  { class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" } %>
+            </div>
+            <div>
+              <%= form.label :complexity, "Form Complexity", class: "block text-sm font-medium text-gray-700" %>
+              <%= form.select :complexity, 
+                  options_for_select([
+                    ['Simple', 'simple'],
+                    ['Moderate', 'moderate'],
+                    ['Complex', 'complex']
+                  ], @complexity || 'moderate'),
+                  {},
+                  { class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" } %>
+            </div>
+          </div>
+        </div>
+
+        <!-- Cost and Credits Info -->
+        <div class="bg-gray-50 rounded-lg p-4">
+          <div class="flex justify-between items-center">
+            <div>
+              <p class="text-sm font-medium text-gray-900">AI Credits Remaining</p>
+              <p class="text-lg font-bold text-indigo-600"><%= @ai_credits_remaining %></p>
+            </div>
+            <div class="text-right">
+              <p class="text-sm font-medium text-gray-900">Estimated Cost</p>
+              <p class="text-lg font-bold text-gray-900"><%= @estimated_cost %> credits</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="flex justify-end">
+          <%= form.submit "Generate Form", 
+              class: "inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed",
+              data: { 
+                "ai-form-generator-target": "submitButton",
+                action: "click->ai-form-generator#handleSubmit"
+              } %>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Help Section -->
+    <div class="mt-8 bg-white rounded-lg shadow-sm p-6">
+      <h3 class="text-lg font-medium text-gray-900 mb-4">Need Help?</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h4 class="font-medium text-gray-900 mb-2">Common Issues</h4>
+          <ul class="text-sm text-gray-600 space-y-1">
+            <li>• Make sure your content is between 10-5000 words</li>
+            <li>• Upload only PDF, Markdown, or text files</li>
+            <li>• Check that you have sufficient AI credits</li>
+            <li>• Try simplifying complex requirements</li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-medium text-gray-900 mb-2">Get Support</h4>
+          <div class="space-y-2">
+            <%= link_to "View Examples", "/help/examples", class: "block text-sm text-indigo-600 hover:text-indigo-500" %>
+            <%= link_to "Contact Support", "/support", class: "block text-sm text-indigo-600 hover:text-indigo-500" %>
+            <%= link_to "Check System Status", "https://status.agentform.com", class: "block text-sm text-indigo-600 hover:text-indigo-500", target: "_blank" %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Auto-retry functionality
+  <% if @retry_plan.present? && @retry_plan[:automatic] && @retry_plan[:delay_seconds] > 0 %>
+    setTimeout(function() {
+      if (confirm('Would you like to automatically retry with optimized settings?')) {
+        document.querySelector('[data-ai-form-generator-target="submitButton"]').click();
+      }
+    }, <%= @retry_plan[:delay_seconds] * 1000 %>);
+  <% end %>
+</script>

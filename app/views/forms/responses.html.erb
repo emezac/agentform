@@ -1,0 +1,341 @@
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Header -->
+  <div class="flex items-center justify-between mb-8">
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900">Form Responses</h1>
+      <p class="mt-2 text-lg text-gray-600">
+        <%= @form.name %>
+      </p>
+    </div>
+    
+    <div class="flex items-center space-x-4">
+      <%= link_to download_responses_form_path(@form, format: :csv), class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+        </svg>
+        Descargar CSV
+      <% end %>
+      
+      <%= link_to analytics_form_path(@form), class: "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+        <svg class="-ml-1 mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+        </svg>
+        Ver Analiticas
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="px-4 py-5 sm:p-6">
+        <dt class="text-sm font-medium text-gray-500 truncate">Total Responses</dt>
+        <dd class="mt-1 text-3xl font-semibold text-gray-900"><%= @responses.total_count %></dd>
+      </div>
+    </div>
+    
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="px-4 py-5 sm:p-6">
+        <dt class="text-sm font-medium text-gray-500 truncate">Completion Rate</dt>
+        <dd class="mt-1 text-3xl font-semibold text-gray-900">
+          <% if @form.form_responses.any? %>
+            <%= number_to_percentage((@form.form_responses.completed.count.to_f / @form.form_responses.count * 100), precision: 1) %>
+          <% else %>
+            0%
+          <% end %>
+        </dd>
+      </div>
+    </div>
+    
+    <div class="bg-white overflow-hidden shadow rounded-lg">
+      <div class="px-4 py-5 sm:p-6">
+        <dt class="text-sm font-medium text-gray-500 truncate">Average Time</dt>
+        <dd class="mt-1 text-3xl font-semibold text-gray-900">
+          <% avg_seconds = @responses.where.not(completed_at: nil).average("EXTRACT(EPOCH FROM (completed_at - started_at))") %>
+          <%= avg_seconds ? "#{avg_seconds.round} seg" : "N/A" %>
+        </dd>
+      </div>
+    </div>
+  </div>
+
+  <!-- Responses Table -->
+  <div class="bg-white shadow overflow-hidden sm:rounded-md">
+    <div class="px-4 py-5 border-b border-gray-200 sm:px-6">
+      <h3 class="text-lg leading-6 font-medium text-gray-900">Response List</h3>
+    </div>
+    
+    <div class="overflow-x-auto">
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+          <tr>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              ID
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Status
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Date
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Time
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              IP
+            </th>
+            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Answers
+            </th>
+            <th scope="col" class="relative px-6 py-3">
+              <span class="sr-only">Actions</span>
+            </th>
+          </tr>
+        </thead>
+        
+        <tbody class="bg-white divide-y divide-gray-200">
+          <% @responses.each do |response| %>
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                <%= response.id %>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap">
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium %>
+                  <% case response.status %>
+                  <% when 'completed' %>
+                    <span class="bg-green-100 text-green-800">Completado</span>
+                  <% when 'in_progress' %>
+                    <span class="bg-yellow-100 text-yellow-800">En Progreso</span>
+                  <% when 'abandoned' %>
+                    <span class="bg-red-100 text-red-800">Abandonado</span>
+                  <% when 'paused' %>
+                    <span class="bg-blue-100 text-blue-800">Pausado</span>
+                  <% else %>
+                    <span class="bg-gray-100 text-gray-800"><%= response.status.humanize %></span>
+                  <% end %>
+                </span>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <% if response.status == 'completed' %>
+                  <%= response.completed_at&.strftime('%d/%m/%Y %H:%M') %>
+                <% else %>
+                  <%= response.created_at.strftime('%d/%m/%Y %H:%M') %>
+                <% end %>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <% if response.completed_at && response.started_at %>
+                  <%= ((response.completed_at - response.started_at).to_i) %> seg
+                <% else %>
+                  N/A
+                <% end %>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <%= response.ip_address %>
+              </td>
+              
+              <td class="px-6 py-4 text-sm text-gray-500">
+                <div class="max-w-xs truncate">
+                  <% response.question_responses.first(3).each do |qr| %>
+                    <span class="inline-block bg-gray-100 rounded px-2 py-1 text-xs mr-1 mb-1">
+                      <%= qr.form_question.title %>: <%= qr.answer_data['value'].to_s.truncate(20) %>
+                    </span>
+                  <% end %>
+                  <% if response.respond_to?(:has_answered_dynamic_questions?) && response.has_answered_dynamic_questions? %>
+                    <span class="inline-block bg-purple-100 text-purple-800 rounded px-2 py-1 text-xs mr-1 mb-1">
+                      +<%= response.respond_to?(:dynamic_questions) ? response.dynamic_questions.answered.count : 0 %> dynamic
+                    </span>
+                  <% end %>
+                </div>
+              </td>
+              
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <div class="flex items-center justify-end space-x-2">
+                  <%= link_to "View", "#", class: "text-indigo-600 hover:text-indigo-900", onclick: "toggleDetails('#{response.id}'); return false;" %>
+                  
+                  <% completed_reports = response.analysis_reports.where(status: 'completed') %>
+                  <% if response.status != 'completed' %>
+                    <span class="text-gray-400 cursor-not-allowed" title="Reports can only be generated for completed responses">Generate Report</span>
+                  <% elsif completed_reports.any? %>
+                    <%= link_to "📊 Report", analysis_report_path(completed_reports.last), 
+                                class: "text-green-600 hover:text-green-900 font-medium" %>
+                  <% elsif current_user.can_use_ai_features? %>
+                    <%= link_to "Generate Report", generate_reports_path(form_response_id: response.id), 
+                                method: :post, 
+                                class: "text-blue-600 hover:text-blue-900 font-medium" %>
+                  <% else %>
+                    <span class="text-gray-400 cursor-not-allowed" title="Report generation requires Premium plan">Generate Report</span>
+                  <% end %>
+                </div>
+              </td>
+            </tr>
+            
+            <!-- Expandable details row -->
+            <tr id="details-<%= response.id %>" class="hidden bg-gray-50">
+              <td colspan="7" class="px-6 py-4">
+                <div class="bg-white rounded-lg p-4">
+                  <h4 class="font-medium text-gray-900 mb-4">Detalles de la respuesta #<%= response.id %></h4>
+                  
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <h5 class="text-sm font-medium text-gray-500 mb-2">Basic Information</h5>
+                      <dl class="space-y-2 text-sm">
+                        <dt class="font-medium text-gray-900">Status:</dt>
+                        <dd class="text-gray-600">
+                          <% case response.status %>
+                          <% when 'completed' %>
+                            <span class="text-green-600">Completado</span>
+                          <% when 'in_progress' %>
+                            <span class="text-yellow-600">En Progreso</span>
+                          <% when 'abandoned' %>
+                            <span class="text-red-600">Abandonado</span>
+                          <% else %>
+                            <%= response.status.humanize %>
+                          <% end %>
+                        </dd>
+                        
+                        <dt class="font-medium text-gray-900"><% if response.status == 'completed' %>Completed on:<% else %>Started on:<% end %>:</dt>
+                        <dd class="text-gray-600"><%= response.status == 'completed' ? response.completed_at.strftime('%d/%m/%Y %H:%M:%S') : response.created_at.strftime('%d/%m/%Y %H:%M:%S') %></dd>
+                        
+                        <dt class="font-medium text-gray-900">Total time:</dt>
+                        <dd class="text-gray-600"><%= response.completed_at && response.started_at ? ((response.completed_at - response.started_at).to_i) : 'N/A' %> segundos</dd>
+                        
+                        <dt class="font-medium text-gray-900">IP Address:</dt>
+                        <dd class="text-gray-600"><%= response.ip_address %></dd>
+                        
+                        <dt class="font-medium text-gray-900">User Agent:</dt>
+                        <dd class="text-gray-600 text-xs"><%= response.user_agent %></dd>
+                      </dl>
+                    </div>
+                    
+                    <div>
+                      <h5 class="text-sm font-medium text-gray-500 mb-2">All Answers</h5>
+                      <dl class="space-y-2 text-sm">
+                        <% response.question_responses.each do |qr| %>
+                          <dt class="font-medium text-gray-900"><%= qr.form_question.title %>:</dt>
+                          <dd class="text-gray-600"><%= qr.answer_data['value'] %></dd>
+                        <% end %>
+                      </dl>
+                      
+                      <% if response.respond_to?(:has_answered_dynamic_questions?) && response.has_answered_dynamic_questions? %>
+                        <h5 class="text-sm font-medium text-gray-500 mb-2 mt-4">Additional Dynamic Questions</h5>
+                        <dl class="space-y-2 text-sm">
+                          <% if response.respond_to?(:dynamic_question_responses) %>
+                            <% response.dynamic_question_responses.each do |question_title, response_data| %>
+                              <dt class="font-medium text-gray-900"><%= question_title %>:</dt>
+                              <dd class="text-gray-600"><%= response_data[:answer] %></dd>
+                            <% end %>
+                          <% end %>
+                        </dl>
+                      <% end %>
+                      
+                      <!-- Strategic Analysis Report -->
+                      <% completed_reports = response.analysis_reports.where(status: 'completed') %>
+                      <% pending_reports = response.analysis_reports.where(status: 'pending').or(response.analysis_reports.where(status: 'processing')) %>
+                      <% failed_reports = response.analysis_reports.where(status: 'failed') %>
+                      
+                      <% if completed_reports.any? %>
+                        <div class="mt-6 border-t pt-4">
+                          <h5 class="text-sm font-medium text-green-600 mb-2">✅ Strategic Analysis Report</h5>
+                          <% report = completed_reports.last %>
+                          <div class="bg-green-50 rounded-lg p-3">
+                            <p class="text-sm text-green-800 mb-2">
+                              <strong>Report ID:</strong> <%= report.id %>
+                            </p>
+                            <p class="text-sm text-green-800 mb-2">
+                              <strong>Generated:</strong> <%= report.respond_to?(:generated_at) && report.generated_at ? report.generated_at.strftime('%d/%m/%Y %H:%M') : report.created_at.strftime('%d/%m/%Y %H:%M') %>
+                            </p>
+                            <p class="text-sm text-green-800 mb-2">
+                              <strong>AI Cost:</strong> $<%= report.respond_to?(:ai_cost) ? (report.ai_cost || '0.00') : '0.00' %>
+                            </p>
+                            <div class="flex space-x-2 mt-3">
+                              <%= link_to "View Report", analysis_report_path(report), 
+                                          class: "text-sm bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700" %>
+                              <% if respond_to?(:download_analysis_report_path) %>
+                                <%= link_to "Download", download_analysis_report_path(report), 
+                                            class: "text-sm bg-gray-600 text-white px-3 py-1 rounded hover:bg-gray-700" %>
+                              <% end %>
+                            </div>
+                          </div>
+                        </div>
+                      <% elsif pending_reports.any? %>
+                        <div class="mt-6 border-t pt-4">
+                          <h5 class="text-sm font-medium text-yellow-600 mb-2">🔄 Generating Report...</h5>
+                          <div class="bg-yellow-50 rounded-lg p-3">
+                            <p class="text-sm text-yellow-800">Report is being generated. Please refresh in a few minutes.</p>
+                          </div>
+                        </div>
+                      <% elsif failed_reports.any? %>
+                        <div class="mt-6 border-t pt-4">
+                          <h5 class="text-sm font-medium text-red-600 mb-2">❌ Report Failed</h5>
+                          <div class="bg-red-50 rounded-lg p-3">
+                            <p class="text-sm text-red-800">Report generation failed. <%= link_to "Try Again", generate_reports_path(form_response_id: response.id), method: :post, class: "underline" %></p>
+                          </div>
+                        </div>
+                      <% else %>
+                        <div class="mt-6 border-t pt-4">
+                          <% if current_user.can_use_ai_features? %>
+                            <%= button_to "Generate Strategic Report", generate_reports_path, params: { form_response_id: response.id }, class: "text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 border-none cursor-pointer" %>
+                          <% else %>
+                            <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                              <p class="text-sm text-yellow-800 mb-2"><strong>Report generation requires Premium plan</strong></p>
+                              <p class="text-xs text-yellow-700 mb-2">Upgrade to unlock strategic analysis reports, AI insights, and comprehensive response analysis.</p>
+                              <%= link_to "Upgrade to Premium", new_subscription_path, class: "text-sm bg-yellow-600 text-white px-3 py-1 rounded hover:bg-yellow-700 no-underline" %>
+                            </div>
+                          <% end %>
+                        </div>
+                      <% end %>
+                    </div>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          <% end %>
+        </tbody>
+      </table>
+    </div>
+    
+    <% if @responses.empty? %>
+      <div class="text-center py-12">
+        <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+        </svg>
+        <h3 class="mt-2 text-sm font-medium text-gray-900">No responses yet</h3>
+        <p class="mt-1 text-sm text-gray-500">
+          There are no completed responses for this form yet.
+        </p>
+      </div>
+    <% end %>
+  </div>
+
+  <!-- Pagination -->
+  <div class="mt-6">
+    <%= paginate @responses %>
+  </div>
+
+  <!-- Back button -->
+  <div class="mt-8">
+    <%= link_to "← Back to form", @form, class: "text-indigo-600 hover:text-indigo-900" %>
+  </div>
+</div>
+
+<script>
+function toggleDetails(responseId) {
+  const detailsRow = document.getElementById('details-' + responseId);
+  if (!detailsRow) {
+    console.error('Details row not found for ID: details-' + responseId);
+    return;
+  }
+  
+  if (detailsRow.classList.contains('hidden')) {
+    detailsRow.classList.remove('hidden');
+  } else {
+    detailsRow.classList.add('hidden');
+  }
+}
+
+// Asegurar que la función esté disponible globalmente
+window.toggleDetails = toggleDetails;
+</script>

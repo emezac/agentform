@@ -1,0 +1,88 @@
+<%
+  # Payment Setup Notification Bar Component
+  # Shows persistent notification for incomplete payment setup
+  has_payment_questions = form.has_payment_questions?
+  setup_complete = form.payment_setup_complete?
+  missing_requirements = form.payment_setup_requirements
+  completion_percentage = form.user.payment_setup_status[:setup_completion_percentage]
+%>
+
+<% if has_payment_questions %>
+  <div class="payment-notification-bar <%= 'hidden' unless has_payment_questions %>" 
+       data-payment-setup-status-target="notificationBar">
+    
+    <% if setup_complete %>
+      <!-- Success notification -->
+      <div class="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
+        <div class="flex items-center justify-between">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-green-700">
+                <strong>Payment setup complete!</strong> Your form is ready to accept payments.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    <% else %>
+      <!-- Setup required notification -->
+      <div class="bg-amber-50 border-l-4 border-amber-400 p-4 mb-6">
+        <div class="flex items-center justify-between">
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg class="h-5 w-5 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+              </svg>
+            </div>
+            <div class="ml-3 flex-1">
+              <p class="text-sm text-amber-700">
+                <strong>Payment setup required</strong> to publish this form with payment questions.
+              </p>
+              
+              <!-- Progress bar -->
+              <div class="mt-2 mb-3">
+                <div class="flex items-center justify-between text-xs text-amber-600 mb-1">
+                  <span>Setup Progress</span>
+                  <span data-payment-setup-status-target="progressText"><%= completion_percentage %>% Complete</span>
+                </div>
+                <div class="w-full bg-amber-200 rounded-full h-2">
+                  <div class="h-2 rounded-full transition-all duration-300 <%= completion_percentage < 50 ? 'bg-red-500' : completion_percentage < 100 ? 'bg-yellow-500' : 'bg-green-500' %>" 
+                       style="width: <%= completion_percentage %>%"
+                       data-payment-setup-status-target="progressBar"></div>
+                </div>
+              </div>
+              
+              <!-- Missing requirements -->
+              <ul class="mt-2 text-sm text-amber-600 list-disc list-inside">
+                <% missing_requirements.each do |requirement| %>
+                  <li>
+                    <% case requirement %>
+                    <% when 'stripe_configuration' %>
+                      Configure Stripe payment processing
+                    <% when 'premium_subscription' %>
+                      Upgrade to Premium subscription
+                    <% else %>
+                      <%= requirement.humanize %>
+                    <% end %>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+          </div>
+          <div class="ml-4 flex-shrink-0">
+            <button data-action="click->payment-setup-status#openSetupModal" 
+                    data-payment-setup-status-target="actionButton"
+                    class="bg-amber-100 hover:bg-amber-200 text-amber-800 px-3 py-2 rounded-md text-sm font-medium transition-colors">
+              Complete Setup
+            </button>
+          </div>
+        </div>
+      </div>
+    <% end %>
+  </div>
+<% end %>

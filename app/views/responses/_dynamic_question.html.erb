@@ -1,0 +1,203 @@
+<%# app/views/responses/_dynamic_question.html.erb %>
+<%# Displays a dynamically generated follow-up question %>
+
+<div class="bg-gradient-to-r from-indigo-50 to-blue-50 border border-indigo-200 rounded-lg p-4 mb-4" 
+     id="dynamic_question_<%= dynamic_question.id %>"
+     data-dynamic-question-id="<%= dynamic_question.id %>"
+     data-source-question-id="<%= dynamic_question.generated_from_question_id %>">
+  
+  <div class="flex items-center justify-between mb-3">
+    <div class="flex items-center">
+      <svg class="w-5 h-5 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+      <h4 class="text-sm font-medium text-indigo-800">Follow-up Question</h4>
+    </div>
+    
+    <div class="flex items-center space-x-2">
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+        AI Generated
+      </span>
+      
+      <% if generation_metadata&.dig(:ai_confidence) %>
+        <span class="text-xs text-indigo-600">
+          Confidence: <%= (generation_metadata[:ai_confidence] * 100).round %>%>%
+        </span>
+      <% end %
+    </div>
+  </div>
+
+  <%# Question Title %>
+  <div class="mb-3">
+    <h5 class="text-base font-medium text-gray-900 mb-1">
+      <%= dynamic_question.title %>
+    </h5>
+    
+    <% if dynamic_question.description.present? %>
+      <p class="text-sm text-gray-600"><%= dynamic_question.description %></p>
+    <% end %
+  </div>
+
+  <%# Dynamic Question Form %>
+  <div class="space-y-3">
+    <%= form_with url: response_dynamic_question_path(form_response, dynamic_question), 
+                  method: :post,
+                  data: { 
+                    turbo: true,
+                    controller: "dynamic-question",
+                    action: "turbo:submit-end->dynamic-question#handleResponse"
+                  } do |f| %>
+
+      <% case dynamic_question.question_type %>
+      
+      <% when 'text_short' %>
+        <div class="relative">
+          <%= f.text_area :answer, 
+                        rows: 2, 
+                        class: "w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm",
+                        placeholder: dynamic_question.configuration&.dig('placeholder') || "Share your thoughts...",
+                        data: { 
+                          dynamic_question_target: "answer",
+                          action: "input->dynamic-question#validate"
+                        } %>
+          <div class="absolute bottom-2 right-2 text-xs text-gray-500" 
+               data-dynamic-question-target="counter">0/<%= dynamic_question.configuration&.dig('max_length') || 255 %></div>
+        </div>
+
+      <% when 'text_long' %>
+        <div class="relative">
+          <%= f.text_area :answer, 
+                        rows: 4, 
+                        class: "w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 text-sm",
+                        placeholder: dynamic_question.configuration&.dig('placeholder') || "Tell us more...",
+                        data: { 
+                          dynamic_question_target: "answer",
+                          action: "input->dynamic-question#validate"
+                        } %>
+          <div class="absolute bottom-2 right-2 text-xs text-gray-500" 
+               data-dynamic-question-target="counter">0/<%= dynamic_question.configuration&.dig('max_length') || 2000 %></div>
+        </div>
+
+      <% when 'multiple_choice', 'single_choice' %>
+        <div class="space-y-2">
+          <% options = dynamic_question.configuration&.dig('options') || [] %>
+          <% options.each do |option| %>
+            <label class="flex items-center p-3 bg-white border border-gray-200 rounded-md hover:bg-gray-50 cursor-pointer transition-colors"
+                   data-action="click->dynamic-question#selectOption"
+                   data-value="<%= option['value'] %>">
+              <input type="<%= dynamic_question.question_type == 'multiple_choice' ? 'checkbox' : 'radio' %>"
+                     name="answer"
+                     value="<%= option['value'] %>"
+                     class="mr-3 h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
+                     data-dynamic-question-target="input"
+                     <%= 'required' if dynamic_question.required? %>>
+              <span class="text-sm text-gray-900"><%= option['label'] %></span>
+            </label>
+          <% end %
+        </div>
+
+      <% when 'rating' %>
+        <div class="space-y-3">
+          <% min_val = dynamic_question.configuration&.dig('min_value') || 1 %>
+          <% max_val = dynamic_question.configuration&.dig('max_value') || 5 %>
+          
+          <div class="flex items-center justify-center space-x-2">
+            <% (min_val..max_val).each do |value| %>
+              <label class="flex flex-col items-center cursor-pointer"
+                     data-value="<%= value %>"
+                     data-action="click->dynamic-question#selectRating">
+                <input type="radio" 
+                       name="answer" 
+                       value="<%= value %>" 
+                       class="sr-only"
+                       data-dynamic-question-target="input"
+                       <%= 'required' if dynamic_question.required? %>>
+                <div class="w-8 h-8 flex items-center justify-center rounded-full border-2 border-gray-300 hover:border-indigo-500 transition-colors"
+                     data-dynamic-question-target="rating">
+                  <span class="text-sm font-medium"><%= value %></span>
+                </div>
+                <span class="text-xs text-gray-600 mt-1">
+                  <%= value == min_val ? dynamic_question.configuration&.dig('labels', 'min') : value == max_val ? dynamic_question.configuration&.dig('labels', 'max') : '' %>
+                </span>
+              </label>
+            <% end %
+          </div>
+        </div>
+
+      <% when 'yes_no' %>
+        <div class="flex space-x-4">
+          <label class="flex items-center cursor-pointer"
+                 data-action="click->dynamic-question#selectYesNo"
+                 data-value="true">
+            <input type="radio" name="answer" value="true" class="mr-2" data-dynamic-question-target="input"
+                   <%= 'required' if dynamic_question.required? %>>
+            <span class="text-sm"><%= dynamic_question.configuration&.dig('true_label') || 'Yes' %></span>
+          </label>
+          
+          <label class="flex items-center cursor-pointer"
+                 data-action="click->dynamic-question#selectYesNo"
+                 data-value="false">
+            <input type="radio" name="answer" value="false" class="mr-2" data-dynamic-question-target="input"
+                   <%= 'required' if dynamic_question.required? %>>
+            <span class="text-sm"><%= dynamic_question.configuration&.dig('false_label') || 'No' %></span>
+          </label>
+        </div>
+
+      <% else %>
+        <div class="text-sm text-gray-600">
+          <p>Unsupported question type: <%= dynamic_question.question_type %></p>
+        </div>
+      <% end %>
+
+      <div class="flex items-center justify-end space-x-3 pt-3">
+        <button type="submit"
+                class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                data-dynamic-question-target="submit"
+                disabled="true">
+          <span class="flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Submit Answer
+          </span>
+        </button>
+
+        <button type="button"
+                class="text-sm text-gray-500 hover:text-gray-700"
+                data-action="click->dynamic-question#skip"
+                data-dynamic-question-target="skip">
+          Skip
+        </button>
+      </div>
+
+    <% end %>
+  </div>
+
+  <%# Generation Metadata (for debugging/admin view) %>
+  <% if current_user&.admin? || Rails.env.development? %>
+    <div class="mt-4 pt-3 border-t border-indigo-200">
+      <div class="text-xs text-indigo-700 space-y-1"
+           data-controller="tooltip"
+           data-tooltip-content="<%= JSON.pretty_generate(dynamic_question.generation_context) %>">
+        <div>
+          <strong>Strategy:</strong> <%= generation_metadata&.dig(:strategy, :type) || 'unknown' %>
+        </div>
+        <div>
+          <strong>Priority:</strong> <%= generation_metadata&.dig(:strategy, :focus) || 'general' %>
+        </div>
+        <div>
+          <strong>Generated:</strong> <%= dynamic_question.created_at.strftime('%H:%M') %>
+        </div>
+      </div>
+    </div>
+  <% end %
+
+</div>
+
+<%# Add JavaScript for dynamic question interactions %>
+<% content_for :javascript do %>
+  <script>
+    // Dynamic question controller will be initialized via Stimulus
+    // This ensures proper handling of form submission and validation
+  </script>
+<% end %>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+  <head>
+    <meta charset="utf-8">
+    <title><%= content_for(:title) || "Form Builder" %> | mydialogform</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+
+    <%= yield :head %>
+
+    <!-- Favicon -->
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <%# Includes all stylesheet files in app/assets/stylesheets %>
+    <%= stylesheet_link_tag :app, "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+  </head>
+
+  <body class="h-full bg-gray-50 font-sans antialiased" data-controller="form-builder debug" data-action="turbo:before-stream-render@document->debug#turboStreamReceived">
+    <!-- Form Builder Layout -->
+    <div class="h-full flex flex-col">
+      <!-- Header -->
+      <header class="bg-white shadow-sm border-b border-gray-200 h-16 flex-shrink-0">
+        <div class="h-full px-4 sm:px-6 lg:px-8">
+          <div class="flex justify-between items-center h-full">
+            <!-- Left side - Logo and form info -->
+            <div class="flex items-center space-x-4">
+              <!-- Back to dashboard -->
+              <%= link_to forms_path, class: "flex items-center space-x-2 text-gray-500 hover:text-gray-900 transition-colors" do %>
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+                </svg>
+                <span class="text-sm font-medium">Back to Forms</span>
+              <% end %>
+              
+              <!-- Form title -->
+              <div class="border-l border-gray-300 pl-4">
+                <h1 class="text-lg font-semibold text-gray-900">
+                  <%= @form&.name || "Untitled Form" %>
+                </h1>
+                <p class="text-sm text-gray-500">
+                  <%= @form&.status&.humanize || "Draft" %> • 
+                  <%= pluralize(@form&.form_questions&.count || 0, 'question') %>
+                </p>
+              </div>
+            </div>
+
+            <!-- Center - View mode toggle -->
+            <div class="flex items-center bg-gray-100 rounded-lg p-1">
+              <button type="button" 
+                      class="px-3 py-1 text-sm font-medium rounded-md transition-colors bg-white text-gray-900 shadow-sm"
+                      data-action="click->form-builder#switchToBuilder">
+                Builder
+              </button>
+              <button type="button" 
+                      class="px-3 py-1 text-sm font-medium rounded-md transition-colors text-gray-500 hover:text-gray-900"
+                      data-action="click->form-builder#switchToPreview">
+                Preview
+              </button>
+            </div>
+
+            <!-- Right side - Actions -->
+            <div class="flex items-center space-x-3">
+              <!-- Save status -->
+              <div class="flex items-center space-x-2 text-sm text-gray-500">
+                <div class="w-2 h-2 bg-green-400 rounded-full" data-form-builder-target="saveIndicator"></div>
+                <span data-form-builder-target="saveStatus">Saved</span>
+              </div>
+
+              <!-- Action buttons -->
+              <div class="flex items-center space-x-2">
+                <%= link_to "Preview", "#", 
+                    class: "px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors",
+                    data: { action: "click->form-builder#openPreview" } %>
+                
+                <% if @form&.persisted? %>
+                  <%= link_to "Publish", publish_form_path(@form), method: :patch,
+                      class: "px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg hover:opacity-90 transition-opacity",
+                      data: { confirm: "Are you sure you want to publish this form?" } %>
+                <% else %>
+                  <button type="button" 
+                          class="px-4 py-2 text-sm font-medium text-white bg-gradient-to-r from-indigo-500 to-purple-600 rounded-lg hover:opacity-90 transition-opacity"
+                          data-action="click->form-builder#saveAndPublish">
+                    Save & Publish
+                  </button>
+                <% end %>
+              </div>
+
+              <!-- User menu -->
+              <div class="relative" data-controller="dropdown">
+                <button type="button" 
+                        class="flex items-center space-x-2 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                        data-action="click->dropdown#toggle">
+                  <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                    <span class="text-indigo-600 font-medium text-sm">
+                      <%= current_user&.email&.first&.upcase || "U" %>
+                    </span>
+                  </div>
+                </button>
+                
+                <!-- Dropdown menu -->
+                <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
+                     data-dropdown-target="menu">
+                  <%= link_to "Dashboard", root_path, 
+                      class: "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" %>
+                  <%= link_to "Settings", "#", 
+                      class: "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" %>
+                  <div class="border-t border-gray-100"></div>
+                  <%= link_to "Sign out", destroy_user_session_path, method: :delete,
+                      class: "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" %>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main content area -->
+      <div class="flex-1 flex overflow-hidden">
+        <!-- Sidebar - Question palette and configuration -->
+        <aside class="w-80 bg-white border-r border-gray-200 flex flex-col">
+          <%= yield :sidebar %>
+        </aside>
+
+        <!-- Main canvas area -->
+        <main class="flex-1 bg-gray-50 overflow-auto">
+          <div class="max-w-4xl mx-auto p-6">
+            <%= yield %>
+          </div>
+        </main>
+
+        <!-- Right panel - Question configuration (if needed) -->
+        <% if content_for?(:right_panel) %>
+          <aside class="w-80 bg-white border-l border-gray-200 flex flex-col">
+            <%= yield :right_panel %>
+          </aside>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Flash messages -->
+    <div id="flash-messages">
+      <% if flash.any? %>
+        <div class="fixed top-20 right-4 z-50 space-y-2">
+          <% flash.each do |type, message| %>
+          <div class="bg-white border-l-4 <%= type.to_s == 'error' || type.to_s == 'alert' ? 'border-red-400' : 'border-green-400' %> p-4 shadow-lg rounded-r-lg max-w-sm animate-slide-in-up">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <% if type.to_s == 'error' || type.to_s == 'alert' %>
+                  <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                  </svg>
+                <% else %>
+                  <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                <% end %>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-gray-700"><%= message %></p>
+              </div>
+              <div class="ml-auto pl-3">
+                <button type="button" class="text-gray-400 hover:text-gray-600" onclick="this.parentElement.parentElement.parentElement.remove()">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+      <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
+        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+        <span class="text-gray-900">Building form...</span>
+      </div>
+    </div>
+
+    <!-- AI Processing indicator -->
+    <div id="ai-processing" class="hidden fixed bottom-4 right-4 bg-white border border-purple-200 rounded-lg p-4 shadow-lg z-40">
+      <div class="flex items-center space-x-3">
+        <div class="flex space-x-1">
+          <div class="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+          <div class="w-2 h-2 bg-purple-500 rounded-full animate-pulse" style="animation-delay: 0.2s;"></div>
+          <div class="w-2 h-2 bg-purple-500 rounded-full animate-pulse" style="animation-delay: 0.4s;"></div>
+        </div>
+        <span class="text-sm text-gray-700">AI is thinking...</span>
+      </div>
+    </div>
+  </body>
+</html>

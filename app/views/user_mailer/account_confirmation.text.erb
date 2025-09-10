@@ -1,0 +1,26 @@
+¡Confirma tu cuenta de mydialogform!
+
+Hola <%= @user.first_name %>,
+
+¡Gracias por registrarte en mydialogform! Para completar tu registro y comenzar a usar todas nuestras funciones, necesitamos que confirmes tu dirección de correo electrónico.
+
+📧 CONFIRMACIÓN REQUERIDA
+Haz clic en el siguiente enlace para confirmar tu cuenta y activar tu acceso completo a mydialogform:
+
+<%= @confirmation_url %>
+
+¿Por qué necesitamos confirmar tu correo?
+- Para asegurar que puedas recibir notificaciones importantes
+- Para proteger tu cuenta de accesos no autorizados  
+- Para enviarte actualizaciones sobre tus formularios
+
+Si no creaste esta cuenta, puedes ignorar este correo de forma segura.
+
+¡Esperamos verte pronto en mydialogform!
+
+Saludos,
+El equipo de mydialogform
+
+---
+Este correo fue enviado a <%= @user.email %>
+mydialogform - Creando formularios inteligentes

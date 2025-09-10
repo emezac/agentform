@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+  <head>
+    <meta charset="utf-8">
+    <title><%= content_for(:title) || "mydialogform" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+    <%= yield :head %>
+
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+      .bg-ai-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      }
+      
+      .animate-slide-in-up {
+        animation: slide-in-up 0.3s ease-out;
+      }
+      
+      @keyframes slide-in-up {
+        from {
+          transform: translateY(-10px);
+          opacity: 0;
+        }
+        to {
+          transform: translateY(0);
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+
+  <body class="h-full bg-gray-50 font-sans antialiased">
+    <!-- Clean, minimal layout for public forms -->
+    <div class="min-h-full">
+      <!-- Form header with branding -->
+      <header class="bg-white shadow-sm border-b border-gray-200">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <span class="text-white font-bold text-sm">M</span>
+              </div>
+              <span class="text-xl font-bold text-gray-900">mydialogform</span>
+            </div>
+            <div class="text-sm text-gray-500">
+              <%= "Powered by AI" if @form&.ai_enhanced? %>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main content -->
+      <main class="py-8">
+        <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
+          <%= yield %>
+        </div>
+      </main>
+
+      <!-- Footer -->
+      <footer class="bg-white border-t border-gray-200 mt-16">
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div class="flex items-center justify-between text-sm text-gray-500">
+            <span>© <%= Date.current.year %> mydialogform. All rights reserved.</span>
+            <span>Powered by SuperAgent AI</span>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Flash messages -->
+    <% if flash.any? %>
+      <div class="fixed top-20 right-4 z-50 space-y-2">
+        <% flash.each do |type, message| %>
+          <div class="bg-white border-l-4 <%= type.to_s == 'error' || type.to_s == 'alert' ? 'border-red-400' : 'border-green-400' %> p-4 shadow-lg rounded-r-lg max-w-sm animate-slide-in-up">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <% if type.to_s == 'error' || type.to_s == 'alert' %>
+                  <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                  </svg>
+                <% else %>
+                  <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                <% end %>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-gray-700"><%= message %></p>
+              </div>
+              <div class="ml-auto pl-3">
+                <button type="button" class="text-gray-400 hover:text-gray-600" onclick="this.parentElement.parentElement.parentElement.remove()">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+      <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
+        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+        <span class="text-gray-900">Processing...</span>
+      </div>
+    </div>
+  </body>
+</html>

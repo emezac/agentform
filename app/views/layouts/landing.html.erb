@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- SEO Meta Tags -->
+    <title><%= content_for(:title) || "mydialogform - Build Forms That Think, Not Just Collect" %></title>
+    <meta name="description" content="Create intelligent, AI-powered forms that adapt, analyze, and automate your business processes. Transform data collection into intelligent conversations.">
+    <meta name="keywords" content="AI forms, intelligent forms, form builder, conversational forms, lead qualification, form automation">
+    <meta name="author" content="mydialogform">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://mydialogform.com/">
+    <meta property="og:title" content="mydialogform - Intelligent Form Builder">
+    <meta property="og:description" content="Create intelligent, AI-powered forms that adapt, analyze, and automate your business processes.">
+    <meta property="og:image" content="https://mydialogform.com/og-image.jpg">
+    <meta property="og:site_name" content="mydialogform">
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://mydialogform.com/">
+    <meta property="twitter:title" content="mydialogform - Intelligent Form Builder">
+    <meta property="twitter:description" content="Create intelligent, AI-powered forms that adapt, analyze, and automate your business processes.">
+    <meta property="twitter:image" content="https://mydialogform.com/og-image.jpg">
+
+    <!-- Rails Meta Tags -->
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    
+    <!-- Stylesheets -->
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    
+    <!-- JavaScript -->
+    <%= javascript_importmap_tags %>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN for development -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Additional head content -->
+    <%= yield :head %>
+  </head>
+
+  <body class="text-slate-800 antialiased">
+    <!-- Flash messages -->
+    <%= render 'shared/flash_message' if notice || alert %>
+    
+    <!-- Main content -->
+    <main>
+      <%= yield %>
+    </main>
+    
+    <!-- Additional scripts -->
+    <%= yield :scripts %>
+  </body>
+</html>

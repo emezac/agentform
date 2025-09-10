@@ -1,0 +1,24 @@
+<%
+  # Payment Status Indicator Component
+  # Shows payment setup status in form header
+  has_payment_questions = form.has_payment_questions?
+  setup_complete = form.payment_setup_complete?
+  completion_percentage = form.user.payment_setup_status[:setup_completion_percentage]
+%>
+
+<% if has_payment_questions %>
+  <div class="payment-status-indicator" 
+       data-payment-setup-status-target="statusIndicator">
+    <% if setup_complete %>
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+        <div class="w-2 h-2 bg-green-400 rounded-full mr-1.5"></div>
+        Payment Ready
+      </span>
+    <% else %>
+      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+        <div class="w-2 h-2 bg-amber-400 rounded-full mr-1.5"></div>
+        Setup Required
+      </span>
+    <% end %>
+  </div>
+<% end %>

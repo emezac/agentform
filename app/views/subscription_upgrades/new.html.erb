@@ -1,0 +1,132 @@
+<div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+  <div class="sm:mx-auto sm:w-full sm:max-w-md">
+    <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+      Tu período de prueba ha terminado
+    </h2>
+    <p class="mt-2 text-center text-sm text-gray-600">
+      Continúa disfrutando de todas las funciones premium
+    </p>
+  </div>
+
+  <div class="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
+    <div class="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+      <%= form_with url: subscription_upgrade_path, method: :post, local: true, class: "space-y-6" do |form| %>
+        
+        <!-- Plan Selection -->
+        <div>
+          <label class="text-base font-medium text-gray-900">Selecciona tu plan</label>
+          <p class="text-sm leading-5 text-gray-500">Elige la opción que mejor se adapte a tus necesidades</p>
+          <fieldset class="mt-4">
+            <legend class="sr-only">Pricing plans</legend>
+            <div class="relative -space-y-px rounded-md bg-white">
+              <!-- Monthly Plan -->
+              <div class="relative border rounded-tl-md rounded-tr-md p-4 flex cursor-pointer focus:outline-none">
+                <%= form.radio_button :billing_cycle, 'monthly', 
+                    class: "h-4 w-4 mt-0.5 cursor-pointer shrink-0 text-indigo-600 border-gray-300 focus:ring-indigo-500",
+                    checked: true %>
+                <div class="ml-3 flex flex-col">
+                  <label class="block text-sm font-medium text-gray-900 cursor-pointer">
+                    Plan Mensual
+                  </label>
+                  <span class="block text-sm text-gray-500">$29/mes</span>
+                </div>
+              </div>
+              
+              <!-- Yearly Plan -->
+              <div class="relative border border-t-0 rounded-bl-md rounded-br-md p-4 flex cursor-pointer focus:outline-none">
+                <%= form.radio_button :billing_cycle, 'yearly', 
+                    class: "h-4 w-4 mt-0.5 cursor-pointer shrink-0 text-indigo-600 border-gray-300 focus:ring-indigo-500" %>
+                <div class="ml-3 flex flex-col">
+                  <label class="block text-sm font-medium text-gray-900 cursor-pointer">
+                    Plan Anual
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2">
+                      Ahorra 2 meses
+                    </span>
+                  </label>
+                  <span class="block text-sm text-gray-500">$290/año (equivale a $24.17/mes)</span>
+                </div>
+              </div>
+            </div>
+          </fieldset>
+        </div>
+
+        <!-- Discount Code -->
+        <div>
+          <%= form.label :discount_code, "Código de descuento (opcional)", class: "block text-sm font-medium text-gray-700" %>
+          <div class="mt-1">
+            <%= form.text_field :discount_code, 
+                class: "appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm",
+                placeholder: "Ingresa tu código" %>
+          </div>
+        </div>
+
+        <!-- Features List -->
+        <div class="bg-gray-50 rounded-lg p-4">
+          <h4 class="text-sm font-medium text-gray-900 mb-3">Incluye todas las funciones premium:</h4>
+          <ul class="text-sm text-gray-600 space-y-2">
+            <li class="flex items-center">
+              <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+              </svg>
+              Formularios y respuestas ilimitadas
+            </li>
+            <li class="flex items-center">
+              <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+              </svg>
+              Procesamiento de pagos via Stripe
+            </li>
+            <li class="flex items-center">
+              <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+              </svg>
+              Funciones avanzadas de IA
+            </li>
+            <li class="flex items-center">
+              <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+              </svg>
+              Soporte prioritario
+            </li>
+            <li class="flex items-center">
+              <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+              </svg>
+              Eliminación de marca mydialogform
+            </li>
+            <li class="flex items-center">
+              <svg class="h-4 w-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+              </svg>
+              Analíticas avanzadas
+            </li>
+          </ul>
+        </div>
+
+        <div>
+          <%= form.submit "Continuar con el pago", 
+              class: "w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+        </div>
+      <% end %>
+
+      <div class="mt-6">
+        <div class="relative">
+          <div class="absolute inset-0 flex items-center">
+            <div class="w-full border-t border-gray-300"></div>
+          </div>
+          <div class="relative flex justify-center text-sm">
+            <span class="px-2 bg-white text-gray-500">¿Necesitas más tiempo?</span>
+          </div>
+        </div>
+
+        <div class="mt-6 text-center">
+          <p class="text-sm text-gray-600">
+            Puedes continuar usando la versión básica gratuita o 
+            <%= link_to "contactarnos", "#", class: "font-medium text-indigo-600 hover:text-indigo-500" %> 
+            si tienes preguntas.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

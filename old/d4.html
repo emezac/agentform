@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AgentForm - Response Management (V3 - Corregido)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+--bg-dark: #1e293b; /* slate-800 */
+--bg-darker: #0f172a; /* slate-900 */
+--border-dark: #334155; /* slate-700 */
+--text-light: #f1f5f9; /* slate-100 */
+--text-muted: #94a3b8; /* slate-400 */
+--accent-primary: #6366f1; /* indigo-500 */
+--accent-primary-hover: #4f46e5; /* indigo-600 */
+}
+code
+Code
+body { font-family: 'Inter', sans-serif; background-color: var(--bg-darker); color: var(--text-light); }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    .animate-slide-in-up { animation: slideInUp 0.5s ease-out forwards; }
+    
+    /* --- LISTA DE RESPUESTAS (TEMA OSCURO) --- */
+    .response-row {
+        transition: all 0.2s ease-in-out;
+        background-color: var(--bg-dark);
+        border: 1px solid var(--border-dark);
+        border-left-width: 4px;
+    }
+    .response-row:hover {
+        background-color: #334155; /* slate-700 */
+        border-left-color: var(--accent-primary);
+        transform: translateX(4px);
+    }
+    .response-row.high-value { border-left-color: #34d399; }
+    .response-row.medium-value { border-left-color: #facc15; }
+    .response-row.low-value { border-left-color: #f87171; }
+    .response-row.selected { 
+        background: var(--accent-primary);
+        border-color: var(--accent-primary);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        transform: translateX(4px) scale(1.02);
+    }
+    .response-row.selected .text-slate-300, 
+    .response-row.selected .text-slate-400 { color: white; }
+    .response-row.selected .bg-slate-600 { background-color: rgba(255,255,255,0.2); }
+
+    .score-badge { color: white; font-weight: 600; }
+    .score-high { background-color: #10b981; }
+    .score-medium { background-color: #f59e0b; }
+    .score-low { background-color: #ef4444; }
+    
+    /* --- PANEL DE DETALLES (TEMA CLARO) --- */
+    .detail-panel { background-color: #f8fafc; /* slate-50 */ }
+    .detail-header { color: #0f172a; /* slate-900 */ }
+    .detail-subheader { color: #475569; /* slate-600 */ }
+    .detail-section-title { color: #334155; /* slate-700 */ }
+    .detail-text { color: #475569; /* slate-600 */ }
+    
+    .timeline-item { position: relative; padding-left: 28px; padding-bottom: 24px; }
+    .timeline-item::before { content: ''; position: absolute; left: 0; top: 5px; width: 12px; height: 12px; background: var(--accent-primary); border-radius: 50%; border: 2px solid white; box-shadow: 0 0 0 2px var(--accent-primary); }
+    .timeline-item::after { content: ''; position: absolute; left: 5px; top: 19px; width: 2px; height: calc(100% - 10px); background: #e2e8f0; /* slate-200 */ }
+    .timeline-item:last-child::after { display: none; }
+
+    .workflow-step { transition: all 0.3s ease; }
+    .workflow-step.completed { background-color: #ecfdf5; /* green-50 */ color: #059669; /* green-700 */ border-left-color: #10b981; }
+    .workflow-step.processing { background-color: #fefce8; /* yellow-50 */ color: #b45309; /* yellow-700 */ border-left-color: #f59e0b; }
+    .workflow-step.pending { background-color: #f1f5f9; /* slate-100 */ color: #475569; /* slate-600 */ border-left-color: #94a3b8; /* slate-400 */ }
+
+    .ai-insight { border-left: 3px solid var(--accent-ai); background-color: #f5f3ff; /* violet-50 */ }
+    
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
+    .light-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+    .light-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; }
+    .light-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+</style>
+</head>
+<body class="h-full">
+<div class="h-screen flex flex-col">
+<!-- HEADER -->
+<header class="bg-slate-800/80 backdrop-blur-md border-b border-slate-700 px-6 py-3 shrink-0 z-10">
+<div class="flex items-center justify-between">
+<div class="flex items-center space-x-4">
+<div class="flex items-center space-x-3">
+<div class="w-9 h-9 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center shadow-lg">
+<svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z"/></svg>
+</div>
+<h1 class="text-xl font-bold text-slate-100">Lead Qualification</h1>
+</div>
+</div>
+<div class="flex items-center space-x-3">
+<select class="bg-slate-700 border border-slate-600 text-slate-300 rounded-md text-sm px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+<option>All Scores</option><option>High Value (80+)</option><option>Medium (60-79)</option><option>Low (<60)</option>
+</select>
+<select class="bg-slate-700 border border-slate-600 text-slate-300 rounded-md text-sm px-3 py-1.5 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+<option>Last 7 days</option><option>Last 24 hours</option><option>Last 30 days</option>
+</select>
+</div>
+</div>
+</header>
+code
+Code
+<div class="flex-1 flex overflow-hidden">
+        <!-- SIDEBAR -->
+        <nav class="w-64 bg-slate-800 border-r border-slate-700 overflow-y-auto hidden md:block">
+            <div class="p-4">
+                <div class="space-y-1">
+                    <a href="#" class="text-slate-400 hover:bg-slate-700 hover:text-white group flex items-center px-3 py-2 text-sm font-medium rounded-md">
+                       <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z"/></svg>
+                        Dashboard
+                    </a>
+                    <a href="#" class="bg-indigo-500 text-white group flex items-center px-3 py-2 text-sm font-medium rounded-md">
+                       <svg class="mr-3 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        Responses
+                        <span class="ml-auto bg-white/20 text-white text-xs px-2 py-0.5 rounded-full">23 new</span>
+                    </a>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- MAIN CONTENT GRID -->
+        <main class="flex-1 grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 overflow-hidden">
+            <!-- RESPONSE LIST (TEMA OSCURO) -->
+            <div class="lg:col-span-1 xl:col-span-1 border-r border-slate-800 overflow-y-auto custom-scrollbar">
+                <div id="response-list" class="p-2 space-y-2">
+                    <!-- JS renders here -->
+                </div>
+            </div>
+            
+            <!-- RESPONSE DETAIL PANEL (TEMA CLARO) -->
+            <aside id="response-detail-panel" class="detail-panel xl:col-span-2 lg:col-span-1 overflow-y-auto p-6 lg:p-8 light-scrollbar">
+                <!-- JS renders here -->
+            </aside>
+        </main>
+    </div>
+</div>
+
+<!-- JS Templates -->
+<template id="response-row-template">
+    <div class="response-row rounded-lg p-4 cursor-pointer" role="button">
+        <div class="flex items-center justify-between">
+            <p class="text-sm font-semibold text-slate-100 truncate response-name"></p>
+            <span class="text-xs text-slate-400 response-date"></span>
+        </div>
+        <p class="text-sm text-slate-300 mt-1 truncate response-email"></p>
+        <div class="flex items-center justify-between mt-3">
+            <span class="score-badge text-xs px-2.5 py-1 rounded-md response-score"></span>
+            <span class="inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-full bg-slate-600 text-slate-300 response-status"></span>
+        </div>
+    </div>
+</template>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const sampleData = {
+        responses: [
+            { id: 1, name: 'Ana García', email: 'ana.garcia@innovatecorp.com', date: 'Hace 2 horas', leadScore: 92, status: 'Completed' },
+            { id: 2, name: 'Carlos Mendoza', email: 'carlos.m@startupdynamo.io', date: 'Hace 8 horas', leadScore: 78, status: 'Completed' },
+            { id: 3, name: 'Luisa Fernández', email: 'luisa.f@techsolutions.net', date: 'Hace 1 día', leadScore: 45, status: 'Completed' },
+            { id: 4, name: 'Javier Torres', email: 'javier.torres@global-ventures.org', date: 'Hace 2 días', leadScore: 85, status: 'In Progress' },
+            { id: 5, name: 'Sofia Reyes', email: 'sofia@datasciencelab.ai', date: 'Hace 3 días', leadScore: 65, status: 'Completed' },
+        ],
+        responseDetails: {
+            1: {
+                workflow: [
+                    { name: "Validate Contact", status: "completed" }, { name: "Enrich Data", status: "completed" },
+                    { name: "AI Sentiment Analysis", status: "completed" }, { name: "Calculate Lead Score", status: "completed" },
+                    { name: "Sync to CRM", status: "completed" },
+                ]
+            },
+             2: {
+                workflow: [
+                    { name: "Validate Contact", status: "completed" }, { name: "Enrich Data", status: "completed" },
+                    { name: "AI Sentiment Analysis", status: "completed" }, { name: "Calculate Lead Score", status: "completed" },
+                    { name: "Sync to CRM", status: "completed" },
+                ]
+            },
+            3: {
+                workflow: [
+                    { name: "Validate Contact", status: "completed" }, { name: "Enrich Data", status: "completed" },
+                    { name: "Calculate Lead Score", status: "completed" }, { name: "Add to Nurturing List", status: "completed" },
+                ]
+            }
+        }
+    };
+
+    const responseListEl = document.getElementById('response-list');
+    const detailPanelEl = document.getElementById('response-detail-panel');
+    const rowTemplate = document.getElementById('response-row-template');
+
+    function getScoreClass(score) {
+        if (score >= 80) return { bg: 'score-high', border: 'high-value' };
+        if (score >= 60) return { bg: 'score-medium', border: 'medium-value' };
+        return { bg: 'score-low', border: 'low-value' };
+    }
+
+    function renderResponseList() {
+        responseListEl.innerHTML = '';
+        sampleData.responses.forEach((response, index) => {
+            const clone = rowTemplate.content.cloneNode(true);
+            const row = clone.querySelector('.response-row');
+            const scoreClasses = getScoreClass(response.leadScore);
+
+            row.dataset.responseId = response.id;
+            row.classList.add(scoreClasses.border, 'animate-slide-in-up');
+            row.style.animationDelay = `${index * 50}ms`;
+            
+            row.querySelector('.response-name').textContent = response.name;
+            row.querySelector('.response-email').textContent = response.email;
+            row.querySelector('.response-date').textContent = response.date;
+            row.querySelector('.response-score').textContent = `Score: ${response.leadScore}`;
+            row.querySelector('.response-score').classList.add(scoreClasses.bg);
+            row.querySelector('.response-status').textContent = response.status;
+            
+            responseListEl.appendChild(clone);
+        });
+    }
+    
+    // ****** ESTA ES LA FUNCIÓN CRÍTICA CORREGIDA ******
+    function renderResponseDetail(responseId) {
+        const details = sampleData.responseDetails[responseId];
+        const response = sampleData.responses.find(r => r.id === responseId);
+        if (!details || !response) return renderInitialMessage("Error: No se encontraron detalles.");
+
+        // CONTENIDO DEL PANEL DE DETALLES (AHORA CON CLASES DE TEXTO OSCURO)
+        detailPanelEl.innerHTML = `
+            <div class="animate-fade-in space-y-6">
+                <!-- Header -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <h2 class="text-2xl font-bold detail-header">${response.name}</h2>
+                    </div>
+                    <p class="detail-subheader">${response.email}</p>
+                </div>
+
+                <!-- User Timeline -->
+                <div>
+                    <h3 class="text-base font-semibold detail-section-title mb-4">Línea de Tiempo del Usuario</h3>
+                    <div class="border-l-2 border-slate-200">
+                         <div class="timeline-item">
+                            <p class="text-sm font-medium detail-header">Iniciado desde búsqueda orgánica.</p>
+                            <p class="text-xs detail-subheader">Hace 8h 30m</p>
+                        </div>
+                         <div class="timeline-item">
+                            <p class="text-sm font-medium detail-header">Completado de forma constante.</p>
+                            <p class="text-xs detail-subheader">Hace 8h 25m</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Workflow Status -->
+                <div>
+                    <h3 class="text-base font-semibold detail-section-title mb-4">Estado del Workflow (SuperAgent)</h3>
+                    <div class="space-y-2">
+                        ${details.workflow.map(step => `
+                            <div class="workflow-step flex items-center p-3 rounded-lg text-sm border-l-4 ${step.status}">
+                                <svg class="w-4 h-4 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+                                <span class="font-medium">${step.name}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex items-center space-x-3 pt-6 border-t border-slate-200">
+                    <button class="flex-1 bg-indigo-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-700 transition">Contactar Lead</button>
+                    <button class="flex-1 bg-slate-700 border border-slate-600 text-slate-100 px-4 py-2 rounded-lg font-semibold hover:bg-slate-800 transition">Asignar Equipo</button>
+                </div>
+            </div>
+        `;
+    }
+    
+    function renderInitialMessage(message = "Selecciona una respuesta para ver los detalles") {
+        detailPanelEl.innerHTML = `
+            <div class="h-full flex flex-col items-center justify-center text-center text-slate-500 animate-fade-in">
+                <svg class="w-16 h-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
+                <h3 class="text-lg font-medium text-slate-800">${message}</h3>
+                <p class="text-sm">Los insights generados por IA aparecerán aquí.</p>
+            </div>`;
+    }
+    
+    function showLoadingIndicator() {
+        detailPanelEl.innerHTML = `
+            <div class="h-full flex items-center justify-center animate-fade-in">
+                <div class="text-center">
+                     <div class="w-10 h-10 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                     <p class="text-slate-600">Cargando análisis de IA...</p>
+                </div>
+            </div>
+        `;
+    }
+
+    responseListEl.addEventListener('click', (e) => {
+        const row = e.target.closest('.response-row');
+        if (!row) return;
+
+        const responseId = parseInt(row.dataset.responseId);
+        document.querySelectorAll('.response-row').forEach(r => r.classList.remove('selected'));
+        row.classList.add('selected');
+
+        showLoadingIndicator();
+        setTimeout(() => renderResponseDetail(responseId), 400);
+    });
+
+    // Initial Load
+    renderResponseList();
+    renderInitialMessage();
+
+    setTimeout(() => {
+        const firstRow = responseListEl.querySelector('.response-row');
+        if (firstRow) firstRow.click();
+    }, 500);
+});
+</script>
+</body>
+</html>

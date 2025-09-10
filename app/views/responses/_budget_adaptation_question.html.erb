@@ -1,0 +1,76 @@
+<!-- app/views/responses/_budget_adaptation_question.html.erb -->
+
+<div class="dynamic-question-container bg-blue-50 border-l-4 border-blue-400 p-6 rounded-lg shadow-sm mb-6" 
+     id="dynamic_question_<%= dynamic_question.id %>"
+     data-dynamic-question-id="<%= dynamic_question.id %>">
+  
+  <div class="flex items-start space-x-4">
+    <!-- AI Icon -->
+    <div class="flex-shrink-0">
+      <div class="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center shadow-sm">
+        <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+        </svg>
+      </div>
+    </div>
+    
+    <!-- Content -->
+    <div class="flex-1 min-w-0">
+      <!-- Header -->
+      <div class="mb-3">
+        <div class="flex items-center space-x-2">
+          <h3 class="text-sm font-medium text-blue-700">Pregunta de Seguimiento</h3>
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+            Opcional
+          </span>
+        </div>
+        <p class="text-xs text-blue-600 mt-1">Based on your response about budget, I''d like to better understand your priorities.</p>
+      </div>
+      
+      <!-- Question Title -->
+      <h4 class="text-lg font-medium text-gray-900 mb-2">
+        <%= dynamic_question.title %>
+      </h4>
+      
+      <!-- Question Description -->
+      <% if dynamic_question.description.present? %>
+        <p class="text-sm text-gray-600 mb-4 leading-relaxed">
+          <%= simple_format(dynamic_question.description) %>
+        </p>
+      <% end %>
+      
+      <!-- Form -->
+      <%= form_with url: answer_dynamic_question_path(form_response.form.share_token, dynamic_question), 
+                    method: :post,
+                    local: false, 
+                    class: "space-y-4",
+                    data: { 
+                      turbo_stream: true
+                    } do |form| %>
+        
+        <div>
+          <%= form.text_area "answer[value]", 
+                            placeholder: "Por favor comparte tus pensamientos en detalle...", 
+                            rows: 4,
+                            class: "block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm" %>
+        </div>
+        
+        <!-- Buttons -->
+        <div class="flex items-center justify-end space-x-3">
+          <button type="button" 
+                  class="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+                  id="skip-question-<%= dynamic_question.id %>"
+                  onclick="this.closest('.dynamic-question-container').remove()">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+            </svg>
+            Omit
+          </button>
+          
+          <%= form.submit "Submit", 
+                         class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

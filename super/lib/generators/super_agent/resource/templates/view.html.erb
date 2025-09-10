@@ -1,0 +1,43 @@
+<div class="card">
+  <div class="card-header">
+    <h2><%= action.humanize %> <%= singular_name.humanize %></h2>
+  </div>
+  <div class="card-body">
+    <div id="<%= action %>_result">
+      <p>Processing <%= singular_name.humanize.downcase %>...</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// Example JavaScript for handling real-time updates
+// This would be customized based on your specific needs
+
+const resultDiv = document.getElementById('<%= action %>_result');
+
+// Poll for results or use WebSockets/Turbo Streams
+function checkStatus() {
+  fetch(`/agents/<%= file_name %>/<%= action %>`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+    },
+    body: JSON.stringify({ <%= singular_name %>: <%= singular_name %>_data })
+  })
+  .then(response => response.json())
+  .then(data => {
+    if (data.status === 'success') {
+      resultDiv.innerHTML = `<pre>${JSON.stringify(data.<%= action %>, null, 2)}</pre>`;
+    } else {
+      resultDiv.innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+    }
+  })
+  .catch(error => {
+    resultDiv.innerHTML = `<div class="alert alert-danger">Error: ${error.message}</div>`;
+  });
+}
+
+// For async workflows, you might want to poll
+// setTimeout(checkStatus, 1000);
+</script>

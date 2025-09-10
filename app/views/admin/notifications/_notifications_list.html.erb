@@ -1,0 +1,23 @@
+<div class="divide-y divide-gray-200">
+  <% if notifications.any? %>
+    <% notifications.each do |notification| %>
+      <%= render "notification", notification: notification %>
+    <% end %>
+    
+    <% if notifications.respond_to?(:current_page) %>
+      <div class="px-6 py-4 bg-gray-50">
+        <%= paginate notifications, theme: 'twitter_bootstrap_4' %>
+      </div>
+    <% end %>
+  <% else %>
+    <div class="px-6 py-12 text-center">
+      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM11 19H6a2 2 0 01-2-2V7a2 2 0 012-2h5m5 0v5"></path>
+      </svg>
+      <h3 class="mt-2 text-sm font-medium text-gray-900">No notifications</h3>
+      <p class="mt-1 text-sm text-gray-500">
+        No notifications match your current filters.
+      </p>
+    </div>
+  <% end %>
+</div>

@@ -1,0 +1,283 @@
+<% content_for :title, "Admin Dashboard" %>
+
+<% content_for :page_header do %>
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+      <p class="mt-1 text-sm text-gray-600">
+        Welcome back, <%= current_user.full_name %>. Here's what's happening with AgentForm.
+      </p>
+    </div>
+    <div class="flex items-center space-x-3">
+      <span class="text-sm text-gray-500">Last updated: <%= Time.current.strftime("%B %d, %Y at %I:%M %p") %></span>
+      <button onclick="location.reload()" class="text-indigo-600 hover:text-indigo-500 text-sm font-medium">
+        Refresh
+      </button>
+    </div>
+  </div>
+<% end %>
+
+<!-- User Statistics Grid -->
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  <!-- Total Users Card -->
+  <div class="<%= admin_card_classes %> hover:shadow-lg transition-shadow duration-200">
+    <div class="p-6">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="ml-4 flex-1">
+          <div class="text-3xl font-bold text-gray-900"><%= number_with_delimiter(@dashboard_stats[:user_stats][:total]) %></div>
+          <div class="text-sm font-medium text-gray-500">Total Users</div>
+          <div class="text-xs text-green-600 mt-1">
+            +<%= @dashboard_stats[:user_stats][:new_this_month] %> this month
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Active Users Card -->
+  <div class="<%= admin_card_classes %> hover:shadow-lg transition-shadow duration-200">
+    <div class="p-6">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="ml-4 flex-1">
+          <div class="text-3xl font-bold text-gray-900"><%= number_with_delimiter(@dashboard_stats[:user_stats][:active]) %></div>
+          <div class="text-sm font-medium text-gray-500">Active Users</div>
+          <div class="text-xs text-gray-600 mt-1">
+            <%= @dashboard_stats[:user_stats][:suspended] %> suspended
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Premium Subscriptions Card -->
+  <div class="<%= admin_card_classes %> hover:shadow-lg transition-shadow duration-200">
+    <div class="p-6">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="ml-4 flex-1">
+          <div class="text-3xl font-bold text-gray-900"><%= number_with_delimiter(@dashboard_stats[:subscription_stats][:active]) %></div>
+          <div class="text-sm font-medium text-gray-500">Premium Users</div>
+          <div class="text-xs text-purple-600 mt-1">
+            <%= @dashboard_stats[:user_stats][:premium_percentage] %>% conversion rate
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monthly Revenue Card -->
+  <div class="<%= admin_card_classes %> hover:shadow-lg transition-shadow duration-200">
+    <div class="p-6">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <div class="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="ml-4 flex-1">
+          <div class="text-3xl font-bold text-gray-900">$<%= number_with_delimiter(@dashboard_stats[:subscription_stats][:mrr]) %></div>
+          <div class="text-sm font-medium text-gray-500">Monthly Revenue</div>
+          <div class="text-xs text-green-600 mt-1">
+            +<%= @dashboard_stats[:subscription_stats][:new_this_month] %> new subs
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Discount Code Statistics -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+  <!-- Active Discount Codes -->
+  <div class="<%= admin_card_classes %> hover:shadow-lg transition-shadow duration-200">
+    <div class="p-6">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="ml-4 flex-1">
+          <div class="text-2xl font-bold text-gray-900"><%= @dashboard_stats[:discount_code_stats][:active_codes] %></div>
+          <div class="text-sm font-medium text-gray-500">Active Codes</div>
+          <div class="text-xs text-gray-600 mt-1">
+            <%= @dashboard_stats[:discount_code_stats][:total_codes] %> total codes
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Total Usage -->
+  <div class="<%= admin_card_classes %> hover:shadow-lg transition-shadow duration-200">
+    <div class="p-6">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <div class="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="ml-4 flex-1">
+          <div class="text-2xl font-bold text-gray-900"><%= @dashboard_stats[:discount_code_stats][:total_usage] %></div>
+          <div class="text-sm font-medium text-gray-500">Total Usage</div>
+          <% if @dashboard_stats[:discount_code_stats][:most_popular_code] %>
+            <div class="text-xs text-amber-600 mt-1">
+              Most popular: <%= @dashboard_stats[:discount_code_stats][:most_popular_code] %>
+            </div>
+          <% end %>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Revenue Impact -->
+  <div class="<%= admin_card_classes %> hover:shadow-lg transition-shadow duration-200">
+    <div class="p-6">
+      <div class="flex items-center">
+        <div class="flex-shrink-0">
+          <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
+            <svg class="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+            </svg>
+          </div>
+        </div>
+        <div class="ml-4 flex-1">
+          <div class="text-2xl font-bold text-gray-900">$<%= number_with_delimiter((@dashboard_stats[:discount_code_stats][:total_discount_amount] / 100.0).round(2)) %></div>
+          <div class="text-sm font-medium text-gray-500">Total Discounts</div>
+          <div class="text-xs text-red-600 mt-1">
+            Avg: $<%= (@dashboard_stats[:discount_code_stats][:average_discount_per_use] / 100.0).round(2) %> per use
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+  <!-- Recent Activity -->
+  <div class="<%= admin_card_classes %>">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h3 class="text-lg font-semibold text-gray-900">Recent Activity</h3>
+      <p class="text-sm text-gray-600">Latest system events and user actions</p>
+    </div>
+    <div class="p-6">
+      <% if @dashboard_stats[:recent_activity].any? %>
+        <div class="space-y-4">
+          <% @dashboard_stats[:recent_activity].each do |activity| %>
+            <div class="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50 transition-colors duration-150">
+              <div class="flex-shrink-0 mt-1">
+                <% case activity[:icon] %>
+                <% when 'user-plus' %>
+                  <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                    <svg class="w-4 h-4 <%= activity[:color] %>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                    </svg>
+                  </div>
+                <% when 'tag' %>
+                  <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                    <svg class="w-4 h-4 <%= activity[:color] %>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                    </svg>
+                  </div>
+                <% when 'user-x' %>
+                  <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                    <svg class="w-4 h-4 <%= activity[:color] %>" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7a4 4 0 11-8 0 4 4 0 018 0zM9 14a6 6 0 00-6 6v1h12v-1a6 6 0 00-6-6zM21 12h-6"></path>
+                    </svg>
+                  </div>
+                <% end %>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-sm text-gray-900 font-medium"><%= activity[:message] %></p>
+                <p class="text-xs text-gray-500 mt-1">
+                  <%= time_ago_in_words(activity[:timestamp]) %> ago
+                </p>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <div class="text-center py-8">
+          <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+          </svg>
+          <p class="text-gray-500">No recent activity</p>
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="<%= admin_card_classes %>">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h3 class="text-lg font-semibold text-gray-900">Quick Actions</h3>
+      <p class="text-sm text-gray-600">Common administrative tasks</p>
+    </div>
+    <div class="p-6">
+      <div class="grid grid-cols-1 gap-4">
+        <% @dashboard_stats[:quick_actions].each do |action| %>
+          <%= link_to action[:url], class: "group flex items-center p-4 rounded-lg border-2 border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-all duration-200" do %>
+            <div class="flex-shrink-0">
+              <div class="w-10 h-10 <%= action[:color] %> rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
+                <% case action[:icon] %>
+                <% when 'plus-circle' %>
+                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                  </svg>
+                <% when 'users' %>
+                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+                  </svg>
+                <% when 'tag' %>
+                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"></path>
+                  </svg>
+                <% when 'download' %>
+                  <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                  </svg>
+                <% end %>
+              </div>
+            </div>
+            <div class="ml-4 flex-1">
+              <h4 class="text-sm font-semibold text-gray-900 group-hover:text-indigo-900"><%= action[:title] %></h4>
+              <p class="text-xs text-gray-600 group-hover:text-indigo-700"><%= action[:description] %></p>
+            </div>
+            <div class="flex-shrink-0">
+              <svg class="w-5 h-5 text-gray-400 group-hover:text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+              </svg>
+            </div>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+  </div>
+</div>

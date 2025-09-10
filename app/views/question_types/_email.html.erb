@@ -1,0 +1,14 @@
+<div class="space-y-2">
+  <%= form.email_field "answer[value]", 
+                      placeholder: config['placeholder'] || "Enter your email address...",
+                      required: question.required?,
+                      class: "block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm",
+                      data: { 
+                        "question-response-target": "answerInput",
+                        "action": "input->question-response#validateInput"
+                      } %>
+  
+  <% if config['help_text'] %>
+    <p class="text-xs text-gray-500"><%= config['help_text'] %></p>
+  <% end %>
+</div>

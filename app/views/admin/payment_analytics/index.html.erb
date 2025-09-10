@@ -1,0 +1,197 @@
+<div class="min-h-screen bg-gray-50 py-8">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Header -->
+    <div class="mb-8">
+      <h1 class="text-3xl font-bold text-gray-900">Payment Analytics Dashboard</h1>
+      <p class="mt-2 text-gray-600">Monitor payment template usage and setup completion rates</p>
+    </div>
+
+    <!-- Date Range Filter -->
+    <div class="bg-white rounded-lg shadow p-6 mb-8">
+      <%= form_with url: admin_payment_analytics_path, method: :get, local: true, class: "flex items-end space-x-4" do |form| %>
+        <div>
+          <%= form.label :start_date, "Start Date", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.date_field :start_date, value: params[:start_date] || 30.days.ago.to_date, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" %>
+        </div>
+        <div>
+          <%= form.label :end_date, "End Date", class: "block text-sm font-medium text-gray-700" %>
+          <%= form.date_field :end_date, value: params[:end_date] || Date.current, class: "mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" %>
+        </div>
+        <div>
+          <%= form.submit "Update", class: "bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" %>
+        </div>
+      <% end %>
+    </div>
+
+    <!-- Key Metrics -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <!-- Setup Completion Rate -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+              <svg class="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-500">Setup Completion Rate</p>
+            <p class="text-2xl font-semibold text-gray-900"><%= @metrics[:setup_completion_rate] %>%</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Template Interactions -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+              <svg class="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-500">Template Interactions</p>
+            <p class="text-2xl font-semibold text-gray-900"><%= @metrics[:template_interaction_stats][:total_interactions] %></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Unique Users -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+              <svg class="w-5 h-5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-500">Unique Users</p>
+            <p class="text-2xl font-semibold text-gray-900"><%= @metrics[:template_interaction_stats][:unique_users] %></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Job Performance -->
+      <div class="bg-white rounded-lg shadow p-6">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <div class="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+              <svg class="w-5 h-5 text-yellow-600" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path>
+              </svg>
+            </div>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm font-medium text-gray-500">Avg Processing Time</p>
+            <p class="text-2xl font-semibold text-gray-900"><%= @metrics[:job_performance_metrics][:average_processing_time] %>ms</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Common Failure Points -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+      <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-medium text-gray-900">Common Failure Points</h3>
+        </div>
+        <div class="p-6">
+          <% if @metrics[:common_failure_points].any? %>
+            <div class="space-y-4">
+              <% @metrics[:common_failure_points].each do |error_type, count| %>
+                <div class="flex justify-between items-center">
+                  <span class="text-sm text-gray-600"><%= error_type&.humanize || 'Unknown' %></span>
+                  <span class="text-sm font-medium text-gray-900"><%= count %></span>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="text-gray-500 text-sm">No failure points recorded in this period.</p>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Popular Templates -->
+      <div class="bg-white rounded-lg shadow">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h3 class="text-lg font-medium text-gray-900">Popular Payment Templates</h3>
+        </div>
+        <div class="p-6">
+          <% if @metrics[:template_interaction_stats][:templates_by_popularity].any? %>
+            <div class="space-y-4">
+              <% @metrics[:template_interaction_stats][:templates_by_popularity].each do |template_id, count| %>
+                <div class="flex justify-between items-center">
+                  <span class="text-sm text-gray-600">Template <%= template_id %></span>
+                  <span class="text-sm font-medium text-gray-900"><%= count %></span>
+                </div>
+              <% end %>
+            </div>
+          <% else %>
+            <p class="text-gray-500 text-sm">No template interactions recorded in this period.</p>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Events -->
+    <div class="bg-white rounded-lg shadow">
+      <div class="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
+        <h3 class="text-lg font-medium text-gray-900">Recent Payment Events</h3>
+        <div class="flex space-x-2">
+          <%= link_to "Export CSV", admin_payment_analytics_path(format: :csv, start_date: params[:start_date], end_date: params[:end_date]), 
+                      class: "text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-md" %>
+          <%= link_to "Export JSON", admin_payment_analytics_path(format: :json, start_date: params[:start_date], end_date: params[:end_date]), 
+                      class: "text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-md" %>
+        </div>
+      </div>
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event Type</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tier</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Timestamp</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Context</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            <% @recent_events.each do |event| %>
+              <tr>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
+                    <%= case event.event_type
+                        when 'payment_setup_completed' then 'bg-green-100 text-green-800'
+                        when 'payment_validation_errors' then 'bg-red-100 text-red-800'
+                        when 'payment_setup_started' then 'bg-blue-100 text-blue-800'
+                        when 'payment_setup_abandoned' then 'bg-yellow-100 text-yellow-800'
+                        else 'bg-gray-100 text-gray-800'
+                        end %>">
+                    <%= event.event_type.humanize %>
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <%= event.user.email %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <%= event.user_subscription_tier&.humanize || 'Free' %>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <%= time_ago_in_words(event.timestamp) %> ago
+                </td>
+                <td class="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                  <%= event.context.except('user_agent', 'ip_address').to_json %>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>

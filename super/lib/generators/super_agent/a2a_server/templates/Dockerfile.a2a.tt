@@ -1,0 +1,46 @@
+FROM ruby:3.2-slim
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
+    nodejs \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copy Gemfile and install gems
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+# Copy application code
+COPY . .
+
+# Create non-root user
+RUN adduser --disabled-password --gecos '' appuser && \
+    chown -R appuser:appuser /app
+USER appuser
+
+# Expose A2A server port
+EXPOSE <%= server_port %>
+
+# Environment variables
+ENV RAILS_ENV=production
+ENV A2A_PORT=<%= server_port %>
+ENV A2A_HOST=<%= server_host %>
+<% if auth_enabled? -%>
+ENV SUPER_AGENT_A2A_TOKEN=your-token-here
+<% end -%>
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:<%= server_port %>/health || exit 1
+
+# Precompile assets if needed
+RUN if [ -f config/application.rb ]; then \
+    RAILS_ENV=production bundle exec rake assets:precompile 2>/dev/null || true; \
+fi
+
+# Default command
+CMD ["bin/super_agent_a2a"]

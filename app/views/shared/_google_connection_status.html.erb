@@ -1,0 +1,140 @@
+<div class="bg-white rounded-lg border border-gray-200 p-4" data-controller="google-connection">
+  <div class="flex items-center justify-between mb-3">
+    <div class="flex items-center space-x-3">
+      <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+        <svg class="w-6 h-6 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+        </svg>
+      </div>
+      <div>
+        <h3 class="text-lg font-semibold text-gray-900">Google Sheets Connection</h3>
+        <p class="text-sm text-gray-500">Connect your Google account to enable Sheets integration</p>
+      </div>
+    </div>
+    
+    <div data-google-connection-target="status">
+      <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium <%= google_oauth_status_class(status) %>">
+        <div class="w-2 h-2 <%= status == :connected ? 'bg-green-400' : 'bg-gray-400' %> rounded-full mr-2"></div>
+        <%= status == :connected ? 'Connected' : 'Not Connected' %>
+      </span>
+    </div>
+  </div>
+
+  <% status = google_oauth_status_for_user(current_user) %>
+
+  <% if status == :not_configured %>
+    <!-- OAuth Not Configured -->
+    <%= render 'shared/google_setup_instructions' %>
+  <% elsif status == :connected %>
+    <!-- Connected State -->
+    <div class="space-y-3">
+      <div class="bg-green-50 border border-green-200 rounded-lg p-3">
+        <div class="flex items-center">
+          <svg class="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <div>
+            <p class="text-sm font-medium text-green-800">
+              Connected as <%= current_user.google_integration.user_info['email'] %>
+            </p>
+            <% if current_user.google_integration.last_used_at %>
+              <p class="text-xs text-green-600">
+                Last used: <%= time_ago_in_words(current_user.google_integration.last_used_at) %> ago
+              </p>
+            <% end %>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex space-x-3">
+        <button type="button" 
+                class="flex-1 inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                data-action="click->google-connection#testConnection">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          Test Connection
+        </button>
+        
+        <%= link_to google_oauth_disconnect_path, 
+              method: :delete,
+              data: { confirm: 'Are you sure you want to disconnect from Google? This will disable all Google Sheets integrations.' },
+              class: "inline-flex items-center px-4 py-2 border border-red-300 shadow-sm text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50" do %>
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+          Disconnect
+        <% end %>
+      </div>
+    </div>
+  <% else %>
+    <!-- Not Connected State -->
+    <div class="space-y-3">
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <h4 class="text-sm font-medium text-blue-800 mb-2">What you can do with Google Sheets:</h4>
+        <ul class="text-sm text-blue-700 space-y-1">
+          <li class="flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Auto-export form responses to your Google Sheets
+          </li>
+          <li class="flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Create new spreadsheets or use existing ones
+          </li>
+          <li class="flex items-center">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            Real-time sync when responses are submitted
+          </li>
+        </ul>
+      </div>
+
+      <div class="flex space-x-3">
+        <%= link_to google_oauth_connect_path, 
+              class: "flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700" do %>
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
+          </svg>
+          Connect to Google
+        <% end %>
+        
+        <button type="button" 
+                class="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                data-action="click->google-connection#showHelp">
+          <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          Help
+        </button>
+      </div>
+    </div>
+  <% end %>
+
+  <% if current_user.google_integration&.error_log&.any? %>
+    <!-- Error State -->
+    <div class="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+      <div class="flex">
+        <svg class="w-5 h-5 text-red-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+          <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+        </svg>
+        <div>
+          <h4 class="text-sm font-medium text-red-800">Connection Issue</h4>
+          <p class="text-sm text-red-700 mt-1">
+            <%= current_user.google_integration.error_log.last['error'] %>
+          </p>
+          <p class="text-xs text-red-600 mt-1">
+            Try reconnecting to resolve this issue.
+          </p>
+        </div>
+      </div>
+    </div>
+  <% end %>
+</div>

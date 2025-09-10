@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+  <head>
+    <meta charset="utf-8">
+    <title><%= content_for(:title) || "mydialogform" %></title>
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+
+    <%= stylesheet_link_tag "application", "data-turbo-track": "reload" %>
+    <%= javascript_importmap_tags %>
+    <%= yield :head %>
+
+    <%# Enable PWA manifest for installable apps %>
+    <%#= tag.link rel: "manifest", href: pwa_manifest_path(format: :json) %>
+
+    <!-- Favicon -->
+    <link rel="icon" href="/icon.png" type="image/png">
+    <link rel="icon" href="/icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="/icon.png">
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  </head>
+
+  <body class="h-full bg-gray-50 font-sans antialiased">
+    <!-- Main application layout with header and sidebar -->
+    <div class="min-h-full">
+      <!-- Header Navigation -->
+      <header class="bg-white shadow-sm border-b border-gray-200 fixed top-0 left-0 right-0 z-40 h-16">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex justify-between items-center h-16">
+            <!-- Logo and brand -->
+            <div class="flex items-center">
+              <div class="flex-shrink-0">
+                <%= link_to root_path, class: "flex items-center space-x-2" do %>
+                  <div class="w-8 h-8 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <span class="text-white font-bold text-sm">M</span>
+                  </div>
+                  <span class="text-xl font-bold text-gray-900">mydialogform</span>
+                <% end %>
+              </div>
+              
+              <!-- Navigation items -->
+              <nav class="hidden md:ml-8 md:flex md:space-x-8">
+                <%= link_to "Forms", forms_path, 
+                    class: "text-gray-900 hover:text-indigo-600 px-3 py-2 text-sm font-medium transition-colors" %>
+                <%= link_to "Blog", blogs_path, 
+                    class: "text-gray-500 hover:text-indigo-600 px-3 py-2 text-sm font-medium transition-colors" %>
+                <%= link_to "Analytics", "#", 
+                    class: "text-gray-500 hover:text-indigo-600 px-3 py-2 text-sm font-medium transition-colors" %>
+              </nav>
+            </div>
+
+            <!-- Right side items -->
+            <div class="flex items-center space-x-4">
+              <!-- Navigation links for authenticated users -->
+              <% if user_signed_in? %>
+                <!-- Tier indicator -->
+                <div class="flex items-center space-x-2">
+                  <span class="text-sm text-gray-600">Plan:</span>
+                  <% if current_user.premium? %>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1v1a1 1 0 001 1h1a1 1 0 001-1V4h1V3a1 1 0 011-1H5zm4 5H7a1 1 0 01-1-1V6a1 1 0 011-1h2a1 1 0 011 1v1a1 1 0 01-1 1zM5 9a1 1 0 011-1h2a1 1 0 110 2H6a1 1 0 01-1-1zm1 4a1 1 0 100 2h2a1 1 0 100-2H6a1 1 0 00-1 1z" clip-rule="evenodd" />
+                      </svg>
+                      Premium
+                    </span>
+                  <% else %>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
+                      </svg>
+                      Basic
+                    </span>
+                  <% end %>
+                </div>
+                
+                <!-- User menu -->
+                <div class="relative" data-controller="dropdown">
+                  <button type="button" 
+                          class="flex items-center space-x-2 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                          data-action="click->dropdown#toggle">
+                    <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                      <span class="text-indigo-600 font-medium text-sm">
+                        <%= current_user.email.first.upcase %>
+                      </span>
+                    </div>
+                    <span class="text-gray-700 font-medium hidden sm:inline"><%= current_user.email %></span>
+                    <svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </button>
+                  
+                  <!-- Dropdown menu -->
+                  <div class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
+                       data-dropdown-target="menu">
+                    <%= link_to "Profile", profile_path, 
+                        class: "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" %>
+                    <%= link_to "Settings", "#", 
+                        class: "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" %>
+                    
+                    <% if current_user.premium? %>
+                      <div class="border-t border-gray-100"></div>
+                      <%= link_to stripe_settings_path, 
+                          class: "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" do %>
+                        <div class="flex items-center">
+                          <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                          </svg>
+                          Payment Settings
+                          <% unless current_user.stripe_configured? %>
+                            <span class="ml-auto w-2 h-2 bg-amber-400 rounded-full"></span>
+                          <% end %>
+                        </div>
+                      <% end %>
+                      
+                      <%= link_to subscription_management_path, 
+                          class: "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" do %>
+                        <div class="flex items-center">
+                          <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                          </svg>
+                          Subscription
+                          <% if current_user.subscription_expires_soon? %>
+                            <span class="ml-auto w-2 h-2 bg-red-400 rounded-full"></span>
+                          <% elsif current_user.subscription_canceling? %>
+                            <span class="ml-auto w-2 h-2 bg-yellow-400 rounded-full"></span>
+                          <% end %>
+                        </div>
+                      <% end %>
+                    <% else %>
+                      <div class="border-t border-gray-100"></div>
+                      <%= link_to subscription_management_path, 
+                          class: "block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" do %>
+                        <div class="flex items-center">
+                          <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                          </svg>
+                          Upgrade to Premium
+                        </div>
+                      <% end %>
+                    <% end %>
+                    
+                    <div class="border-t border-gray-100"></div>
+                    <%= form_tag destroy_user_session_path, method: :delete, class: "block" do %>
+                      <%= submit_tag "Sign out", class: "block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 bg-transparent border-none cursor-pointer" %>
+                    <% end %>
+                  </div>
+                </div>
+              <% else %>
+                <nav class="hidden md:flex md:space-x-4">
+                  <%= link_to "Sign in", new_user_session_path, 
+                      class: "text-gray-500 hover:text-indigo-600 px-3 py-2 text-sm font-medium transition-colors" %>
+                  <%= link_to "Sign up", new_user_registration_path, 
+                      class: "bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 text-sm font-medium rounded-md transition-colors" %>
+                </nav>
+                
+                <!-- Mobile menu button -->
+                <div class="md:hidden flex items-center space-x-2">
+                  <%= link_to "Blog", blogs_path, 
+                      class: "text-gray-500 hover:text-indigo-600 px-3 py-2 text-sm font-medium" %>
+                  <span class="text-gray-300">|</span>
+                  <%= link_to "Sign in", new_user_session_path, 
+                      class: "text-gray-500 hover:text-indigo-600 px-3 py-2 text-sm font-medium" %>
+                  <span class="text-gray-300">|</span>
+                  <%= link_to "Sign up", new_user_registration_path, 
+                      class: "text-indigo-600 hover:text-indigo-700 px-3 py-2 text-sm font-medium" %>
+                </div>
+              <% end %>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <!-- Main content area -->
+      <div class="pt-16">
+        <!-- Sidebar (if content_for :sidebar is provided) -->
+        <% if content_for?(:sidebar) %>
+          <div class="flex">
+            <aside class="w-64 bg-white border-r border-gray-200 min-h-screen">
+              <%= yield :sidebar %>
+            </aside>
+            <main class="flex-1 bg-gray-50">
+              <%= yield %>
+            </main>
+          </div>
+        <% else %>
+          <!-- Full width content -->
+          <main class="bg-gray-50 min-h-screen">
+            <%= yield %>
+          </main>
+        <% end %>
+      </div>
+    </div>
+
+    <!-- Flash messages -->
+    <% if flash.any? %>
+      <div class="fixed top-20 right-4 z-50 space-y-2">
+        <% flash.each do |type, message| %>
+          <div class="bg-white border-l-4 <%= type.to_s == 'error' || type.to_s == 'alert' ? 'border-red-400' : 'border-green-400' %> p-4 shadow-lg rounded-r-lg max-w-sm animate-slide-in-up">
+            <div class="flex">
+              <div class="flex-shrink-0">
+                <% if type.to_s == 'error' || type.to_s == 'alert' %>
+                  <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                  </svg>
+                <% else %>
+                  <svg class="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                  </svg>
+                <% end %>
+              </div>
+              <div class="ml-3">
+                <p class="text-sm text-gray-700"><%= message %></p>
+              </div>
+              <div class="ml-auto pl-3">
+                <button type="button" class="text-gray-400 hover:text-gray-600" onclick="this.parentElement.parentElement.parentElement.remove()">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        <% end %>
+      </div>
+    <% end %>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 z-50 flex items-center justify-center">
+      <div class="bg-white rounded-lg p-6 flex items-center space-x-3">
+        <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+        <span class="text-gray-900">Processing...</span>
+      </div>
+    </div>
+  </body>
+</html>

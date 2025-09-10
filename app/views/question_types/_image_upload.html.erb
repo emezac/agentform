@@ -1,0 +1,121 @@
+<div class="space-y-4">
+  <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition-colors image-drop-zone">
+    <%= form.file_field "answer[value]", 
+                       multiple: config['multiple'] == true,
+                       accept: "image/*",
+                       required: question.required?,
+                       class: "sr-only",
+                       data: { 
+                         "question-response-target": "answerInput",
+                         "action": "change->question-response#validateInput change->question-response#handleImageUpload"
+                       } %>
+    
+    <div class="space-y-2">
+      <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 48 48">
+        <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20v12a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H8a2 2 0 00-2 2v12z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      
+      <div class="text-sm text-gray-600">
+        <label for="<%= form.object_name %>_answer_value" class="cursor-pointer font-medium text-indigo-600 hover:text-indigo-500">
+          Upload <%= config['multiple'] == true ? 'images' : 'an image' %>
+        </label>
+        <span> or drag and drop</span>
+      </div>
+      
+      <p class="text-xs text-gray-500">
+        PNG, JPG, GIF up to <%= config['max_size_mb'] || 10 %>MB
+      </p>
+    </div>
+  </div>
+  
+  <!-- Image preview area -->
+  <div class="hidden grid grid-cols-2 md:grid-cols-3 gap-4" data-question-response-target="imagePreview">
+    <!-- Images will be previewed here -->
+  </div>
+  
+  <% if config['help_text'] %>
+    <p class="text-xs text-gray-500"><%= config['help_text'] %></p>
+  <% end %>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const dropZone = document.querySelector('.image-drop-zone');
+    const fileInput = document.querySelector('input[type="file"]');
+    const imagePreview = document.querySelector('[data-question-response-target="imagePreview"]');
+    
+    if (!dropZone || !fileInput) return;
+    
+    // Handle drag and drop
+    dropZone.addEventListener('dragover', function(e) {
+      e.preventDefault();
+      dropZone.classList.add('border-indigo-500', 'bg-indigo-50');
+    });
+    
+    dropZone.addEventListener('dragleave', function(e) {
+      e.preventDefault();
+      dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
+    });
+    
+    dropZone.addEventListener('drop', function(e) {
+      e.preventDefault();
+      dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
+      
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        fileInput.files = files;
+        fileInput.dispatchEvent(new Event('change'));
+      }
+    });
+    
+    // Handle click to open file dialog
+    dropZone.addEventListener('click', function() {
+      fileInput.click();
+    });
+    
+    // Handle file selection
+    fileInput.addEventListener('change', function() {
+      updateImagePreview();
+    });
+    
+    function updateImagePreview() {
+      if (fileInput.files.length === 0) {
+        imagePreview.classList.add('hidden');
+        imagePreview.innerHTML = '';
+        return;
+      }
+      
+      imagePreview.classList.remove('hidden');
+      imagePreview.innerHTML = '';
+      
+      Array.from(fileInput.files).forEach(file => {
+        if (file.type.startsWith('image/')) {
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            const imageContainer = document.createElement('div');
+            imageContainer.className = 'relative group';
+            imageContainer.innerHTML = `
+              <img src="${e.target.result}" alt="${file.name}" class="w-full h-32 object-cover rounded-lg border border-gray-200">
+              <div class="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg flex items-center justify-center">
+                <span class="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-center px-2">
+                  ${file.name}<br>
+                  ${formatFileSize(file.size)}
+                </span>
+              </div>
+            `;
+            imagePreview.appendChild(imageContainer);
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+    
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+  });
+</script>

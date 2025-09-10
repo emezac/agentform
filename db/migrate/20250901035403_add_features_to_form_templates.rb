@@ -1,0 +1,5 @@
+class AddFeaturesToFormTemplates < ActiveRecord::Migration[8.0]
+  def change
+    add_column :form_templates, :features, :text
+  end
+end

@@ -1,0 +1,68 @@
+{
+  "name": "mydialogform",
+  "description": "AI-powered intelligent form builder platform",
+  "repository": "https://github.com/yourusername/mydialogform",
+  "logo": "https://mydialogform.com/logo.png",
+  "keywords": ["rails", "forms", "ai", "superagent", "postgresql", "redis"],
+  "website": "https://mydialogform.com",
+  "success_url": "/",
+  "scripts": {
+    "postdeploy": "bundle exec rails db:seed"
+  },
+  "env": {
+    "RAILS_ENV": {
+      "description": "Rails environment",
+      "value": "production"
+    },
+    "RAILS_SERVE_STATIC_FILES": {
+      "description": "Enable static file serving",
+      "value": "true"
+    },
+    "RAILS_LOG_TO_STDOUT": {
+      "description": "Enable logging to stdout",
+      "value": "true"
+    },
+    "SECRET_KEY_BASE": {
+      "description": "Secret key for Rails application",
+      "generator": "secret"
+    },
+    "RAILS_MASTER_KEY": {
+      "description": "Master key for Rails credentials",
+      "required": true
+    },
+    "APP_DOMAIN": {
+      "description": "Application domain for email links and CORS",
+      "required": false
+    }
+  },
+  "formation": {
+    "web": {
+      "quantity": 1,
+      "size": "basic"
+    },
+    "worker": {
+      "quantity": 1,
+      "size": "basic"
+    }
+  },
+  "addons": [
+    {
+      "plan": "heroku-postgresql:essential-0"
+    },
+    {
+      "plan": "heroku-redis:mini"
+    },
+    {
+      "plan": "scheduler:standard"
+    }
+  ],
+  "buildpacks": [
+    {
+      "url": "heroku/nodejs"
+    },
+    {
+      "url": "heroku/ruby"
+    }
+  ],
+  "stack": "heroku-22"
+}

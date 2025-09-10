@@ -1,0 +1,48 @@
+<% content ||= {} %>
+
+<div class="payment-error-education bg-gradient-to-br from-indigo-50 via-white to-purple-50 border border-indigo-200 rounded-xl p-6 mb-6">
+  <div class="flex items-start">
+    <div class="flex-shrink-0">
+      <div class="flex items-center justify-center h-10 w-10 rounded-full bg-indigo-100">
+        <svg class="h-6 w-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      </div>
+    </div>
+    
+    <div class="ml-4 flex-1">
+      <h3 class="text-lg font-semibold text-indigo-900 mb-2">
+        <%= content[:title] || 'Payment Features' %>
+      </h3>
+      
+      <p class="text-sm text-indigo-800 mb-4">
+        <%= content[:description] || 'Learn about payment features and setup requirements.' %>
+      </p>
+      
+      <% if content[:benefits].present? %>
+        <div class="mb-4">
+          <h4 class="text-sm font-medium text-indigo-900 mb-2">Key Benefits:</h4>
+          <ul class="space-y-1">
+            <% content[:benefits].each do |benefit| %>
+              <li class="flex items-start text-sm text-indigo-700">
+                <svg class="mr-2 mt-0.5 h-4 w-4 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                </svg>
+                <span><%= benefit %></span>
+              </li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+      
+      <% if content[:setup_time].present? %>
+        <div class="flex items-center text-sm text-indigo-600 bg-indigo-50 rounded-lg px-3 py-2">
+          <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span><strong>Setup Time:</strong> <%= content[:setup_time] %></span>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>

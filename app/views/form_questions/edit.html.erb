@@ -1,0 +1,1238 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-2xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Edit Question</h1>
+      <%= link_to "Back to Form", edit_form_path(@form), 
+          class: "text-gray-600 hover:text-gray-900" %>
+    </div>
+
+    <div class="bg-white shadow rounded-lg p-6">
+      <%= form_with model: [@form, @question], local: true, class: "space-y-6" do |form| %>
+        <% if @question.errors.any? %>
+          <div class="bg-red-50 border border-red-200 rounded-md p-4">
+            <h3 class="text-sm font-medium text-red-800">
+              <%= pluralize(@question.errors.count, "error") %> prohibited this question from being saved:
+            </h3>
+            <ul class="mt-2 text-sm text-red-700 list-disc list-inside">
+              <% @question.errors.full_messages.each do |message| %>
+                <li><%= message %></li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+
+        <div>
+          <%= form.label :title, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_field :title, 
+              class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500",
+              placeholder: "Enter your question..." %>
+        </div>
+
+        <div>
+          <%= form.label :description, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_area :description, 
+              rows: 3,
+              class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500",
+              placeholder: "Optional description or help text..." %>
+        </div>
+
+        <div>
+          <%= form.label :question_type, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.select :question_type, 
+              options_for_select(@question_types.map { |type| [type.humanize, type] }, @question.question_type),
+              {},
+              { class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" } %>
+          
+          <!-- Payment Feature Notice -->
+          <% unless current_user.can_accept_payments? %>
+            <div id="payment-premium-notice" class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md <%= 'hidden' unless @question.question_type == 'payment' %>">
+              <div class="flex items-start">
+                <svg class="w-5 h-5 text-amber-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.232 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+                <div class="flex-1">
+                  <% if current_user.premium? %>
+                    <h4 class="text-sm font-medium text-amber-800">Stripe Configuration Required</h4>
+                    <p class="mt-1 text-sm text-amber-700">
+                      To accept payments, you need to configure your Stripe account. 
+                      <a href="<%= stripe_settings_path %>" class="font-medium underline hover:text-amber-600">Configure Stripe</a> 
+                      to start accepting payments through your forms.
+                    </p>
+                  <% else %>
+                    <h4 class="text-sm font-medium text-amber-800">Premium Feature</h4>
+                    <p class="mt-1 text-sm text-amber-700">
+                      Payment questions are only available for Premium users. 
+                      <a href="#" class="font-medium underline hover:text-amber-600">Upgrade your account</a> 
+                      to accept payments directly through your forms.
+                    </p>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+
+        <div>
+          <%= form.label :position, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.number_field :position, 
+              class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+        </div>
+
+        <!-- Multiple Choice Configuration -->
+        <div id="choice-configuration" class="space-y-4" style="display: none;">
+          <h3 class="text-lg font-medium text-gray-900">Choice Options</h3>
+          
+          <div id="options-container" class="space-y-3">
+            <% current_options = @question.question_config&.dig('options') || [] %>
+            <% current_options.each_with_index do |option, index| %>
+              <div class="flex items-center space-x-2 option-item">
+                <%= text_field_tag "form_question[question_config][options][]", option,
+                    class: "block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500",
+                    placeholder: "Option #{index + 1}" %>
+                <button type="button" class="remove-option text-red-600 hover:text-red-800">
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                  </svg>
+                </button>
+              </div>
+            <% end %>
+          </div>
+          
+          <button type="button" id="add-option" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            Add Option
+          </button>
+        </div>
+
+        <!-- Rating Configuration -->
+        <div id="rating-configuration" class="space-y-4" style="display: none;">
+          <h3 class="text-lg font-medium text-gray-900">Rating Configuration</h3>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <%= label_tag "form_question[question_config][min_value]", "Minimum Value", class: "block text-sm font-medium text-gray-700" %>
+              <%= number_field_tag "form_question[question_config][min_value]", 
+                  @question.question_config&.dig('min_value') || 1,
+                  class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+            </div>
+            <div>
+              <%= label_tag "form_question[question_config][max_value]", "Maximum Value", class: "block text-sm font-medium text-gray-700" %>
+              <%= number_field_tag "form_question[question_config][max_value]", 
+                  @question.question_config&.dig('max_value') || 5,
+                  class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+            </div>
+          </div>
+        </div>
+
+        <!-- Drag and Drop Configuration -->
+        <div id="drag-drop-configuration" class="space-y-4" style="display: none;">
+          <h3 class="text-lg font-medium text-gray-900">Drag and Drop Configuration</h3>
+          
+          <div class="space-y-4">
+            <div>
+              <%= label_tag "form_question[question_config][items][]", "Items to Drag", class: "block text-sm font-medium text-gray-700" %>
+              <div id="items-container" class="space-y-2">
+                <% current_items = @question.question_config&.dig('items') || [] %>
+                <% current_items.each_with_index do |item, index| %>
+                  <div class="flex items-center space-x-2 item-item">
+                    <%= text_field_tag "form_question[question_config][items][]", item,
+                        class: "block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500",
+                        placeholder: "Item #{index + 1}" %>
+                    <button type="button" class="remove-item text-red-600 hover:text-red-800">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                <% end %>
+              </div>
+              <button type="button" id="add-item" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Add Item
+              </button>
+            </div>
+
+            <div>
+              <%= label_tag "form_question[question_config][categories][]", "Drop Categories", class: "block text-sm font-medium text-gray-700" %>
+              <div id="categories-container" class="space-y-2">
+                <% current_categories = @question.question_config&.dig('categories') || [] %>
+                <% current_categories.each_with_index do |category, index| %>
+                  <div class="flex items-center space-x-2 category-item">
+                    <%= text_field_tag "form_question[question_config][categories][]", category,
+                        class: "block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500",
+                        placeholder: "Category #{index + 1}" %>
+                    <button type="button" class="remove-category text-red-600 hover:text-red-800">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                <% end %>
+              </div>
+              <button type="button" id="add-category" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Add Category
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Matrix Configuration -->
+        <div id="matrix-configuration" class="space-y-4" style="display: none;">
+          <h3 class="text-lg font-medium text-gray-900">Matrix Configuration</h3>
+          
+          <div class="space-y-4">
+            <div>
+              <%= label_tag "form_question[question_config][rows][]", "Matrix Rows", class: "block text-sm font-medium text-gray-700" %>
+              <div id="matrix-rows-container" class="space-y-2">
+                <% current_rows = @question.question_config&.dig('rows') || [] %>
+                <% current_rows.each_with_index do |row, index| %>
+                  <div class="flex items-center space-x-2 matrix-row-item">
+                    <%= text_field_tag "form_question[question_config][rows][]", row,
+                        class: "block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500",
+                        placeholder: "Row #{index + 1}" %>
+                    <button type="button" class="remove-matrix-row text-red-600 hover:text-red-800">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                <% end %>
+              </div>
+              <button type="button" id="add-matrix-row" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Add Row
+              </button>
+            </div>
+
+            <div>
+              <%= label_tag "form_question[question_config][columns][]", "Matrix Columns", class: "block text-sm font-medium text-gray-700" %>
+              <div id="matrix-columns-container" class="space-y-2">
+                <% current_columns = @question.question_config&.dig('columns') || [] %>
+                <% current_columns.each_with_index do |column, index| %>
+                  <div class="flex items-center space-x-2 matrix-column-item">
+                    <%= text_field_tag "form_question[question_config][columns][]", column,
+                        class: "block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500",
+                        placeholder: "Column #{index + 1}" %>
+                    <button type="button" class="remove-matrix-column text-red-600 hover:text-red-800">
+                      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                    </button>
+                  </div>
+                <% end %>
+              </div>
+              <button type="button" id="add-matrix-column" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Add Column
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Conditional Logic Configuration -->
+        <div id="conditional-configuration" class="space-y-4" style="display: none;">
+          <h3 class="text-lg font-medium text-gray-900">Conditional Logic Rules</h3>
+          
+          <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+            <div class="flex items-start">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+              </div>
+              <div class="ml-3">
+                <h4 class="text-sm font-medium text-blue-800">How conditional logic works</h4>
+                <p class="text-sm text-blue-700 mt-1">
+                  This question will only be shown if ALL the conditions below are met. 
+                  The conditions are checked against answers from previous questions.
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <div id="conditional-rules-container" class="space-y-4">
+              <% current_rules = @question.conditional_logic&.dig('rules') || [] %>
+              <% current_rules.each_with_index do |rule, index| %>
+                <div class="conditional-rule border border-gray-200 rounded-lg p-4 bg-white relative" data-rule-index="<%= index %>">
+                  <!-- Rule Number Badge -->
+                  <div class="absolute -top-2 -left-2 bg-indigo-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-semibold">
+                    <%= index + 1 %>
+                  </div>
+                  
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- Question Selection -->
+                    <div>
+                      <%= label_tag "form_question[conditional_logic][rules][][question_id]", "Previous Question", class: "block text-sm font-medium text-gray-700" %>
+                      <% 
+                        question_options = @conditional_questions.map do |q|
+                          # Include question type and sample options for better UX
+                          label = "#{q.title}"
+                          if q.question_type == 'single_choice' && q.choice_options.any?
+                            sample_options = q.choice_options.first(2).join(', ')
+                            sample_options += '...' if q.choice_options.length > 2
+                            label += " (Options: #{sample_options})"
+                          elsif q.question_type == 'yes_no'
+                            label += " (Yes/No)"
+                          end
+                          [label, q.reference_id || q.id, { 'data-question-type' => q.question_type, 'data-options' => q.choice_options&.to_json }]
+                        end
+                      %>
+                      <%= select_tag "form_question[conditional_logic][rules][][question_id]", 
+                          options_for_select(question_options.map { |opt| [opt[0], opt[1], opt[2]] }, rule['question_id']),
+                          { prompt: "Select a previous question...", 
+                            class: "question-select mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" } %>
+                      
+                      <!-- Dynamic help text based on selected question -->
+                      <div class="question-help-text mt-1 text-xs text-gray-500" style="display: none;">
+                        <span class="available-options"></span>
+                      </div>
+                    </div>
+                    
+                    <!-- Operator Selection -->
+                    <div>
+                      <%= label_tag "form_question[conditional_logic][rules][][operator]", "Condition", class: "block text-sm font-medium text-gray-700" %>
+                      <%= select_tag "form_question[conditional_logic][rules][][operator]",
+                          options_for_select([
+                            ['is exactly', 'equals'],
+                            ['is not', 'not_equals'],
+                            ['contains', 'contains'],
+                            ['does not contain', 'not_contains'],
+                            ['starts with', 'starts_with'],
+                            ['ends with', 'ends_with'],
+                            ['is greater than', 'greater_than'],
+                            ['is less than', 'less_than'],
+                            ['is empty (no answer)', 'is_empty'],
+                            ['has any answer', 'is_not_empty']
+                          ], rule['operator']),
+                          { prompt: "Select condition...",
+                            class: "operator-select mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" } %>
+                    </div>
+                    
+                    <!-- Value Selection -->
+                    <div class="value-field">
+                      <%= label_tag "form_question[conditional_logic][rules][][value]", "Expected Value", class: "block text-sm font-medium text-gray-700" %>
+                      <div class="value-input-container">
+                        <%= text_field_tag "form_question[conditional_logic][rules][][value]", rule['value'],
+                            class: "value-input mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500",
+                            placeholder: "Enter the expected value..." %>
+                      </div>
+                      
+                      <!-- Dynamic value suggestions -->
+                      <div class="value-suggestions mt-2" style="display: none;">
+                        <div class="text-xs text-gray-600 mb-1">Quick select:</div>
+                        <div class="flex flex-wrap gap-1"></div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Rule Preview -->
+                  <div class="mt-3 p-2 bg-gray-50 rounded text-sm text-gray-600 rule-preview">
+                    <strong>Rule preview:</strong> <span class="preview-text">Configure the rule above to see preview</span>
+                  </div>
+                  
+                  <div class="mt-4 flex justify-end">
+                    <button type="button" class="remove-rule text-red-600 hover:text-red-800 inline-flex items-center">
+                      <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                      </svg>
+                      Remove Rule
+                    </button>
+                  </div>
+                </div>
+              <% end %>
+            </div>
+            
+            <div class="mt-4 flex items-center justify-between">
+              <button type="button" id="add-conditional-rule" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+                </svg>
+                Add Another Rule
+              </button>
+              
+              <!-- Logic Operator for Multiple Rules -->
+              <div class="logic-operator-section" style="display: none;">
+                <label class="text-sm font-medium text-gray-700 mr-2">Multiple rules logic:</label>
+                <%= select_tag "form_question[conditional_logic][operator]",
+                    options_for_select([
+                      ['ALL rules must be true (AND)', 'and'],
+                      ['ANY rule can be true (OR)', 'or']
+                    ], @question.conditional_logic&.dig('operator') || 'and'),
+                    { class: "text-sm border-gray-300 rounded shadow-sm focus:ring-indigo-500 focus:border-indigo-500" } %>
+              </div>
+            </div>
+            
+            <!-- Test Section -->
+            <div class="mt-4 p-3 border-t border-gray-200">
+              <button type="button" id="test-conditional-logic" class="text-sm text-indigo-600 hover:text-indigo-800">
+                🧪 Test this logic with sample data
+              </button>
+              <div id="test-results" class="mt-2" style="display: none;">
+                <!-- Test results will be populated here -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-6">
+          <div class="flex items-center">
+            <%= form.check_box :required, class: "h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" %>
+            <%= form.label :required, "Required", class: "ml-2 block text-sm text-gray-900" %>
+          </div>
+
+          <div class="flex items-center">
+            <%= form.check_box :ai_enhanced, class: "h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" %>
+            <%= form.label :ai_enhanced, "AI Enhanced", class: "ml-2 block text-sm text-gray-900" %>
+          </div>
+
+          <div class="flex items-center">
+            <%= form.check_box :conditional_enabled, class: "h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" %>
+            <%= form.label :conditional_enabled, "Conditional Logic", class: "ml-2 block text-sm text-gray-900" %>
+          </div>
+        </div>
+
+        <div class="flex justify-end space-x-3">
+          <%= link_to "Cancel", edit_form_path(@form), 
+              class: "bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+          <%= form.submit "Update Question", 
+              class: "bg-indigo-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const questionTypeSelect = document.getElementById('form_question_question_type');
+  const choiceConfig = document.getElementById('choice-configuration');
+  const ratingConfig = document.getElementById('rating-configuration');
+  const dragDropConfig = document.getElementById('drag-drop-configuration');
+  const optionsContainer = document.getElementById('options-container');
+  const addOptionBtn = document.getElementById('add-option');
+  const itemsContainer = document.getElementById('items-container');
+  const addItemBtn = document.getElementById('add-item');
+  const categoriesContainer = document.getElementById('categories-container');
+  const addCategoryBtn = document.getElementById('add-category');
+  const matrixConfig = document.getElementById('matrix-configuration');
+  const matrixRowsContainer = document.getElementById('matrix-rows-container');
+  const addMatrixRowBtn = document.getElementById('add-matrix-row');
+  const matrixColumnsContainer = document.getElementById('matrix-columns-container');
+  const addMatrixColumnBtn = document.getElementById('add-matrix-column');
+  
+  // Conditional Logic Elements
+  const conditionalEnabled = document.getElementById('form_question_conditional_enabled');
+  const conditionalConfig = document.getElementById('conditional-configuration');
+  const conditionalRulesContainer = document.getElementById('conditional-rules-container');
+  const addConditionalRuleBtn = document.getElementById('add-conditional-rule');
+
+    // Enhanced Conditional Logic Management
+  function initializeConditionalLogic() {
+    updateLogicOperatorVisibility();
+    updateAllRulePreviews();
+    attachConditionalEventListeners();
+  }
+
+  function attachConditionalEventListeners() {
+    // Question selection change
+    document.addEventListener('change', function(e) {
+      if (e.target.classList.contains('question-select')) {
+        handleQuestionSelectionChange(e.target);
+      }
+    });
+
+    // Operator selection change
+    document.addEventListener('change', function(e) {
+      if (e.target.classList.contains('operator-select')) {
+        handleOperatorChange(e.target);
+      }
+    });
+
+    // Value input change
+    document.addEventListener('input', function(e) {
+      if (e.target.classList.contains('value-input')) {
+        handleValueChange(e.target);
+      }
+    });
+
+    // Test logic button
+    const testButton = document.getElementById('test-conditional-logic');
+    if (testButton) {
+      testButton.addEventListener('click', testConditionalLogic);
+    }
+  }
+
+  function handleQuestionSelectionChange(questionSelect) {
+    const ruleDiv = questionSelect.closest('.conditional-rule');
+    const selectedOption = questionSelect.options[questionSelect.selectedIndex];
+    const questionType = selectedOption.getAttribute('data-question-type');
+    const questionOptions = selectedOption.getAttribute('data-options');
+    
+    // Update help text
+    updateQuestionHelpText(ruleDiv, questionType, questionOptions);
+    
+    // Update operator options based on question type
+    updateOperatorOptions(ruleDiv, questionType);
+    
+    // Update value field based on question type
+    updateValueField(ruleDiv, questionType, questionOptions);
+    
+    // Update rule preview
+    updateRulePreview(ruleDiv);
+  }
+
+  function updateQuestionHelpText(ruleDiv, questionType, questionOptions) {
+    const helpText = ruleDiv.querySelector('.question-help-text');
+    const availableOptions = helpText.querySelector('.available-options');
+    
+    if (questionType && questionOptions) {
+      try {
+        const options = JSON.parse(questionOptions);
+        if (options && options.length > 0) {
+          availableOptions.textContent = `Available options: ${options.join(', ')}`;
+          helpText.style.display = 'block';
+        } else {
+          helpText.style.display = 'none';
+        }
+      } catch (e) {
+        helpText.style.display = 'none';
+      }
+    } else if (questionType === 'yes_no') {
+      availableOptions.textContent = 'Available options: Yes, No';
+      helpText.style.display = 'block';
+    } else {
+      helpText.style.display = 'none';
+    }
+  }
+
+  function updateOperatorOptions(ruleDiv, questionType) {
+    const operatorSelect = ruleDiv.querySelector('.operator-select');
+    const currentValue = operatorSelect.value;
+    
+    // Define operators for each question type
+    const operatorsByType = {
+      'single_choice': [
+        ['is exactly', 'equals'],
+        ['is not', 'not_equals'],
+        ['is any of', 'in_list'],
+        ['is none of', 'not_in_list']
+      ],
+      'multiple_choice': [
+        ['contains', 'contains'],
+        ['does not contain', 'not_contains'],
+        ['is any of', 'in_list'],
+        ['is none of', 'not_in_list']
+      ],
+      'yes_no': [
+        ['is', 'equals']
+      ],
+      'text_short': [
+        ['is exactly', 'equals'],
+        ['contains', 'contains'],
+        ['does not contain', 'not_contains'],
+        ['starts with', 'starts_with'],
+        ['ends with', 'ends_with'],
+        ['is empty', 'is_empty'],
+        ['has any answer', 'is_not_empty']
+      ],
+      'text_long': [
+        ['contains', 'contains'],
+        ['does not contain', 'not_contains'],
+        ['is empty', 'is_empty'],
+        ['has any answer', 'is_not_empty']
+      ],
+      'rating': [
+        ['is exactly', 'equals'],
+        ['is greater than', 'greater_than'],
+        ['is less than', 'less_than'],
+        ['is greater than or equal', 'greater_than_or_equal'],
+        ['is less than or equal', 'less_than_or_equal']
+      ]
+    };
+
+    const operators = operatorsByType[questionType] || operatorsByType['text_short'];
+    
+    // Clear and repopulate options
+    operatorSelect.innerHTML = '<option value="">Select condition...</option>';
+    operators.forEach(([label, value]) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      if (value === currentValue) {
+        option.selected = true;
+      }
+      operatorSelect.appendChild(option);
+    });
+  }
+
+  function updateValueField(ruleDiv, questionType, questionOptions) {
+    const valueContainer = ruleDiv.querySelector('.value-input-container');
+    const suggestionsDiv = ruleDiv.querySelector('.value-suggestions');
+    const operatorSelect = ruleDiv.querySelector('.operator-select');
+    const currentValue = ruleDiv.querySelector('.value-input')?.value || '';
+    
+    // Operators that don't need a value
+    const noValueOperators = ['is_empty', 'is_not_empty'];
+    if (noValueOperators.includes(operatorSelect.value)) {
+      valueContainer.style.display = 'none';
+      suggestionsDiv.style.display = 'none';
+      return;
+    } else {
+      valueContainer.style.display = 'block';
+    }
+
+    if (questionType === 'yes_no') {
+      // Create yes/no select
+      valueContainer.innerHTML = `
+        <select name="form_question[conditional_logic][rules][][value]" 
+                class="value-input mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+          <option value="">Select value...</option>
+          <option value="yes" ${currentValue.toLowerCase() === 'yes' ? 'selected' : ''}>Yes</option>
+          <option value="no" ${currentValue.toLowerCase() === 'no' ? 'selected' : ''}>No</option>
+        </select>
+      `;
+      suggestionsDiv.style.display = 'none';
+    } else if (questionType === 'single_choice' || questionType === 'multiple_choice') {
+      // Create text input with suggestions
+      valueContainer.innerHTML = `
+        <input type="text" name="form_question[conditional_logic][rules][][value]" 
+               class="value-input mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+               placeholder="Type or click a suggestion below..."
+               value="${currentValue}">
+      `;
+      
+      // Show suggestions
+      if (questionOptions) {
+        try {
+          const options = JSON.parse(questionOptions);
+          if (options && options.length > 0) {
+            const suggestionsContainer = suggestionsDiv.querySelector('.flex');
+            suggestionsContainer.innerHTML = '';
+            
+            options.forEach(option => {
+              const button = document.createElement('button');
+              button.type = 'button';
+              button.className = 'text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded border text-gray-700';
+              button.textContent = option;
+              button.addEventListener('click', function() {
+                const valueInput = ruleDiv.querySelector('.value-input');
+                valueInput.value = option;
+                updateRulePreview(ruleDiv);
+              });
+              suggestionsContainer.appendChild(button);
+            });
+            
+            suggestionsDiv.style.display = 'block';
+          } else {
+            suggestionsDiv.style.display = 'none';
+          }
+        } catch (e) {
+          suggestionsDiv.style.display = 'none';
+        }
+      }
+    } else {
+      // Standard text input
+      valueContainer.innerHTML = `
+        <input type="text" name="form_question[conditional_logic][rules][][value]" 
+               class="value-input mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+               placeholder="Enter the expected value..."
+               value="${currentValue}">
+      `;
+      suggestionsDiv.style.display = 'none';
+    }
+  }
+
+  function handleOperatorChange(operatorSelect) {
+    const ruleDiv = operatorSelect.closest('.conditional-rule');
+    const questionSelect = ruleDiv.querySelector('.question-select');
+    const selectedOption = questionSelect.options[questionSelect.selectedIndex];
+    const questionType = selectedOption.getAttribute('data-question-type');
+    const questionOptions = selectedOption.getAttribute('data-options');
+    
+    updateValueField(ruleDiv, questionType, questionOptions);
+    updateRulePreview(ruleDiv);
+  }
+
+  function handleValueChange(valueInput) {
+    const ruleDiv = valueInput.closest('.conditional-rule');
+    updateRulePreview(ruleDiv);
+  }
+
+  function updateRulePreview(ruleDiv) {
+    const questionSelect = ruleDiv.querySelector('.question-select');
+    const operatorSelect = ruleDiv.querySelector('.operator-select');
+    const valueInput = ruleDiv.querySelector('.value-input');
+    const previewSpan = ruleDiv.querySelector('.preview-text');
+    
+    const questionText = questionSelect.options[questionSelect.selectedIndex]?.text || 'Select a question';
+    const operatorText = operatorSelect.options[operatorSelect.selectedIndex]?.text || 'select condition';
+    const valueText = valueInput?.value || 'enter value';
+    
+    // Clean question text (remove the options part)
+    const cleanQuestionText = questionText.replace(/\s*\(.*\)$/, '');
+    
+    if (questionSelect.value && operatorSelect.value) {
+      if (['is_empty', 'is_not_empty'].includes(operatorSelect.value)) {
+        previewSpan.innerHTML = `Show this question when "<strong>${cleanQuestionText}</strong>" <strong>${operatorText}</strong>`;
+      } else if (valueInput?.value) {
+        previewSpan.innerHTML = `Show this question when "<strong>${cleanQuestionText}</strong>" <strong>${operatorText}</strong> "<strong>${valueText}</strong>"`;
+      } else {
+        previewSpan.innerHTML = `Show this question when "<strong>${cleanQuestionText}</strong>" <strong>${operatorText}</strong> <em>(enter value)</em>`;
+      }
+    } else {
+      previewSpan.textContent = 'Configure the rule above to see preview';
+    }
+  }
+
+  function updateAllRulePreviews() {
+    document.querySelectorAll('.conditional-rule').forEach(ruleDiv => {
+      updateRulePreview(ruleDiv);
+    });
+  }
+
+  function updateLogicOperatorVisibility() {
+    const rulesContainer = document.getElementById('conditional-rules-container');
+    const logicOperatorSection = document.querySelector('.logic-operator-section');
+    
+    if (rulesContainer && logicOperatorSection) {
+      const ruleCount = rulesContainer.children.length;
+      logicOperatorSection.style.display = ruleCount > 1 ? 'block' : 'none';
+    }
+  }
+
+  function testConditionalLogic() {
+    const rulesContainer = document.getElementById('conditional-rules-container');
+    const testResults = document.getElementById('test-results');
+    const rules = [];
+    
+    // Collect all rules
+    rulesContainer.querySelectorAll('.conditional-rule').forEach(ruleDiv => {
+      const questionSelect = ruleDiv.querySelector('.question-select');
+      const operatorSelect = ruleDiv.querySelector('.operator-select');
+      const valueInput = ruleDiv.querySelector('.value-input');
+      
+      if (questionSelect.value && operatorSelect.value) {
+        rules.push({
+          questionText: questionSelect.options[questionSelect.selectedIndex].text.replace(/\s*\(.*\)$/, ''),
+          operator: operatorSelect.value,
+          operatorText: operatorSelect.options[operatorSelect.selectedIndex].text,
+          value: valueInput?.value || ''
+        });
+      }
+    });
+    
+    if (rules.length === 0) {
+      testResults.innerHTML = '<div class="text-sm text-red-600">Please configure at least one rule to test.</div>';
+      testResults.style.display = 'block';
+      return;
+    }
+    
+    // Generate test scenarios
+    let testHTML = '<div class="text-sm space-y-2">';
+    testHTML += '<div class="font-medium text-gray-900">Test scenarios:</div>';
+    
+    rules.forEach((rule, index) => {
+      testHTML += `<div class="pl-4 border-l-2 border-gray-200">`;
+      testHTML += `<div class="font-medium">Rule ${index + 1}:</div>`;
+      testHTML += `<div class="text-gray-600">When "${rule.questionText}" ${rule.operatorText}`;
+      if (rule.value && !['is_empty', 'is_not_empty'].includes(rule.operator)) {
+        testHTML += ` "${rule.value}"`;
+      }
+      testHTML += ` → This question will be shown</div>`;
+      testHTML += `</div>`;
+    });
+    
+    const logicOperator = document.querySelector('select[name*="[operator]"]')?.value || 'and';
+    if (rules.length > 1) {
+      testHTML += `<div class="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">`;
+      testHTML += `<strong>Multiple rules logic:</strong> ${logicOperator === 'and' ? 'ALL' : 'ANY'} of the above rules must be true`;
+      testHTML += `</div>`;
+    }
+    
+    testHTML += '</div>';
+    
+    testResults.innerHTML = testHTML;
+    testResults.style.display = 'block';
+  }
+
+  // Enhanced add rule function
+  const originalAddConditionalRule = addConditionalRuleBtn.onclick;
+  addConditionalRuleBtn.onclick = function() {
+    // Call original function or create new rule
+    const ruleCount = conditionalRulesContainer.children.length;
+    const newRule = document.createElement('div');
+    newRule.className = 'conditional-rule border border-gray-200 rounded-lg p-4 bg-white relative';
+    newRule.setAttribute('data-rule-index', ruleCount);
+    
+    newRule.innerHTML = `
+      <div class="absolute -top-2 -left-2 bg-indigo-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-semibold">
+        ${ruleCount + 1}
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Previous Question</label>
+          <select name="form_question[conditional_logic][rules][][question_id]" 
+                  class="question-select mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="">Select a previous question...</option>
+            <% @conditional_questions.each do |q| %>
+              <% 
+                label = q.title
+                if q.question_type == 'single_choice' && q.choice_options.any?
+                  sample_options = q.choice_options.first(2).join(', ')
+                  sample_options += '...' if q.choice_options.length > 2
+                  label += " (Options: #{sample_options})"
+                elsif q.question_type == 'yes_no'
+                  label += " (Yes/No)"
+                end
+              %>
+              <option value="<%= q.reference_id || q.id %>" 
+                      data-question-type="<%= q.question_type %>"
+                      data-options="<%= q.choice_options&.to_json %>"><%= label %></option>
+            <% end %>
+          </select>
+          <div class="question-help-text mt-1 text-xs text-gray-500" style="display: none;">
+            <span class="available-options"></span>
+          </div>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Condition</label>
+          <select name="form_question[conditional_logic][rules][][operator]"
+                  class="operator-select mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="">Select condition...</option>
+          </select>
+        </div>
+        
+        <div class="value-field">
+          <label class="block text-sm font-medium text-gray-700">Expected Value</label>
+          <div class="value-input-container">
+            <input type="text" name="form_question[conditional_logic][rules][][value]" 
+                   class="value-input mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                   placeholder="Enter the expected value...">
+          </div>
+          <div class="value-suggestions mt-2" style="display: none;">
+            <div class="text-xs text-gray-600 mb-1">Quick select:</div>
+            <div class="flex flex-wrap gap-1"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="mt-3 p-2 bg-gray-50 rounded text-sm text-gray-600 rule-preview">
+        <strong>Rule preview:</strong> <span class="preview-text">Configure the rule above to see preview</span>
+      </div>
+      
+      <div class="mt-4 flex justify-end">
+        <button type="button" class="remove-rule text-red-600 hover:text-red-800 inline-flex items-center">
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          Remove Rule
+        </button>
+      </div>
+    `;
+    
+    conditionalRulesContainer.appendChild(newRule);
+    
+    // Add event listeners to the new rule
+    newRule.querySelector('.remove-rule').addEventListener('click', function() {
+      newRule.remove();
+      updateLogicOperatorVisibility();
+      // Renumber rules
+      document.querySelectorAll('.conditional-rule').forEach((rule, index) => {
+        rule.querySelector('.absolute').textContent = index + 1;
+      });
+    });
+    
+    updateLogicOperatorVisibility();
+  };
+
+  // Initialize enhanced conditional logic
+  if (conditionalEnabled) {
+    initializeConditionalLogic();
+  }
+
+  function showConfiguration() {
+    const selectedType = questionTypeSelect.value;
+    const paymentNotice = document.getElementById('payment-premium-notice');
+    
+    // Hide all configurations
+    choiceConfig.style.display = 'none';
+    ratingConfig.style.display = 'none';
+    dragDropConfig.style.display = 'none';
+    matrixConfig.style.display = 'none';
+    
+    // Show/hide premium notice for payment questions
+    if (paymentNotice) {
+      if (selectedType === 'payment') {
+        paymentNotice.classList.remove('hidden');
+      } else {
+        paymentNotice.classList.add('hidden');
+      }
+    }
+    
+    // Show appropriate configuration
+    if (['multiple_choice', 'single_choice', 'checkbox'].includes(selectedType)) {
+      choiceConfig.style.display = 'block';
+    } else if (['rating', 'scale', 'nps_score'].includes(selectedType)) {
+      ratingConfig.style.display = 'block';
+    } else if (['drag_drop'].includes(selectedType)) {
+      dragDropConfig.style.display = 'block';
+    } else if (['matrix'].includes(selectedType)) {
+      matrixConfig.style.display = 'block';
+    }
+  }
+
+  function showConditionalConfiguration() {
+    conditionalConfig.style.display = conditionalEnabled.checked ? 'block' : 'none';
+  }
+
+  function updateConditionalRuleOptions() {
+    const ruleDivs = conditionalRulesContainer.querySelectorAll('.conditional-rule');
+    ruleDivs.forEach((ruleDiv, index) => {
+      const questionSelect = ruleDiv.querySelector('select[name*="[question_id]"]');
+      const operatorSelect = ruleDiv.querySelector('select[name*="[operator]"]');
+      const valueInput = ruleDiv.querySelector('input[name*="[value]"]');
+      
+      // Update operator options based on question type
+      if (questionSelect.value) {
+        const selectedOption = questionSelect.options[questionSelect.selectedIndex];
+        const questionType = selectedOption.getAttribute('data-question-type') || 'text';
+        
+        // For yes/no questions, provide yes/no value options
+        if (questionType === 'yes_no') {
+          if (!valueInput.getAttribute('data-initialized')) {
+            valueInput.outerHTML = `
+              <select name="form_question[conditional_logic][rules][][value]" 
+                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                      data-initialized="true">
+                <option value="">Select value...</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+              </select>
+            `;
+          }
+        } else {
+          // For other question types, use text input
+          if (valueInput.tagName === 'SELECT') {
+            valueInput.outerHTML = `
+              <input type="text" name="form_question[conditional_logic][rules][][value]" 
+                     class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                     placeholder="Enter value..."
+                     data-initialized="true">
+            `;
+          }
+        }
+      }
+    });
+  }
+
+  // Initial setup
+  showConfiguration();
+  showConditionalConfiguration();
+  updateConditionalRuleOptions();
+
+  // Handle question type change
+  questionTypeSelect.addEventListener('change', showConfiguration);
+
+  // Handle conditional logic toggle
+  conditionalEnabled.addEventListener('change', function() {
+    showConditionalConfiguration();
+    if (this.checked) {
+      updateConditionalRuleOptions();
+    }
+  });
+
+  // Handle adding new conditional rules
+  addConditionalRuleBtn.addEventListener('click', function() {
+    const ruleCount = conditionalRulesContainer.children.length;
+    const newRule = document.createElement('div');
+    newRule.className = 'conditional-rule border border-gray-200 rounded-lg p-4 bg-white';
+    newRule.setAttribute('data-rule-index', ruleCount);
+    newRule.innerHTML = `
+      <div class="grid grid-cols-3 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Question</label>
+          <select name="form_question[conditional_logic][rules][][question_id]" 
+                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="">Select a question...</option>
+            <% @conditional_questions.each do |q| %>
+              <option value="<%= q.reference_id || q.id %>"><%= q.title %></option>
+            <% end %>
+          </select>
+        </div>
+        
+        <div>
+          <label class="block text-sm font-medium text-gray-700">Condition</label>
+          <select name="form_question[conditional_logic][rules][][operator]"
+                  class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500">
+            <option value="">Select condition...</option>
+            <option value="equals">Equals (Case Insensitive)</option>
+            <option value="equals_ignore_case">Equals (Exact)</option>
+            <option value="not_equals">Not Equals (Case Insensitive)</option>
+            <option value="not_equals_ignore_case">Not Equals (Exact)</option>
+            <option value="contains">Contains (Case Insensitive)</option>
+            <option value="contains_ignore_case">Contains (Exact)</option>
+            <option value="starts_with">Starts With (Case Insensitive)</option>
+            <option value="starts_with_ignore_case">Starts With (Exact)</option>
+            <option value="ends_with">Ends With (Case Insensitive)</option>
+            <option value="ends_with_ignore_case">Ends With (Exact)</option>
+            <option value="greater_than">Greater Than</option>
+            <option value="greater_than_or_equal">Greater Than or Equal</option>
+            <option value="less_than">Less Than</option>
+            <option value="less_than_or_equal">Less Than or Equal</option>
+            <option value="is_empty">Is Empty</option>
+            <option value="is_not_empty">Is Not Empty</option>
+            <option value="matches_pattern">Matches Pattern (Regex)</option>
+          </select>
+        </div>
+        
+        <div class="value-field">
+          <label class="block text-sm font-medium text-gray-700">Value</label>
+          <input type="text" name="form_question[conditional_logic][rules][][value]" 
+                 class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                 placeholder="Enter value...">
+        </div>
+      </div>
+      
+      <div class="mt-4 flex justify-end">
+        <button type="button" class="remove-rule text-red-600 hover:text-red-800 inline-flex items-center">
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+          </svg>
+          Remove Rule
+        </button>
+      </div>
+    `;
+    conditionalRulesContainer.appendChild(newRule);
+    
+    // Add event listeners to the new rule
+    newRule.querySelector('.remove-rule').addEventListener('click', removeConditionalRule);
+    newRule.querySelector('select[name*="[question_id]"]').addEventListener('change', updateConditionalRuleOptions);
+    newRule.querySelector('select[name*="[operator]"]').addEventListener('change', function() {
+      updateValueFieldVisibility(newRule);
+    });
+    
+    // Initialize value field visibility for the new rule
+    updateValueFieldVisibility(newRule);
+  });
+
+  // Handle removing conditional rules
+  function removeConditionalRule(event) {
+    const ruleItem = event.target.closest('.conditional-rule');
+    if (ruleItem) {
+      ruleItem.remove();
+    }
+  }
+
+  // Handle dynamic value field visibility based on operator
+  function updateValueFieldVisibility(ruleDiv) {
+    const operatorSelect = ruleDiv.querySelector('select[name*="[operator]"]');
+    const valueField = ruleDiv.querySelector('.value-field');
+    const valueInput = valueField.querySelector('input, select');
+    
+    if (!operatorSelect || !valueField) return;
+    
+    const operatorsThatNeedValue = [
+      'equals', 'equals_ignore_case', 'not_equals', 'not_equals_ignore_case',
+      'contains', 'contains_ignore_case', 'starts_with', 'starts_with_ignore_case',
+      'ends_with', 'ends_with_ignore_case', 'greater_than', 'greater_than_or_equal',
+      'less_than', 'less_than_or_equal', 'matches_pattern'
+    ];
+    
+    const operatorsThatNeedNoValue = [
+      'is_empty', 'is_not_empty'
+    ];
+    
+    const selectedOperator = operatorSelect.value;
+    
+    if (operatorsThatNeedNoValue.includes(selectedOperator)) {
+      valueField.style.display = 'none';
+      if (valueInput) valueInput.removeAttribute('required');
+    } else if (operatorsThatNeedValue.includes(selectedOperator)) {
+      valueField.style.display = 'block';
+      if (valueInput) valueInput.setAttribute('required', 'required');
+    } else {
+      valueField.style.display = 'block';
+      if (valueInput) valueInput.setAttribute('required', 'required');
+    }
+  }
+
+  // Update value field visibility for all existing rules
+  function updateAllValueFields() {
+    document.querySelectorAll('.conditional-rule').forEach(ruleDiv => {
+      updateValueFieldVisibility(ruleDiv);
+    });
+  }
+
+  // Add event listeners to existing conditional rules
+  document.querySelectorAll('.conditional-rule select[name*="[question_id]"]').forEach(select => {
+    select.addEventListener('change', updateConditionalRuleOptions);
+  });
+
+  document.querySelectorAll('.conditional-rule .remove-rule').forEach(button => {
+    button.addEventListener('click', removeConditionalRule);
+  });
+
+  // Handle adding new options
+  addOptionBtn.addEventListener('click', function() {
+    const optionCount = optionsContainer.children.length;
+    const newOption = document.createElement('div');
+    newOption.className = 'flex items-center space-x-2 option-item';
+    newOption.innerHTML = `
+      <input type="text" name="form_question[question_config][options][]" 
+             class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+             placeholder="Option ${optionCount + 1}" />
+      <button type="button" class="remove-option text-red-600 hover:text-red-800">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </button>
+    `;
+    optionsContainer.appendChild(newOption);
+
+    // Add remove handler to new button
+    newOption.querySelector('.remove-option').addEventListener('click', removeOption);
+  });
+
+  // Handle removing options
+  function removeOption(event) {
+    const optionItem = event.target.closest('.option-item');
+    if (optionItem) {
+      optionItem.remove();
+    }
+  }
+
+  // Handle adding new items for drag-drop
+  addItemBtn.addEventListener('click', function() {
+    const itemCount = itemsContainer.children.length;
+    const newItem = document.createElement('div');
+    newItem.className = 'flex items-center space-x-2 item-item';
+    newItem.innerHTML = `
+      <input type="text" name="form_question[question_config][items][]" 
+             class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+             placeholder="Item ${itemCount + 1}" />
+      <button type="button" class="remove-item text-red-600 hover:text-red-800">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </button>
+    `;
+    itemsContainer.appendChild(newItem);
+    newItem.querySelector('.remove-item').addEventListener('click', removeItem);
+  });
+
+  // Handle adding new categories for drag-drop
+  addCategoryBtn.addEventListener('click', function() {
+    const categoryCount = categoriesContainer.children.length;
+    const newCategory = document.createElement('div');
+    newCategory.className = 'flex items-center space-x-2 category-item';
+    newCategory.innerHTML = `
+      <input type="text" name="form_question[question_config][categories][]" 
+             class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+             placeholder="Category ${categoryCount + 1}" />
+      <button type="button" class="remove-category text-red-600 hover:text-red-800">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </button>
+    `;
+    categoriesContainer.appendChild(newCategory);
+    newCategory.querySelector('.remove-category').addEventListener('click', removeCategory);
+  });
+
+  // Handle removing items
+  function removeItem(event) {
+    const itemItem = event.target.closest('.item-item');
+    if (itemItem) {
+      itemItem.remove();
+    }
+  }
+
+  // Handle removing categories
+  function removeCategory(event) {
+    const categoryItem = event.target.closest('.category-item');
+    if (categoryItem) {
+      categoryItem.remove();
+    }
+  }
+
+  // Handle adding matrix rows
+  addMatrixRowBtn.addEventListener('click', function() {
+    const rowCount = matrixRowsContainer.children.length;
+    const newRow = document.createElement('div');
+    newRow.className = 'flex items-center space-x-2 matrix-row-item';
+    newRow.innerHTML = `
+      <input type="text" name="form_question[question_config][rows][]" 
+             class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+             placeholder="Row ${rowCount + 1}" />
+      <button type="button" class="remove-matrix-row text-red-600 hover:text-red-800">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </button>
+    `;
+    matrixRowsContainer.appendChild(newRow);
+    newRow.querySelector('.remove-matrix-row').addEventListener('click', removeMatrixRow);
+  });
+
+  // Handle adding matrix columns
+  addMatrixColumnBtn.addEventListener('click', function() {
+    const columnCount = matrixColumnsContainer.children.length;
+    const newColumn = document.createElement('div');
+    newColumn.className = 'flex items-center space-x-2 matrix-column-item';
+    newColumn.innerHTML = `
+      <input type="text" name="form_question[question_config][columns][]" 
+             class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+             placeholder="Column ${columnCount + 1}" />
+      <button type="button" class="remove-matrix-column text-red-600 hover:text-red-800">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </button>
+    `;
+    matrixColumnsContainer.appendChild(newColumn);
+    newColumn.querySelector('.remove-matrix-column').addEventListener('click', removeMatrixColumn);
+  });
+
+  // Handle removing matrix rows
+  function removeMatrixRow(event) {
+    const rowItem = event.target.closest('.matrix-row-item');
+    if (rowItem) {
+      rowItem.remove();
+    }
+  }
+
+  // Handle removing matrix columns
+  function removeMatrixColumn(event) {
+    const columnItem = event.target.closest('.matrix-column-item');
+    if (columnItem) {
+      columnItem.remove();
+    }
+  }
+
+  // Add remove handlers to all existing elements
+  document.querySelectorAll('.remove-option').forEach(button => {
+    button.addEventListener('click', removeOption);
+  });
+  document.querySelectorAll('.remove-item').forEach(button => {
+    button.addEventListener('click', removeItem);
+  });
+  document.querySelectorAll('.remove-category').forEach(button => {
+    button.addEventListener('click', removeCategory);
+  });
+  document.querySelectorAll('.remove-matrix-row').forEach(button => {
+    button.addEventListener('click', removeMatrixRow);
+  });
+  document.querySelectorAll('.remove-matrix-column').forEach(button => {
+    button.addEventListener('click', removeMatrixColumn);
+  });
+
+  // Add operator change event listeners for conditional rules
+  document.querySelectorAll('.conditional-rule select[name*="[operator]"]').forEach(select => {
+    select.addEventListener('change', function() {
+      updateValueFieldVisibility(this.closest('.conditional-rule'));
+    });
+  });
+
+  // Initialize value field visibility for existing rules
+  updateAllValueFields();
+});
+</script>

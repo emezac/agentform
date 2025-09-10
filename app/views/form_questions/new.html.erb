@@ -1,0 +1,211 @@
+<div class="container mx-auto px-4 py-8">
+  <div class="max-w-2xl mx-auto">
+    <div class="flex justify-between items-center mb-6">
+      <h1 class="text-2xl font-bold text-gray-900">Add New Question</h1>
+      <%= link_to "Back to Form", edit_form_path(@form), 
+          class: "text-gray-600 hover:text-gray-900" %>
+    </div>
+
+    <div class="bg-white shadow rounded-lg p-6">
+      <%= form_with model: [@form, @question], local: true, class: "space-y-6" do |form| %>
+        <% if @question.errors.any? %>
+          <div class="bg-red-50 border border-red-200 rounded-md p-4">
+            <h3 class="text-sm font-medium text-red-800">
+              <%= pluralize(@question.errors.count, "error") %> prohibited this question from being saved:
+            </h3>
+            <ul class="mt-2 text-sm text-red-700 list-disc list-inside">
+              <% @question.errors.full_messages.each do |message| %>
+                <li><%= message %></li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+
+        <div>
+          <%= form.label :title, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_field :title, 
+              class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500",
+              placeholder: "Enter your question..." %>
+        </div>
+
+        <div>
+          <%= form.label :description, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.text_area :description, 
+              rows: 3,
+              class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500",
+              placeholder: "Optional description or help text..." %>
+        </div>
+
+        <div>
+          <%= form.label :question_type, class: "block text-sm font-medium text-gray-700" %>
+          <%= form.select :question_type, 
+              options_for_select(@question_types.map { |type| [type.humanize, type] }, @question.question_type),
+              { prompt: "Select question type..." },
+              { class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" } %>
+          
+          <!-- Payment Feature Notice -->
+          <% unless current_user.can_accept_payments? %>
+            <div id="payment-premium-notice" class="mt-2 p-3 bg-amber-50 border border-amber-200 rounded-md hidden">
+              <div class="flex items-start">
+                <svg class="w-5 h-5 text-amber-600 mt-0.5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.232 15.5c-.77.833.192 2.5 1.732 2.5z"></path>
+                </svg>
+                <div class="flex-1">
+                  <% if current_user.premium? %>
+                    <h4 class="text-sm font-medium text-amber-800">Stripe Configuration Required</h4>
+                    <p class="mt-1 text-sm text-amber-700">
+                      To accept payments, you need to configure your Stripe account. 
+                      <a href="<%= stripe_settings_path %>" class="font-medium underline hover:text-amber-600">Configure Stripe</a> 
+                      to start accepting payments through your forms.
+                    </p>
+                  <% else %>
+                    <h4 class="text-sm font-medium text-amber-800">Premium Feature</h4>
+                    <p class="mt-1 text-sm text-amber-700">
+                      Payment questions are only available for Premium users. 
+                      <a href="#" class="font-medium underline hover:text-amber-600">Upgrade your account</a> 
+                      to accept payments directly through your forms.
+                    </p>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+
+        <!-- Multiple Choice Configuration -->
+        <div id="choice-configuration" class="space-y-4" style="display: none;">
+          <h3 class="text-lg font-medium text-gray-900">Choice Options</h3>
+          
+          <div id="options-container" class="space-y-3">
+            <div class="flex items-center space-x-2 option-item">
+              <%= text_field_tag "form_question[question_config][options][]", "",
+                  class: "block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500",
+                  placeholder: "Option 1" %>
+              <button type="button" class="remove-option text-red-600 hover:text-red-800">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <button type="button" id="add-option" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            Add Option
+          </button>
+        </div>
+
+        <!-- Rating Configuration -->
+        <div id="rating-configuration" class="space-y-4" style="display: none;">
+          <h3 class="text-lg font-medium text-gray-900">Rating Configuration</h3>
+          
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <%= label_tag "form_question[question_config][min_value]", "Minimum Value", class: "block text-sm font-medium text-gray-700" %>
+              <%= number_field_tag "form_question[question_config][min_value]", 1,
+                  class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+            </div>
+            <div>
+              <%= label_tag "form_question[question_config][max_value]", "Maximum Value", class: "block text-sm font-medium text-gray-700" %>
+              <%= number_field_tag "form_question[question_config][max_value]", 5,
+                  class: "mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" %>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-6">
+          <div class="flex items-center">
+            <%= form.check_box :required, class: "h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" %>
+            <%= form.label :required, "Required", class: "ml-2 block text-sm text-gray-900" %>
+          </div>
+
+          <div class="flex items-center">
+            <%= form.check_box :ai_enhanced, class: "h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded" %>
+            <%= form.label :ai_enhanced, "AI Enhanced", class: "ml-2 block text-sm text-gray-900" %>
+          </div>
+        </div>
+
+        <div class="flex justify-end space-x-3">
+          <%= link_to "Cancel", edit_form_path(@form), 
+              class: "bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+          <%= form.submit "Create Question", 
+              class: "bg-indigo-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+        </div>
+
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+          const questionTypeSelect = document.getElementById('form_question_question_type');
+          const choiceConfig = document.getElementById('choice-configuration');
+          const ratingConfig = document.getElementById('rating-configuration');
+          const optionsContainer = document.getElementById('options-container');
+          const addOptionBtn = document.getElementById('add-option');
+          const paymentNotice = document.getElementById('payment-premium-notice');
+
+          function showConfiguration() {
+            const selectedType = questionTypeSelect.value;
+            
+            // Hide all configurations
+            choiceConfig.style.display = 'none';
+            ratingConfig.style.display = 'none';
+            
+            // Show/hide premium notice for payment questions
+            if (paymentNotice) {
+              if (selectedType === 'payment') {
+                paymentNotice.classList.remove('hidden');
+              } else {
+                paymentNotice.classList.add('hidden');
+              }
+            }
+            
+            // Show appropriate configuration
+            if (['multiple_choice', 'single_choice', 'checkbox'].includes(selectedType)) {
+              choiceConfig.style.display = 'block';
+            } else if (['rating', 'scale', 'nps_score'].includes(selectedType)) {
+              ratingConfig.style.display = 'block';
+            }
+          }
+
+          // Initial setup
+          showConfiguration();
+
+          // Handle question type change
+          questionTypeSelect.addEventListener('change', showConfiguration);
+
+          // Handle adding new options
+          addOptionBtn.addEventListener('click', function() {
+            const optionCount = optionsContainer.children.length;
+            const newOption = document.createElement('div');
+            newOption.className = 'flex items-center space-x-2 option-item';
+            newOption.innerHTML = `
+              <input type="text" name="form_question[question_config][options][]" 
+                     class="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                     placeholder="Option ${optionCount + 1}" />
+              <button type="button" class="remove-option text-red-600 hover:text-red-800">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                </svg>
+              </button>
+            `;
+            optionsContainer.appendChild(newOption);
+
+            // Add remove handler to new button
+            newOption.querySelector('.remove-option').addEventListener('click', removeOption);
+          });
+
+          // Handle removing options
+          function removeOption(event) {
+            const optionItem = event.target.closest('.option-item');
+            if (optionItem) {
+              optionItem.remove();
+            }
+          }
+
+          // Add remove handlers to existing options
+          document.querySelectorAll('.remove-option').forEach(button => {
+            button.addEventListener('click', removeOption);
+          });
+        });
+        </script>
+      <% end %>
+    </div>
+  </div>
+</div>

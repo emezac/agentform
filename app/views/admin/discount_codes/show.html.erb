@@ -1,0 +1,217 @@
+<% content_for :title, "Discount Code: #{@discount_code.code}" %>
+
+<div class="admin-content">
+  <div class="admin-header">
+    <div class="admin-header-content">
+      <h1 class="admin-title">
+        Discount Code: <span class="code-highlight"><%= @discount_code.code %></span>
+      </h1>
+      <div class="admin-subtitle">
+        <span class="status-indicator <%= @discount_code.active? ? 'active' : 'inactive' %>">
+          <%= @discount_code.active? ? 'Active' : 'Inactive' %>
+        </span>
+        <% unless @discount_code.available? %>
+          <% if @discount_code.expired? %>
+            <span class="badge badge-warning">Expired</span>
+          <% elsif @discount_code.usage_limit_reached? %>
+            <span class="badge badge-danger">Exhausted</span>
+          <% end %>
+        <% end %>
+      </div>
+    </div>
+    <div class="admin-header-actions">
+      <%= link_to "Edit Code", edit_admin_discount_code_path(@discount_code), 
+                  class: "btn btn-primary" %>
+      <%= link_to @discount_code.active? ? "Deactivate" : "Activate", 
+                 toggle_status_admin_discount_code_path(@discount_code),
+                 method: :patch,
+                 class: "btn #{@discount_code.active? ? 'btn-warning' : 'btn-success'}",
+                 data: { 
+                   confirm: "Are you sure you want to #{@discount_code.active? ? 'deactivate' : 'activate'} this code?" 
+                 } %>
+      <%= link_to "Back to Codes", admin_discount_codes_path, 
+                  class: "btn btn-secondary" %>
+    </div>
+  </div>
+
+  <div class="admin-grid">
+    <!-- Code Details -->
+    <div class="admin-card">
+      <h3 class="card-title">Code Details</h3>
+      <div class="detail-grid">
+        <div class="detail-item">
+          <span class="detail-label">Discount Percentage</span>
+          <span class="detail-value discount-percentage">
+            <%= @discount_code.discount_percentage %>%
+          </span>
+        </div>
+        
+        <div class="detail-item">
+          <span class="detail-label">Created By</span>
+          <span class="detail-value">
+            <%= @discount_code.created_by.email %>
+          </span>
+        </div>
+        
+        <div class="detail-item">
+          <span class="detail-label">Created Date</span>
+          <span class="detail-value">
+            <%= @discount_code.created_at.strftime("%B %d, %Y at %I:%M %p") %>
+          </span>
+        </div>
+        
+        <div class="detail-item">
+          <span class="detail-label">Expiration</span>
+          <span class="detail-value">
+            <% if @discount_code.expires_at %>
+              <span class="<%= 'text-danger' if @discount_code.expired? %>">
+                <%= @discount_code.expires_at.strftime("%B %d, %Y at %I:%M %p") %>
+              </span>
+            <% else %>
+              <span class="text-muted">Never expires</span>
+            <% end %>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Usage Statistics -->
+    <div class="admin-card">
+      <h3 class="card-title">Usage Statistics</h3>
+      <% if @usage_stats.success? %>
+        <% stats = @usage_stats.result %>
+        <div class="stats-grid">
+          <div class="stat-item">
+            <div class="stat-value"><%= stats[:total_uses] %></div>
+            <div class="stat-label">Total Uses</div>
+          </div>
+          
+          <div class="stat-item">
+            <div class="stat-value">
+              <% if stats[:max_uses] %>
+                <%= stats[:remaining_uses] %>
+              <% else %>
+                ∞
+              <% end %>
+            </div>
+            <div class="stat-label">Remaining Uses</div>
+          </div>
+          
+          <div class="stat-item">
+            <div class="stat-value">
+              <%= number_to_currency(stats[:revenue_impact] / 100.0) %>
+            </div>
+            <div class="stat-label">Total Discount Given</div>
+          </div>
+          
+          <div class="stat-item">
+            <div class="stat-value">
+              <%= stats[:usage_percentage].round(1) %>%
+            </div>
+            <div class="stat-label">Usage Rate</div>
+          </div>
+        </div>
+        
+        <% if stats[:max_uses] %>
+          <div class="usage-progress-container">
+            <div class="usage-progress-bar">
+              <div class="usage-progress-fill" 
+                   style="width: <%= stats[:usage_percentage] %>%"></div>
+            </div>
+            <div class="usage-progress-text">
+              <%= stats[:total_uses] %> of <%= stats[:max_uses] %> uses
+            </div>
+          </div>
+        <% end %>
+      <% else %>
+        <div class="alert alert-warning">
+          Unable to load usage statistics.
+        </div>
+      <% end %>
+    </div>
+  </div>
+
+  <!-- Recent Usage -->
+  <% if @recent_usages.any? %>
+    <div class="admin-card">
+      <h3 class="card-title">Recent Usage</h3>
+      <div class="usage-table-container">
+        <table class="usage-table">
+          <thead>
+            <tr>
+              <th>User</th>
+              <th>Original Amount</th>
+              <th>Discount Amount</th>
+              <th>Final Amount</th>
+              <th>Savings</th>
+              <th>Used At</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% @recent_usages.each do |usage| %>
+              <tr>
+                <td>
+                  <div class="user-info">
+                    <span class="user-email"><%= usage.user.email %></span>
+                    <span class="user-name text-muted">
+                      <%= usage.user.first_name %> <%= usage.user.last_name %>
+                    </span>
+                  </div>
+                </td>
+                <td>
+                  <span class="amount">
+                    <%= usage.formatted_original_amount %>
+                  </span>
+                </td>
+                <td>
+                  <span class="discount-amount">
+                    -<%= usage.formatted_discount_amount %>
+                  </span>
+                </td>
+                <td>
+                  <span class="final-amount">
+                    <%= usage.formatted_final_amount %>
+                  </span>
+                </td>
+                <td>
+                  <span class="savings-percentage">
+                    <%= usage.savings_percentage %>%
+                  </span>
+                </td>
+                <td>
+                  <span class="usage-date">
+                    <%= usage.used_at.strftime("%b %d, %Y") %>
+                  </span>
+                </td>
+              </tr>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+      
+      <% if @discount_code.discount_code_usages.count > 10 %>
+        <div class="table-footer">
+          <p class="text-muted">
+            Showing 10 most recent uses. 
+            Total: <%= @discount_code.discount_code_usages.count %> uses.
+          </p>
+        </div>
+      <% end %>
+    </div>
+  <% else %>
+    <div class="admin-card">
+      <div class="empty-state">
+        <div class="empty-state-icon">
+          <svg class="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path>
+          </svg>
+        </div>
+        <h3 class="empty-state-title">No usage yet</h3>
+        <p class="empty-state-description">
+          This discount code hasn't been used by any customers yet.
+        </p>
+      </div>
+    </div>
+  <% end %>
+</div>

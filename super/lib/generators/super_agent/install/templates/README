@@ -1,0 +1,31 @@
+=== SuperAgent Installation Complete\! ===
+
+✅ SuperAgent has been successfully installed in your Rails application\!
+
+📁 Files created:
+- config/initializers/super_agent.rb
+- app/workflows/application_workflow.rb
+- app/agents/application_agent.rb
+
+📂 Directories created:
+- app/workflows/ - Place your workflow definitions here
+- app/agents/ - Place your agent classes here
+
+🚀 Next steps:
+
+1. Set your API keys in your environment:
+   export OPENAI_API_KEY=your_openai_key
+   export ANTHROPIC_API_KEY=your_anthropic_key
+
+2. Create your first workflow:
+   rails generate super_agent:workflow LeadAnalysisWorkflow
+
+3. Create your first agent:
+   rails generate super_agent:agent LeadAnalysisAgent
+
+4. Run the database migrations (if any):
+   rails db:migrate
+
+📚 Documentation: https://github.com/superagent-rb/super_agent
+💡 Examples: https://github.com/superagent-rb/super_agent/tree/main/examples
+EOF < /dev/null

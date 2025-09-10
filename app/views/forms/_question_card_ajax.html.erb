@@ -1,0 +1,92 @@
+<%# app/views/forms/_question_card_ajax.html.erb %>
+<div class="bg-white rounded-xl border border-gray-200 p-6 hover:shadow-md transition-shadow" 
+     data-question-id="<%= question.id %>"
+     data-form-builder-target="questionCard">
+  
+  <!-- Drag Handle -->
+  <div class="flex items-start justify-between mb-4">
+    <div class="flex items-start space-x-3">
+      <div class="drag-handle cursor-grab text-gray-400 hover:text-gray-600 mt-1">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"/>
+        </svg>
+      </div>
+      
+      <div class="flex-1">
+        <div class="flex items-center space-x-2 mb-1">
+          <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-purple-100 text-purple-800 rounded-full">
+            Step <%= index + 1 %>
+          </span>
+          <% if question.ai_enhanced? %>
+            <span class="ai-indicator inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded-full">
+              AI Enhanced
+            </span>
+          <% end %>
+          <% if question.required? %>
+            <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-red-100 text-red-800 rounded-full">
+              Required
+            </span>
+          <% end %>
+        </div>
+        <h3 class="question-title font-semibold text-gray-900 mb-1"><%= question.title %></h3>
+        <% if question.description.present? %>
+          <p class="text-sm text-gray-600 mb-2"><%= question.description %></p>
+        <% end %>
+        <div class="text-xs text-gray-500">
+          Type: <span class="font-medium"><%= question.question_type.humanize %></span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Action Buttons -->
+    <div class="flex items-center space-x-1">
+      <button type="button" 
+              class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              data-action="click->form-builder#editQuestion"
+              title="Edit question">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        </svg>
+      </button>
+      
+      <button type="button" 
+              class="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              data-action="click->form-builder#duplicateQuestion"
+              title="Duplicate question">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+        </svg>
+      </button>
+      
+      <button type="button" 
+              class="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+              data-action="click->form-builder#enhanceWithAI"
+              title="Enhance with AI">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+        </svg>
+      </button>
+      
+      <button type="button" 
+              class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              data-action="click->form-builder#deleteQuestion"
+              title="Delete question">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  
+  <!-- Quick Required Toggle -->
+  <div class="flex items-center justify-between pt-4 border-t border-gray-200">
+    <span class="text-sm text-gray-700">Required field</span>
+    <label class="relative inline-flex items-center cursor-pointer">
+      <input type="checkbox" 
+             class="sr-only peer" 
+             <%= 'checked' if question.required? %>
+             data-action="change->form-builder#toggleRequired">
+      <div class="w-9 h-5 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+    </label>
+  </div>
+</div>

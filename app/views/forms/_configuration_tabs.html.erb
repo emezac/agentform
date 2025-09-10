@@ -1,0 +1,349 @@
+<%
+  # Configuration Tabs Component
+  # Right sidebar with tabbed configuration panels for form settings
+%>
+
+<div class="w-80 bg-white border-l border-gray-200 flex flex-col" data-controller="tabs">
+  
+  <!-- Tab Navigation -->
+  <div class="border-b border-gray-200 px-4 py-3">
+    <nav class="flex space-x-1" role="tablist">
+      <button data-action="click->tabs#switch" 
+              data-tabs-target="tab"
+              data-tab="settings"
+              class="tab-button active px-3 py-2 text-sm font-medium rounded-lg transition-colors">
+        Settings
+      </button>
+      <button data-action="click->tabs#switch" 
+              data-tabs-target="tab"
+              data-tab="design"
+              class="tab-button px-3 py-2 text-sm font-medium rounded-lg transition-colors">
+        Design
+      </button>
+      <button data-action="click->tabs#switch" 
+              data-tabs-target="tab"
+              data-tab="ai"
+              class="tab-button px-3 py-2 text-sm font-medium rounded-lg transition-colors">
+        AI
+      </button>
+      <button data-action="click->tabs#switch" 
+              data-tabs-target="tab"
+              data-tab="integrations"
+              class="tab-button px-3 py-2 text-sm font-medium rounded-lg transition-colors">
+        Integrations
+      </button>
+    </nav>
+  </div>
+
+  <!-- Tab Content -->
+  <div class="flex-1 overflow-y-auto">
+    
+    <!-- Settings Tab -->
+    <div data-tabs-target="panel" data-tab="settings" class="tab-panel p-4 space-y-6">
+      <div>
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Form Information</h3>
+        
+        <%= form_with model: @form, local: false, data: { controller: "auto-save" } do |form| %>
+          <div class="space-y-4">
+            <div>
+              <%= form.label :name, "Form Title", class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= form.text_field :name, 
+                  class: "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent",
+                  placeholder: "Enter form title..." %>
+            </div>
+            
+            <div>
+              <%= form.label :description, "Description", class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= form.text_area :description, 
+                  rows: 3,
+                  class: "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent",
+                  placeholder: "Describe your form..." %>
+            </div>
+            
+            <div>
+              <%= form.label :category, "Category", class: "block text-sm font-medium text-gray-700 mb-1" %>
+              <%= form.select :category, 
+                  options_for_select([
+                    ['Lead Generation', 'lead_generation'],
+                    ['Customer Feedback', 'customer_feedback'],
+                    ['Event Registration', 'event_registration'],
+                    ['Contact Form', 'contact_form'],
+                    ['Survey', 'survey'],
+                    ['Application', 'application'],
+                    ['Other', 'other']
+                  ], @form.category),
+                  { prompt: "Select category..." },
+                  { class: "w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent" } %>
+            </div>
+          </div>
+        <% end %>
+      </div>
+      
+      <!-- Form Behavior -->
+      <div class="border-t pt-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Form Behavior</h3>
+        <div class="space-y-3">
+          <label class="flex items-center">
+            <input type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+            <span class="ml-2 text-sm text-gray-700">Allow multiple submissions</span>
+          </label>
+          <label class="flex items-center">
+            <input type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+            <span class="ml-2 text-sm text-gray-700">Show progress bar</span>
+          </label>
+          <label class="flex items-center">
+            <input type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+            <span class="ml-2 text-sm text-gray-700">Auto-save responses</span>
+          </label>
+        </div>
+      </div>
+      
+      <!-- Notifications -->
+      <div class="border-t pt-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Notifications</h3>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email notifications to:</label>
+            <input type="email" 
+                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                   placeholder="your@email.com">
+          </div>
+          <label class="flex items-center">
+            <input type="checkbox" class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+            <span class="ml-2 text-sm text-gray-700">Send confirmation email to respondents</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Design Tab -->
+    <div data-tabs-target="panel" data-tab="design" class="tab-panel hidden p-4 space-y-6">
+      <div>
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Theme</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <button class="theme-option active p-3 border-2 border-indigo-500 rounded-lg bg-white">
+            <div class="w-full h-8 bg-gradient-to-r from-indigo-500 to-purple-600 rounded mb-2"></div>
+            <span class="text-xs font-medium">Default</span>
+          </button>
+          <button class="theme-option p-3 border-2 border-gray-200 rounded-lg bg-white hover:border-gray-300">
+            <div class="w-full h-8 bg-gradient-to-r from-green-500 to-blue-600 rounded mb-2"></div>
+            <span class="text-xs font-medium">Nature</span>
+          </button>
+          <button class="theme-option p-3 border-2 border-gray-200 rounded-lg bg-white hover:border-gray-300">
+            <div class="w-full h-8 bg-gradient-to-r from-pink-500 to-red-600 rounded mb-2"></div>
+            <span class="text-xs font-medium">Warm</span>
+          </button>
+          <button class="theme-option p-3 border-2 border-gray-200 rounded-lg bg-white hover:border-gray-300">
+            <div class="w-full h-8 bg-gradient-to-r from-gray-700 to-gray-900 rounded mb-2"></div>
+            <span class="text-xs font-medium">Dark</span>
+          </button>
+        </div>
+      </div>
+      
+      <!-- Custom Colors -->
+      <div class="border-t pt-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Custom Colors</h3>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Primary Color</label>
+            <div class="flex items-center space-x-2">
+              <input type="color" value="#6366f1" class="w-8 h-8 border border-gray-300 rounded">
+              <input type="text" value="#6366f1" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            </div>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Background Color</label>
+            <div class="flex items-center space-x-2">
+              <input type="color" value="#ffffff" class="w-8 h-8 border border-gray-300 rounded">
+              <input type="text" value="#ffffff" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Typography -->
+      <div class="border-t pt-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Typography</h3>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Font Family</label>
+            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              <option>Inter (Default)</option>
+              <option>Roboto</option>
+              <option>Open Sans</option>
+              <option>Lato</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Tab -->
+    <div data-tabs-target="panel" data-tab="ai" class="tab-panel hidden p-4 space-y-6">
+      <div>
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">AI Features</h3>
+        
+        <!-- AI Toggle -->
+        <div class="flex items-center justify-between p-3 bg-purple-50 rounded-lg border border-purple-200">
+          <div>
+            <div class="font-medium text-purple-900">Enable AI Enhancement</div>
+            <div class="text-sm text-purple-700">Unlock intelligent form features</div>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" class="sr-only peer" <%= 'checked' if @form.ai_enhanced? %>>
+            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-purple-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-purple-600"></div>
+          </label>
+        </div>
+        
+        <!-- AI Features List -->
+        <div class="space-y-3 <%= 'opacity-50 pointer-events-none' unless @form.ai_enhanced? %>" id="ai-features-list">
+          <label class="flex items-center">
+            <input type="checkbox" class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+            <span class="ml-2 text-sm text-gray-700">Smart question suggestions</span>
+          </label>
+          <label class="flex items-center">
+            <input type="checkbox" class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+            <span class="ml-2 text-sm text-gray-700">Dynamic follow-up questions</span>
+          </label>
+          <label class="flex items-center">
+            <input type="checkbox" class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+            <span class="ml-2 text-sm text-gray-700">Response analysis & insights</span>
+          </label>
+          <label class="flex items-center">
+            <input type="checkbox" class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+            <span class="ml-2 text-sm text-gray-700">Lead qualification (BANT)</span>
+          </label>
+          <label class="flex items-center">
+            <input type="checkbox" class="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded">
+            <span class="ml-2 text-sm text-gray-700">Sentiment analysis</span>
+          </label>
+        </div>
+      </div>
+      
+      <!-- AI Model Settings -->
+      <div class="border-t pt-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">AI Model Settings</h3>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Analysis Intensity</label>
+            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              <option>Light (Fast, basic insights)</option>
+              <option selected>Medium (Balanced performance)</option>
+              <option>Deep (Comprehensive analysis)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Response Language</label>
+            <select class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+              <option>Auto-detect</option>
+              <option selected>English</option>
+              <option>Spanish</option>
+              <option>French</option>
+              <option>German</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Integrations Tab -->
+    <div data-tabs-target="panel" data-tab="integrations" class="tab-panel hidden p-4 space-y-6">
+      <div>
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Connected Integrations</h3>
+        
+        <!-- Integration Cards -->
+        <div class="space-y-3">
+          <!-- Webhook Integration -->
+          <div class="p-3 border border-gray-200 rounded-lg">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="font-medium text-sm">Webhook</div>
+                  <div class="text-xs text-gray-500">Send data to external services</div>
+                </div>
+              </div>
+              <button class="text-sm text-indigo-600 hover:text-indigo-800">Configure</button>
+            </div>
+          </div>
+          
+          <!-- Email Integration -->
+          <div class="p-3 border border-gray-200 rounded-lg">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                  <svg class="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                  </svg>
+                </div>
+                <div>
+                  <div class="font-medium text-sm">Email Notifications</div>
+                  <div class="text-xs text-gray-500">Get notified of new responses</div>
+                </div>
+              </div>
+              <div class="flex items-center space-x-2">
+                <div class="w-2 h-2 bg-green-500 rounded-full"></div>
+                <span class="text-xs text-green-600">Active</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Available Integrations -->
+      <div class="border-t pt-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Available Integrations</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <button class="p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+            <div class="w-8 h-8 bg-blue-600 rounded mx-auto mb-2 flex items-center justify-center">
+              <span class="text-white text-xs font-bold">SF</span>
+            </div>
+            <div class="text-xs font-medium">Salesforce</div>
+          </button>
+          <button class="p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+            <div class="w-8 h-8 bg-orange-500 rounded mx-auto mb-2 flex items-center justify-center">
+              <span class="text-white text-xs font-bold">HS</span>
+            </div>
+            <div class="text-xs font-medium">HubSpot</div>
+          </button>
+          <button class="p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+            <div class="w-8 h-8 bg-purple-600 rounded mx-auto mb-2 flex items-center justify-center">
+              <span class="text-white text-xs font-bold">S</span>
+            </div>
+            <div class="text-xs font-medium">Slack</div>
+          </button>
+          <button class="p-3 border border-gray-200 rounded-lg hover:border-gray-300 transition-colors">
+            <div class="w-8 h-8 bg-blue-400 rounded mx-auto mb-2 flex items-center justify-center">
+              <span class="text-white text-xs font-bold">Z</span>
+            </div>
+            <div class="text-xs font-medium">Zapier</div>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .tab-button.active {
+    background-color: #f3f4f6;
+    color: #1f2937;
+  }
+  
+  .tab-button:not(.active) {
+    color: #6b7280;
+  }
+  
+  .tab-button:not(.active):hover {
+    background-color: #f9fafb;
+    color: #374151;
+  }
+  
+  .theme-option.active {
+    border-color: #6366f1;
+  }
+</style>

@@ -1,0 +1,329 @@
+# This file should ensure the existence of records required to run the application in every environment (production,
+# development, test). The code here should be idempotent so that it can be executed at any point in every environment.
+# The data can then be loaded with the bin/rails db:seed command (or created alongside the database with db:setup).
+#
+# Example:
+#
+#   ["Action", "Comedy", "Drama", "Horror"].each do |genre_name|
+#     MovieGenre.find_or_create_by!(name: genre_name)
+#   end
+
+puts "Creating form templates based on technical guide..."
+
+# Customer Satisfaction Survey (NPS) - Based on CX principles from technical guide
+FormTemplate.find_or_create_by!(name: "Customer Satisfaction Survey (NPS)") do |template|
+  template.category = "customer_feedback"
+  template.visibility = "template_public"
+  template.description = "Measure customer loyalty and satisfaction using the industry-standard Net Promoter Score methodology. Perfect for understanding customer sentiment and identifying promoters vs detractors."
+  template.estimated_time_minutes = 2
+  template.template_data = {
+    "form" => {
+      "name" => "Customer Satisfaction Survey (NPS)",
+      "description" => "Help us improve by sharing your experience. This survey takes less than 2 minutes.",
+      "category" => "customer_feedback",
+      "ai_enabled" => true,
+      "settings" => {
+        "show_progress" => false,
+        "allow_save_progress" => false,
+        "multi_step" => false,
+        "completion_message" => "Thank you for your feedback! We use your responses to improve our service."
+      },
+      "ai_configuration" => {
+        "auto_analysis" => true,
+        "sentiment_analysis" => true,
+        "response_categorization" => true
+      }
+    },
+    "questions" => [
+      {
+        "title" => "How likely are you to recommend our company to a friend or colleague?",
+        "description" => "0 = Not at all likely, 10 = Extremely likely",
+        "question_type" => "nps_score",
+        "position" => 1,
+        "required" => true,
+        "configuration" => {
+          "min_value" => 0,
+          "max_value" => 10,
+          "labels" => { "0" => "Not likely", "10" => "Very likely" }
+        },
+        "ai_enhanced" => true,
+        "ai_config" => {
+          "auto_categorize" => true,
+          "generate_followup" => true
+        }
+      },
+      {
+        "title" => "What's the primary reason for your score?",
+        "description" => "Please share what influenced your rating",
+        "question_type" => "text_long",
+        "position" => 2,
+        "required" => false,
+        "configuration" => {
+          "placeholder" => "Tell us more about your experience...",
+          "max_length" => 500
+        },
+        "ai_enhanced" => true,
+        "ai_config" => {
+          "sentiment_analysis" => true,
+          "keyword_extraction" => true
+        }
+      },
+      {
+        "title" => "What could we improve?",
+        "description" => "Your suggestions help us serve you better",
+        "question_type" => "text_long",
+        "position" => 3,
+        "required" => false,
+        "configuration" => {
+          "placeholder" => "Share your suggestions for improvement...",
+          "max_length" => 300
+        },
+        "ai_enhanced" => true,
+        "ai_config" => {
+          "theme_extraction" => true,
+          "priority_ranking" => true
+        }
+      }
+    ]
+  }
+end
+
+# B2B Lead Qualification Form - Based on lead qualification principles
+FormTemplate.find_or_create_by!(name: "B2B Lead Qualification Agent") do |template|
+  template.category = "lead_qualification"
+  template.visibility = "template_public"
+  template.description = "Qualify B2B leads effectively with this comprehensive form that captures essential business information and identifies high-value prospects."
+  template.estimated_time_minutes = 5
+  template.template_data = {
+    "form" => {
+      "name" => "B2B Lead Qualification Agent",
+      "description" => "Tell us about your business so we can understand how best to serve you.",
+      "category" => "lead_qualification",
+      "ai_enabled" => true,
+      "settings" => {
+        "show_progress" => true,
+        "allow_save_progress" => true,
+        "multi_step" => true,
+        "completion_message" => "Thank you! We'll review your information and get back to you within 24 hours."
+      },
+      "ai_configuration" => {
+        "auto_qualification" => true,
+        "lead_scoring" => true,
+        "dynamic_questions" => true
+      }
+    },
+    "questions" => [
+      {
+        "title" => "Work Email",
+        "description" => "Your business email address",
+        "question_type" => "email",
+        "position" => 1,
+        "required" => true,
+        "configuration" => {
+          "placeholder" => "your.name@company.com",
+          "validation" => "email"
+        },
+        "ai_enhanced" => false
+      },
+      {
+        "title" => "Company Name",
+        "description" => "Your organization",
+        "question_type" => "text_short",
+        "position" => 2,
+        "required" => true,
+        "configuration" => {
+          "placeholder" => "Acme Corp",
+          "max_length" => 100
+        },
+        "ai_enhanced" => true,
+        "ai_config" => {
+          "company_lookup" => true
+        }
+      },
+      {
+        "title" => "Company Size",
+        "description" => "Number of employees",
+        "question_type" => "single_choice",
+        "position" => 3,
+        "required" => true,
+        "configuration" => {
+          "options" => [
+            { "value" => "1-10", "label" => "1-10 employees" },
+            { "value" => "11-50", "label" => "11-50 employees" },
+            { "value" => "51-200", "label" => "51-200 employees" },
+            { "value" => "201-1000", "label" => "201-1000 employees" },
+            { "value" => "1000+", "label" => "1000+ employees" }
+          ]
+        },
+        "ai_enhanced" => true,
+        "ai_config" => {
+          "auto_segment" => true
+        }
+      },
+      {
+        "title" => "Industry",
+        "description" => "Your primary industry",
+        "question_type" => "single_choice",
+        "position" => 4,
+        "required" => true,
+        "configuration" => {
+          "options" => [
+            { "value" => "technology", "label" => "Technology" },
+            { "value" => "healthcare", "label" => "Healthcare" },
+            { "value" => "finance", "label" => "Finance & Banking" },
+            { "value" => "manufacturing", "label" => "Manufacturing" },
+            { "value" => "retail", "label" => "Retail & E-commerce" },
+            { "value" => "education", "label" => "Education" },
+            { "value" => "consulting", "label" => "Consulting" },
+            { "value" => "other", "label" => "Other" }
+          ]
+        },
+        "ai_enhanced" => true,
+        "ai_config" => {
+          "industry_insights" => true
+        }
+      },
+      {
+        "title" => "What's your biggest challenge?",
+        "description" => "What problem are you trying to solve?",
+        "question_type" => "text_long",
+        "position" => 5,
+        "required" => true,
+        "configuration" => {
+          "placeholder" => "Describe your main challenge or goal...",
+          "max_length" => 500
+        },
+        "ai_enhanced" => true,
+        "ai_config" => {
+          "challenge_analysis" => true,
+          "solution_matching" => true,
+          "priority_scoring" => true
+        }
+      },
+      {
+        "title" => "Timeline",
+        "description" => "When do you need a solution?",
+        "question_type" => "single_choice",
+        "position" => 6,
+        "required" => false,
+        "configuration" => {
+          "options" => [
+            { "value" => "immediate", "label" => "Immediately" },
+            { "value" => "1-3_months", "label" => "1-3 months" },
+            { "value" => "3-6_months", "label" => "3-6 months" },
+            { "value" => "6-12_months", "label" => "6-12 months" },
+            { "value" => "exploring", "label" => "Just exploring" }
+          ]
+        }
+      }
+    ]
+  }
+end
+
+# Employee Pulse Survey - Based on EX principles from technical guide
+FormTemplate.find_or_create_by!(name: "Employee Pulse Survey") do |template|
+  template.category = "survey"
+  template.visibility = "template_public"
+  template.description = "Quick 2-minute pulse survey to gauge employee satisfaction and identify areas for improvement. Perfect for regular check-ins rather than annual reviews."
+  template.estimated_time_minutes = 2
+  template.template_data = {
+    "form" => {
+      "name" => "Employee Pulse Survey",
+      "description" => "How was your week? Share your feedback to help us improve our workplace.",
+      "category" => "hr",
+      "ai_enabled" => true,
+      "settings" => {
+        "show_progress" => false,
+        "allow_save_progress" => false,
+        "multi_step" => false,
+        "completion_message" => "Thank you for your feedback! Your responses help us create a better workplace.",
+        "anonymous" => true
+      },
+      "ai_configuration" => {
+        "sentiment_analysis" => true,
+        "trend_analysis" => true,
+        "anonymity_protection" => true
+      }
+    },
+    "questions" => [
+      {
+        "title" => "How would you rate your week?",
+        "description" => "Overall satisfaction with your work week",
+        "question_type" => "rating",
+        "position" => 1,
+        "required" => true,
+        "configuration" => {
+          "min_value" => 1,
+          "max_value" => 5,
+          "labels" => { "1" => "Very Poor", "5" => "Excellent" },
+          "icons" => ["😞", "😕", "😐", "🙂", "😄"]
+        }
+      },
+      {
+        "title" => "Do you have the tools and resources to do your job effectively?",
+        "description" => "Access to necessary tools and support",
+        "question_type" => "yes_no",
+        "position" => 2,
+        "required" => true,
+        "configuration" => {
+          "yes_label" => "Yes, I have what I need",
+          "no_label" => "No, I'm missing resources"
+        },
+        "conditional_enabled" => true,
+        "conditional_logic" => {
+          "if_no" => {
+            "show_question" => 3
+          }
+        }
+      },
+      {
+        "title" => "What resources or tools are you missing?",
+        "description" => "Help us understand what's needed",
+        "question_type" => "text_long",
+        "position" => 3,
+        "required" => false,
+        "configuration" => {
+          "placeholder" => "Describe any tools, training, or resources you need...",
+          "max_length" => 200
+        },
+        "ai_enhanced" => true,
+        "ai_config" => {
+          "resource_categorization" => true,
+          "priority_ranking" => true
+        }
+      },
+      {
+        "title" => "How would you rate your team's communication?",
+        "description" => "Effectiveness of communication within your team",
+        "question_type" => "rating",
+        "position" => 4,
+        "required" => true,
+        "configuration" => {
+          "min_value" => 1,
+          "max_value" => 5,
+          "labels" => { "1" => "Very Poor", "5" => "Excellent" }
+        }
+      },
+      {
+        "title" => "Any suggestions for improvement?",
+        "description" => "Open feedback on what's working well and what could be better",
+        "question_type" => "text_long",
+        "position" => 5,
+        "required" => false,
+        "configuration" => {
+          "placeholder" => "Share any suggestions, concerns, or positive feedback...",
+          "max_length" => 300
+        },
+        "ai_enhanced" => true,
+        "ai_config" => {
+          "sentiment_analysis" => true,
+          "theme_extraction" => true,
+          "action_item_identification" => true
+        }
+      }
+    ]
+  }
+end
+
+puts "✅ Form templates created successfully!"
+puts "Created 3 technical survey templates based on market research principles"

@@ -1,0 +1,116 @@
+<%# Admin form details view %>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <!-- Header -->
+  <div class="bg-white shadow rounded-lg mb-6">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <div class="flex items-center justify-between">
+        <h1 class="text-2xl font-bold text-gray-900"><%= @form.name %></h1>
+        <div class="flex items-center space-x-2">          
+          <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            <%= @form.status.humanize %>
+          </span>
+          <% if @form.ai_enabled? %>
+            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+              AI Enabled
+            </span>
+          <% end %>
+        </div>
+      </div>
+    </div>
+    
+    <div class="px-6 py-4">
+      <p class="text-gray-600"><%= @form.description %></p>
+      <div class="mt-4 flex items-center space-x-4 text-sm text-gray-500">
+        <span><%= pluralize(@form.questions_count, 'question') %></span>
+        <span>•</span>
+        <%= link_to pluralize(@form.form_responses.count, 'response'), responses_form_path(@form), class: "text-indigo-600 hover:text-indigo-900" %>
+        <span>•</span>
+        <span>Creado: <%= @form.created_at.strftime('%d/%m/%Y') %></span>
+        <span>•</span>
+        <span>Category: <%= @form.category.humanize %></span>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Quick Stats -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+    <%= link_to responses_form_path(@form), class: "bg-white shadow rounded-lg p-6 hover:shadow-md transition-shadow" do %>
+      <div class="text-2xl font-bold text-gray-900"><%= @form.form_responses.count %></div>
+      <div class="text-sm text-gray-500">Total Responses</div>
+    <% end %>
+    
+    <div class="bg-white shadow rounded-lg p-6">      
+      <div class="text-2xl font-bold text-gray-900"><%= @form.completion_rate %>%</div>
+      <div class="text-sm text-gray-500">Completion Rate</div>
+    </div>
+    
+    <div class="bg-white shadow rounded-lg p-6">      
+      <div class="text-2xl font-bold text-gray-900"><%= @form.questions_count %></div>
+      <div class="text-sm text-gray-500">Questions</div>
+    </div>
+  </div>
+  
+  <!-- Recent Responses -->
+  <div class="bg-white shadow rounded-lg mb-6">
+    <div class="px-6 py-4 border-b border-gray-200">      
+      <h2 class="text-lg font-medium text-gray-900">Recent Responses</h2>
+    </div>
+    
+    <div class="px-6 py-4">
+      <% if @recent_responses.any? %>
+        <div class="space-y-4">
+          <% @recent_responses.each do |response| %>
+            <div class="border-b border-gray-200 pb-4 last:border-b-0">
+              <div class="flex items-center justify-between">
+                <span class="text-sm text-gray-600"><%= response.created_at.strftime("%B %d, %Y at %I:%M %p") %></span>
+                <span class="text-sm text-gray-500"><%= response.status.humanize %></span>
+              </div>
+              <div class="mt-2 text-sm text-gray-700">
+                <%= response.question_responses.count %> questions answered
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="text-gray-500 text-center py-4">No responses yet.</p>
+      <% end %>
+    </div>
+  </div>
+  
+  <!-- Questions List -->
+  <div class="bg-white shadow rounded-lg mb-6">
+    <div class="px-6 py-4 border-b border-gray-200">      
+      <h2 class="text-lg font-medium text-gray-900">Questions</h2>
+    </div>
+    
+    <div class="px-6 py-4">
+      <% if @form_questions.any? %>
+        <div class="space-y-3">
+          <% @form_questions.each_with_index do |question, index| %>
+            <div class="flex items-center justify-between p-3 border rounded-lg">
+              <div>
+                <span class="text-sm font-medium text-gray-900"><%= index + 1 %>. <%= question.title.truncate(50) %></span>
+                <span class="text-xs text-gray-500 ml-2"><%= question.question_type.humanize %></span>
+              </div>
+              <div class="text-sm text-gray-500"><%= question.required? ? 'Required' : 'Optional' %></div>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="text-gray-500 text-center py-4">No questions added yet.</p>
+      <% end %>
+    </div>
+  </div>
+  
+  <!-- Actions -->
+  <div class="flex space-x-4">
+    <%= link_to "Edit Form", edit_form_path(@form), class: "px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700" %>
+    <%= link_to "Preview", preview_form_path(@form), class: "px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700" %>
+    <%= link_to "Analytics", analytics_form_path(@form), class: "px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700" %>
+    <%= link_to "Responses", responses_form_path(@form), class: "px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700" %>
+    
+    <% if @form.published? %>
+      <%= link_to "View Public Form", public_form_path(@form.share_token), target: "_blank", class: "px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700" %>
+    <% end %>
+  </div>
+</div>

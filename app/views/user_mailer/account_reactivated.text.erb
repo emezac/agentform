@@ -1,0 +1,25 @@
+AgentForm Account Reactivated - Welcome Back!
+
+Hello <%= @user.first_name %>,
+
+Great news! Your AgentForm account (<%= @user.email %>) has been reactivated by an administrator. You now have full access to all your forms and features.
+
+You can now:
+- Log in to your AgentForm account
+- Access all your existing forms
+- Create new forms and collect responses
+- Use all premium features (if applicable)
+- Access the API and integrations
+
+Log in here: <%= @login_url %>
+
+What's Next?
+All your forms and data have been preserved during the suspension period. You can continue where you left off. If you have any questions about your account or need assistance, our support team is here to help.
+
+Thank you for your patience during the suspension period. We're glad to have you back!
+
+---
+This is an automated notification from AgentForm.
+Please do not reply to this email.
+
+© <%= Date.current.year %> AgentForm. All rights reserved.

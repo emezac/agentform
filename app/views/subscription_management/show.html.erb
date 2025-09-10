@@ -1,0 +1,567 @@
+<% content_for :title, "Subscription Management" %>
+
+<div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+  <!-- Header -->
+  <div class="mb-8">
+    <h1 class="text-3xl font-bold text-gray-900">Subscription Management</h1>
+    <p class="mt-2 text-gray-600">Manage your AgentForm subscription and billing</p>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Current Subscription Status -->
+    <div class="lg:col-span-2 space-y-6">
+      <!-- Subscription Status Card -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-medium text-gray-900">Current Subscription</h2>
+        </div>
+        
+        <div class="p-6">
+          <% if current_user.subscription_status == 'trialing' %>
+            <!-- Trial Status Section -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <div class="flex items-start">
+                <div class="flex-shrink-0">
+                  <svg class="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+                <div class="ml-3 flex-1">
+                  <h3 class="text-sm font-medium text-blue-800">
+                    <%= current_user.trial_status_message %>
+                  </h3>
+                  <div class="mt-2 text-sm text-blue-700">
+                    <% if current_user.trial_days_remaining <= 3 && current_user.trial_days_remaining > 0 %>
+                      <p class="font-medium text-red-700">⚠️ Your trial expires very soon! Upgrade now to continue using all features without interruption.</p>
+                    <% elsif current_user.trial_expires_soon? %>
+                      <p class="font-medium">Upgrade now to continue using all features without interruption.</p>
+                    <% elsif current_user.trial_expired? %>
+                      <p class="font-medium text-red-700">Please upgrade to continue using AgentForm.</p>
+                    <% else %>
+                      <p>Enjoy full access to all features during your trial period.</p>
+                    <% end %>
+                  </div>
+                  <% unless current_user.trial_expired? %>
+                    <div class="mt-3">
+                      <div class="bg-blue-200 rounded-full h-2">
+                        <% progress = [(TrialConfig.trial_period_days - current_user.trial_days_remaining).to_f / TrialConfig.trial_period_days * 100, 100].min %>
+                        <div class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: <%= progress %>%"></div>
+                      </div>
+                      <p class="text-xs text-blue-600 mt-1">
+                        Day <%= TrialConfig.trial_period_days - current_user.trial_days_remaining + 1 %> of <%= TrialConfig.trial_period_days %>
+                      </p>
+                    </div>
+                  <% end %>
+                </div>
+              </div>
+            </div>
+
+            <!-- Trial Subscription Details -->
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <svg class="w-6 h-6 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+                <div class="ml-4">
+                  <h3 class="text-xl font-semibold text-gray-900">
+                    Premium Trial
+                  </h3>
+                  <p class="text-gray-600">
+                    Status: 
+                    <% if current_user.trial_expired? %>
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Trial Expired</span>
+                    <% elsif current_user.trial_days_remaining <= 3 %>
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Trial (Expires Soon)</span>
+                    <% elsif current_user.trial_expires_soon? %>
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Trial (Expires Soon)</span>
+                    <% else %>
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Trial Active</span>
+                    <% end %>
+                  </p>
+                </div>
+              </div>
+              
+              <div class="text-right">
+                <p class="text-2xl font-bold text-blue-600">
+                  FREE
+                </p>
+                <p class="text-sm text-gray-500">
+                  <% if current_user.trial_expired? %>
+                    Trial Expired
+                  <% else %>
+                    <%= pluralize(current_user.trial_days_remaining, 'day') %> remaining
+                  <% end %>
+                </p>
+              </div>
+            </div>
+
+            <!-- Trial Period Details -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+              <div class="bg-gray-50 rounded-lg p-4">
+                <dt class="text-sm font-medium text-gray-500">Trial Started</dt>
+                <dd class="mt-1 text-sm text-gray-900">
+                  <%= (current_user.trial_ends_at - TrialConfig.trial_period_days.days).strftime('%b %d, %Y') %>
+                </dd>
+              </div>
+              
+              <div class="bg-gray-50 rounded-lg p-4">
+                <dt class="text-sm font-medium text-gray-500">
+                  <% if current_user.trial_expired? %>
+                    Trial Expired
+                  <% else %>
+                    Trial Expires
+                  <% end %>
+                </dt>
+                <dd class="mt-1 text-sm <%= current_user.trial_expired? ? 'text-red-600' : (current_user.trial_days_remaining <= 3 ? 'text-red-600' : (current_user.trial_expires_soon? ? 'text-yellow-600' : 'text-gray-900')) %>">
+                  <%= current_user.trial_ends_at.strftime('%b %d, %Y') %>
+                  <% unless current_user.trial_expired? %>
+                    <span class="text-xs text-gray-500">
+                      (<%= pluralize(current_user.trial_days_remaining, 'day') %> remaining)
+                    </span>
+                  <% end %>
+                </dd>
+              </div>
+            </div>
+
+            <!-- Upgrade Call to Action -->
+            <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-lg p-6 mb-6">
+              <div class="text-center">
+                <h4 class="text-lg font-semibold text-gray-900 mb-2">
+                  <% if current_user.trial_expired? %>
+                    Your trial has ended
+                  <% elsif current_user.trial_days_remaining <= 3 %>
+                    Don't lose access!
+                  <% else %>
+                    Enjoying your trial?
+                  <% end %>
+                </h4>
+                <p class="text-gray-600 mb-4">
+                  <% if current_user.trial_expired? %>
+                    Upgrade now to regain access to all premium features.
+                  <% elsif current_user.trial_days_remaining <= 3 %>
+                    Upgrade now to ensure uninterrupted access to all features.
+                  <% else %>
+                    Upgrade to premium to continue enjoying all features after your trial ends.
+                  <% end %>
+                </p>
+                
+                <!-- Discount Code Section -->
+                <div class="max-w-md mx-auto mb-6" 
+                     data-controller="discount-code" 
+                     data-discount-code-billing-cycle-value="monthly"
+                     data-discount-code-validate-url-value="<%= api_v1_discount_codes_validate_path %>">
+                  
+                  <div class="bg-white rounded-lg p-4 mb-4 border border-gray-200">
+                    <label for="discount_code" class="block text-sm font-medium text-gray-700 mb-2">
+                      Have a discount code?
+                    </label>
+                    
+                    <div class="flex space-x-2">
+                      <input type="text" 
+                             id="discount_code"
+                             data-discount-code-target="input"
+                             data-action="input->discount-code#inputChanged"
+                             placeholder="Enter discount code"
+                             class="flex-1 min-w-0 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                      
+                      <button type="button"
+                              data-discount-code-target="applyButton"
+                              data-action="click->discount-code#applyDiscount"
+                              disabled
+                              class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                        Apply
+                      </button>
+                      
+                      <button type="button"
+                              data-discount-code-target="clearButton"
+                              data-action="click->discount-code#clearDiscount"
+                              class="hidden inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                        </svg>
+                      </button>
+                    </div>
+                    
+                    <!-- Feedback Messages -->
+                    <div data-discount-code-target="feedback" class="mt-2 hidden"></div>
+                  </div>
+                  
+                  <!-- Pricing Details (shown when discount is applied) -->
+                  <div data-discount-code-target="pricingDetails" class="hidden bg-blue-50 rounded-lg p-4 mb-4 border border-blue-200">
+                    <h4 class="text-sm font-medium text-blue-900 mb-2">Pricing Breakdown</h4>
+                    <div class="space-y-1 text-sm">
+                      <div class="flex justify-between text-gray-600">
+                        <span>Original Price:</span>
+                        <span data-discount-code-target="originalPrice">$29.00</span>
+                      </div>
+                      <div class="flex justify-between text-green-600">
+                        <span>Discount (<span data-discount-code-target="discountPercentage">0%</span>):</span>
+                        <span data-discount-code-target="discountAmount">-$0.00</span>
+                      </div>
+                      <div class="flex justify-between font-medium text-blue-900 pt-1 border-t border-blue-200">
+                        <span>Final Price:</span>
+                        <span data-discount-code-target="finalPrice">$29.00</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Subscription Buttons -->
+                <div id="subscription-buttons" 
+                     data-controller="subscription-checkout"
+                     data-action="discount-code:applied->subscription-checkout#updateDiscount discount-code:cleared->subscription-checkout#clearDiscount">
+                  
+                  <div class="flex justify-center space-x-4">
+                    <%= form_with url: subscription_management_path, method: :post, local: true, 
+                        class: "inline-block",
+                        data: { 
+                          "subscription-checkout-target": "monthlyForm",
+                          "billing-cycle": "monthly"
+                        } do |form| %>
+                      <%= form.hidden_field :billing_cycle, value: 'monthly' %>
+                      <%= form.hidden_field :discount_code, value: '', data: { "subscription-checkout-target": "monthlyDiscountField" } %>
+                      <%= form.submit "Upgrade Monthly ($29/month)", 
+                          data: { "subscription-checkout-target": "monthlyButton" },
+                          class: "inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+                    <% end %>
+                    
+                    <%= form_with url: subscription_management_path, method: :post, local: true, 
+                        class: "inline-block",
+                        data: { 
+                          "subscription-checkout-target": "yearlyForm",
+                          "billing-cycle": "yearly"
+                        } do |form| %>
+                      <%= form.hidden_field :billing_cycle, value: 'yearly' %>
+                      <%= form.hidden_field :discount_code, value: '', data: { "subscription-checkout-target": "yearlyDiscountField" } %>
+                      <%= form.submit "Upgrade Yearly ($290/year)", 
+                          data: { "subscription-checkout-target": "yearlyButton" },
+                          class: "inline-flex items-center px-6 py-3 border border-indigo-300 text-base font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+                    <% end %>
+                  </div>
+                  
+                  <p class="text-sm text-gray-500 mt-4">Save 2 months with yearly billing</p>
+                </div>
+              </div>
+            </div>
+
+          <% elsif current_user.premium? && @subscription_service.user_has_active_subscription? %>
+            <!-- Active Premium Subscription -->
+            <div class="flex items-center justify-between mb-6">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
+                    <svg class="w-6 h-6 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M5 2a1 1 0 011 1v1h1v1a1 1 0 001 1h1a1 1 0 001-1V4h1V3a1 1 0 011-1H5zm4 5H7a1 1 0 01-1-1V6a1 1 0 011-1h2a1 1 0 011 1v1a1 1 0 01-1 1zM5 9a1 1 0 011-1h2a1 1 0 110 2H6a1 1 0 01-1-1zm1 4a1 1 0 100 2h2a1 1 0 100-2H6a1 1 0 00-1 1z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                </div>
+                <div class="ml-4">
+                  <h3 class="text-xl font-semibold text-gray-900">
+                    <% if current_user.subscription_status == 'trialing' %>
+                      Premium Trial
+                    <% else %>
+                      Premium Plan
+                    <% end %>
+                  </h3>
+                  <p class="text-gray-600">
+                    Status: 
+                    <% case current_user.subscription_status %>
+                    <% when 'active' %>
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active</span>
+                    <% when 'canceling' %>
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Canceling</span>
+                    <% when 'trialing' %>
+                      <% if current_user.trial_expired? %>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Trial Expired</span>
+                      <% elsif current_user.trial_days_remaining <= 3 %>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Trial (Expires Soon)</span>
+                      <% elsif current_user.trial_expires_soon? %>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Trial (Expires Soon)</span>
+                      <% else %>
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Trial Active</span>
+                      <% end %>
+                    <% when 'free', nil, '' %>
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Active (Complimentary)</span>
+                    <% else %>
+                      <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"><%= current_user.subscription_status.humanize %></span>
+                    <% end %>
+                  </p>
+                </div>
+              </div>
+              
+              <% if @subscription_details.present? %>
+                <div class="text-right">
+                  <p class="text-2xl font-bold text-gray-900">
+                    $<%= (@subscription_details[:amount] / 100.0).to_i %>
+                    <span class="text-sm font-normal text-gray-500">/<%= @subscription_details[:interval] %></span>
+                  </p>
+                  <p class="text-sm text-gray-500"><%= @subscription_details[:currency] %></p>
+                </div>
+              <% elsif current_user.subscription_status == 'trialing' %>
+                <div class="text-right">
+                  <p class="text-2xl font-bold text-blue-600">
+                    FREE
+                  </p>
+                  <p class="text-sm text-gray-500">
+                    <% if current_user.trial_expired? %>
+                      Trial Expired
+                    <% else %>
+                      <%= pluralize(current_user.trial_days_remaining, 'day') %> remaining
+                    <% end %>
+                  </p>
+                </div>
+              <% elsif current_user.subscription_status.in?(['free', nil, '']) %>
+                <div class="text-right">
+                  <p class="text-2xl font-bold text-gray-900">
+                    $0
+                    <span class="text-sm font-normal text-gray-500">/month</span>
+                  </p>
+                  <p class="text-sm text-gray-500">Complimentary</p>
+                </div>
+              <% end %>
+            </div>
+
+            <!-- Subscription Details -->
+            <% if @subscription_details.present? %>
+              <% if @subscription_details[:source] == 'stripe' %>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                  <div class="bg-gray-50 rounded-lg p-4">
+                    <dt class="text-sm font-medium text-gray-500">Current Period</dt>
+                    <dd class="mt-1 text-sm text-gray-900">
+                      <%= @subscription_details[:current_period_start]&.strftime('%b %d, %Y') %> - 
+                      <%= @subscription_details[:current_period_end]&.strftime('%b %d, %Y') %>
+                    </dd>
+                  </div>
+                  
+                  <div class="bg-gray-50 rounded-lg p-4">
+                    <dt class="text-sm font-medium text-gray-500">Next Billing Date</dt>
+                    <dd class="mt-1 text-sm text-gray-900">
+                      <% if @subscription_details[:cancel_at_period_end] %>
+                        <span class="text-red-600">Canceled - expires <%= @subscription_details[:current_period_end]&.strftime('%b %d, %Y') %></span>
+                      <% else %>
+                        <%= @subscription_details[:current_period_end]&.strftime('%b %d, %Y') %>
+                      <% end %>
+                    </dd>
+                  </div>
+                </div>
+              <% else %>
+                <div class="bg-blue-50 rounded-lg p-4 mb-6">
+                  <div class="flex items-center">
+                    <svg class="w-5 h-5 text-blue-400 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                    </svg>
+                    <p class="text-sm text-blue-700">
+                      This is a complimentary premium account. No billing information required.
+                    </p>
+                  </div>
+                </div>
+              <% end %>
+            <% end %>
+
+            <!-- Action Buttons (only for Stripe subscriptions) -->
+            <% if @subscription_details[:source] == 'stripe' %>
+              <div class="flex flex-wrap gap-3">
+                <%= link_to update_payment_method_subscription_management_path, 
+                    method: :post,
+                    class: "inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" do %>
+                  <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                  </svg>
+                  Update Payment Method
+                <% end %>
+
+                <% if current_user.subscription_status == 'canceling' %>
+                  <%= link_to reactivate_subscription_management_path, 
+                      method: :post,
+                      class: "inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500",
+                      confirm: "Are you sure you want to reactivate your subscription?" do %>
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                    </svg>
+                    Reactivate Subscription
+                  <% end %>
+                <% else %>
+                  <%= link_to cancel_subscription_management_path, 
+                      method: :delete,
+                      class: "inline-flex items-center px-4 py-2 border border-red-300 text-sm font-medium rounded-md text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500",
+                      confirm: "Are you sure you want to cancel your subscription? You'll keep access until the end of your billing period." do %>
+                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                    Cancel Subscription
+                  <% end %>
+                <% end %>
+              </div>
+            <% end %>
+
+          <% else %>
+            <!-- No Active Subscription -->
+            <div class="text-center py-8">
+              <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+                </svg>
+              </div>
+              <h3 class="text-lg font-medium text-gray-900 mb-2">No Active Subscription</h3>
+              <p class="text-gray-600 mb-6">Upgrade to Premium to unlock all features</p>
+              
+              <!-- Discount Code Section -->
+              <div class="max-w-md mx-auto mb-8" 
+                   data-controller="discount-code" 
+                   data-discount-code-billing-cycle-value="monthly"
+                   data-discount-code-validate-url-value="<%= api_v1_discount_codes_validate_path %>">
+                
+                <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                  <label for="discount_code" class="block text-sm font-medium text-gray-700 mb-2">
+                    Have a discount code?
+                  </label>
+                  
+                  <div class="flex space-x-2">
+                    <input type="text" 
+                           id="discount_code"
+                           data-discount-code-target="input"
+                           data-action="input->discount-code#inputChanged"
+                           placeholder="Enter discount code"
+                           class="flex-1 min-w-0 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                    
+                    <button type="button"
+                            data-discount-code-target="applyButton"
+                            data-action="click->discount-code#applyDiscount"
+                            disabled
+                            class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed">
+                      Apply
+                    </button>
+                    
+                    <button type="button"
+                            data-discount-code-target="clearButton"
+                            data-action="click->discount-code#clearDiscount"
+                            class="hidden inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                      </svg>
+                    </button>
+                  </div>
+                  
+                  <!-- Feedback Messages -->
+                  <div data-discount-code-target="feedback" class="mt-2 hidden"></div>
+                </div>
+                
+                <!-- Pricing Details (shown when discount is applied) -->
+                <div data-discount-code-target="pricingDetails" class="hidden bg-blue-50 rounded-lg p-4 mb-4 border border-blue-200">
+                  <h4 class="text-sm font-medium text-blue-900 mb-2">Pricing Breakdown</h4>
+                  <div class="space-y-1 text-sm">
+                    <div class="flex justify-between text-gray-600">
+                      <span>Original Price:</span>
+                      <span data-discount-code-target="originalPrice">$29.00</span>
+                    </div>
+                    <div class="flex justify-between text-green-600">
+                      <span>Discount (<span data-discount-code-target="discountPercentage">0%</span>):</span>
+                      <span data-discount-code-target="discountAmount">-$0.00</span>
+                    </div>
+                    <div class="flex justify-between font-medium text-blue-900 pt-1 border-t border-blue-200">
+                      <span>Final Price:</span>
+                      <span data-discount-code-target="finalPrice">$29.00</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Subscription Buttons -->
+              <div id="subscription-buttons" 
+                   data-controller="subscription-checkout"
+                   data-action="discount-code:applied->subscription-checkout#updateDiscount discount-code:cleared->subscription-checkout#clearDiscount">
+                
+                <div class="flex justify-center space-x-4">
+                  <%= form_with url: subscription_management_path, method: :post, local: true, 
+                      class: "inline-block",
+                      data: { 
+                        "subscription-checkout-target": "monthlyForm",
+                        "billing-cycle": "monthly"
+                      } do |form| %>
+                    <%= form.hidden_field :billing_cycle, value: 'monthly' %>
+                    <%= form.hidden_field :discount_code, value: '', data: { "subscription-checkout-target": "monthlyDiscountField" } %>
+                    <%= form.submit "Subscribe Monthly ($29/month)", 
+                        data: { "subscription-checkout-target": "monthlyButton" },
+                        class: "inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+                  <% end %>
+                  
+                  <%= form_with url: subscription_management_path, method: :post, local: true, 
+                      class: "inline-block",
+                      data: { 
+                        "subscription-checkout-target": "yearlyForm",
+                        "billing-cycle": "yearly"
+                      } do |form| %>
+                    <%= form.hidden_field :billing_cycle, value: 'yearly' %>
+                    <%= form.hidden_field :discount_code, value: '', data: { "subscription-checkout-target": "yearlyDiscountField" } %>
+                    <%= form.submit "Subscribe Yearly ($290/year)", 
+                        data: { "subscription-checkout-target": "yearlyButton" },
+                        class: "inline-flex items-center px-6 py-3 border border-indigo-300 text-base font-medium rounded-md text-indigo-700 bg-white hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" %>
+                  <% end %>
+                </div>
+                
+                <p class="text-sm text-gray-500 mt-4">Save 2 months with yearly billing</p>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      </div>
+
+      <!-- Billing History -->
+      <div class="bg-white shadow rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-200">
+          <h2 class="text-lg font-medium text-gray-900">Billing History</h2>
+        </div>
+        
+        <div class="p-6">
+          <p class="text-gray-500 text-center py-8">
+            Billing history will be available once you have an active subscription.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="space-y-6">
+      <!-- Plan Features -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Premium Features</h3>
+        
+        <ul class="space-y-3">
+          <% SubscriptionManagementService.plans['premium'][:features].each do |feature| %>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-green-500 mt-0.5 mr-3 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"></path>
+              </svg>
+              <span class="text-sm text-gray-700"><%= feature %></span>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+
+      <!-- Support -->
+      <div class="bg-white shadow rounded-lg p-6">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">Need Help?</h3>
+        
+        <div class="space-y-3">
+          <a href="mailto:support@agentform.com" class="flex items-center text-sm text-indigo-600 hover:text-indigo-500">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path>
+            </svg>
+            Contact Support
+          </a>
+          
+          <a href="#" class="flex items-center text-sm text-indigo-600 hover:text-indigo-500">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            FAQ & Documentation
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

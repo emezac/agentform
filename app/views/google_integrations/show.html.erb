@@ -1,0 +1,158 @@
+<div class="max-w-4xl mx-auto p-6">
+  <div class="bg-white shadow rounded-lg">
+    <div class="px-6 py-4 border-b border-gray-200">
+      <h1 class="text-2xl font-bold text-gray-900">Google Sheets Integration</h1>
+      <p class="mt-1 text-sm text-gray-600">Connect your forms to Google Sheets for automatic data export</p>
+    </div>
+
+    <div class="p-6">
+      <% if @integration&.active? %>
+        <!-- Connected State -->
+        <div class="bg-green-50 border border-green-200 rounded-md p-4 mb-6">
+          <div class="flex items-center">
+            <svg class="h-5 w-5 text-green-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <h3 class="ml-3 text-sm font-medium text-green-800">Connected to Google Sheets</h3>
+          </div>
+          <div class="mt-2 text-sm text-green-700">
+            <p>Account: <%= @integration.user_info['email'] %></p>
+            <p>Connected: <%= time_ago_in_words(@integration.created_at) %> ago</p>
+            <p>Last used: <%= @integration.last_used_at ? time_ago_in_words(@integration.last_used_at) + ' ago' : 'Never' %></p>
+          </div>
+        </div>
+
+        <!-- Test Connection -->
+        <div class="mb-6">
+          <button id="test-connection" 
+                  class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            Test Connection
+          </button>
+          <div id="test-result" class="mt-2"></div>
+        </div>
+
+        <!-- Recent Exports -->
+        <% if @recent_exports.any? %>
+          <div class="mb-6">
+            <h3 class="text-lg font-medium text-gray-900 mb-4">Recent Exports</h3>
+            <div class="bg-white shadow overflow-hidden sm:rounded-md">
+              <ul class="divide-y divide-gray-200">
+                <% @recent_exports.each do |export| %>
+                  <li class="px-6 py-4">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                          <% case export.status %>
+                          <% when 'completed' %>
+                            <div class="h-2 w-2 bg-green-400 rounded-full"></div>
+                          <% when 'processing' %>
+                            <div class="h-2 w-2 bg-yellow-400 rounded-full animate-pulse"></div>
+                          <% when 'failed' %>
+                            <div class="h-2 w-2 bg-red-400 rounded-full"></div>
+                          <% else %>
+                            <div class="h-2 w-2 bg-gray-400 rounded-full"></div>
+                          <% end %>
+                        </div>
+                        <div class="ml-4">
+                          <div class="text-sm font-medium text-gray-900">
+                            <%= export.form.name %>
+                          </div>
+                          <div class="text-sm text-gray-500">
+                            <%= export.status.humanize %> • 
+                            <%= export.records_exported %> records • 
+                            <%= time_ago_in_words(export.created_at) %> ago
+                          </div>
+                        </div>
+                      </div>
+                      <% if export.spreadsheet_url.present? %>
+                        <div class="flex-shrink-0">
+                          <%= link_to export.spreadsheet_url, 
+                                      target: '_blank',
+                                      class: "text-indigo-600 hover:text-indigo-900 text-sm font-medium" do %>
+                            View Spreadsheet
+                          <% end %>
+                        </div>
+                      <% end %>
+                    </div>
+                  </li>
+                <% end %>
+              </ul>
+            </div>
+          </div>
+        <% end %>
+
+        <!-- Disconnect -->
+        <div class="mb-6">
+          <%= link_to disconnect_google_integration_path, 
+                      method: :delete,
+                      class: "inline-flex items-center px-4 py-2 border border-red-300 rounded-md shadow-sm text-sm font-medium text-red-700 bg-white hover:bg-red-50",
+                      data: { confirm: 'Are you sure you want to disconnect from Google Sheets?' } do %>
+            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+            Disconnect
+          <% end %>
+        </div>
+
+      <% else %>
+        <!-- Not Connected State -->
+        <div class="text-center py-12">
+          <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 48 48">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5l7-7 7 7M9 20h6"/>
+          </svg>
+          <h3 class="mt-2 text-sm font-medium text-gray-900">No Google Sheets connection</h3>
+          <p class="mt-1 text-sm text-gray-500">Connect your Google account to start exporting form responses automatically.</p>
+          <div class="mt-6">
+            <%= link_to connect_google_integration_path,
+                        class: "inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700" do %>
+              <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z"/>
+              </svg>
+              Connect to Google Sheets
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const testButton = document.getElementById('test-connection');
+  const testResult = document.getElementById('test-result');
+  
+  if (testButton) {
+    testButton.addEventListener('click', function() {
+      testButton.disabled = true;
+      testButton.innerHTML = '<svg class="animate-spin -ml-1 mr-3 h-4 w-4 text-gray-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>Testing...';
+      
+      fetch('<%= test_connection_google_integration_path %>', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': document.querySelector('[name="csrf-token"]').content
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.success) {
+          testResult.innerHTML = '<div class="text-sm text-green-600">✓ Connection successful</div>';
+        } else {
+          testResult.innerHTML = '<div class="text-sm text-red-600">✗ ' + data.error + '</div>';
+        }
+      })
+      .catch(error => {
+        testResult.innerHTML = '<div class="text-sm text-red-600">✗ Connection test failed</div>';
+      })
+      .finally(() => {
+        testButton.disabled = false;
+        testButton.innerHTML = '<svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>Test Connection';
+      });
+    });
+  }
+});
+</script>

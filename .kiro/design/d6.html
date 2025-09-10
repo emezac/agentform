@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="es" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgentForm - Advanced Preview Mode</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        .animate-slide-in { animation: slideIn 0.5s ease-out; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-out; }
+        .animate-pulse-slow { animation: pulse 2s ease-in-out infinite; }
+        .ai-gradient { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        
+        .form-step {
+            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            position: absolute; width: 100%; opacity: 0; transform: translateX(100%);
+        }
+        .form-step.active { position: relative; opacity: 1; transform: translateX(0); }
+        .form-step.previous { opacity: 0; transform: translateX(-100%); }
+        
+        .progress-bar { transition: width 0.6s ease; }
+        
+        /* File Upload Styles */
+        .drop-zone { border: 2px dashed #d1d5db; transition: all 0.2s ease; }
+        .drop-zone.dragover { border-color: #667eea; background-color: #f5f3ff; }
+        
+        /* Signature Pad */
+        .signature-pad { border: 2px solid #e5e7eb; border-radius: 0.75rem; cursor: crosshair; }
+
+        /* AI Sidebar */
+        .workflow-step { border-left: 3px solid #e5e7eb; padding-left: 1rem; position: relative; }
+        .workflow-step.active { border-left-color: #667eea; }
+        .workflow-step.completed { border-left-color: #10b981; }
+        .workflow-step::before { content: ''; position: absolute; left: -7.5px; top: 0.5rem; width: 12px; height: 12px; border-radius: 50%; background-color: #e5e7eb; border: 2px solid white; }
+        .workflow-step.active::before { background-color: #667eea; box-shadow: 0 0 10px rgba(102, 126, 234, 0.5); }
+        .workflow-step.completed::before { background-color: #10b981; }
+    </style>
+</head>
+<body class="bg-gray-50 h-full">
+    <!-- Main Layout -->
+    <div class="h-screen flex">
+        
+        <!-- Form Preview Area -->
+        <main class="flex-1 flex flex-col">
+            <header class="bg-white/80 backdrop-blur-md border-b border-gray-200 p-4">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-xl font-semibold text-gray-900">Advanced Form Preview</h1>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-600">Progreso:</span>
+                            <div class="w-40 bg-gray-200 rounded-full h-2.5"><div id="progress-bar" class="progress-bar bg-purple-600 h-2.5 rounded-full" style="width: 12.5%"></div></div>
+                            <span id="progress-text" class="text-sm font-medium text-gray-900">1/8</span>
+                        </div>
+                        <button id="toggle-ai-view" class="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-md text-sm font-medium hover:bg-purple-200">Ver AI</button>
+                    </div>
+                </div>
+            </header>
+            
+            <div class="flex-1 flex items-center justify-center p-8">
+                <div class="w-full max-w-2xl relative overflow-hidden">
+                    <div id="form-steps" class="relative min-h-[450px]">
+                        
+                        <!-- Step 1: Welcome -->
+                        <div class="form-step active" data-step="1">
+                            <div class="text-center mb-8"><h2 class="text-3xl font-bold text-gray-900 mb-4">Registro para Plan Pro</h2><p class="text-gray-600">Comencemos con tus datos básicos.</p></div>
+                            <div class="space-y-6"><label class="block text-lg font-medium text-gray-900 mb-3">Nombre Completo</label><input type="text" id="name-input" class="w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500" placeholder="Tu nombre aquí..."></div>
+                            <div class="mt-8 flex justify-end"><button id="next-step-1" class="px-8 py-3 ai-gradient text-white rounded-xl font-medium" disabled>Continuar</button></div>
+                        </div>
+
+                        <!-- Step 2: Email -->
+                        <div class="form-step" data-step="2">
+                             <h3 class="text-2xl font-semibold text-gray-900 mb-6" id="welcome-message">¡Hola! Continuemos.</h3>
+                             <label class="block text-lg font-medium text-gray-900 mb-3">Tu correo de trabajo</label>
+                             <input type="email" id="email-input" class="w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500" placeholder="tu@empresa.com">
+                             <div class="mt-8 flex justify-between"><button onclick="app.previousStep()" class="px-6 py-3">← Anterior</button><button id="next-step-2" class="px-8 py-3 ai-gradient text-white rounded-xl font-medium" disabled>Continuar</button></div>
+                        </div>
+
+                        <!-- Step 3: Company -->
+                        <div class="form-step" data-step="3">
+                             <h3 class="text-2xl font-semibold text-gray-900 mb-6">Información de tu empresa</h3>
+                             <label class="block text-lg font-medium text-gray-900 mb-3">Nombre de la Empresa</label>
+                             <input type="text" id="company-input" class="w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500" placeholder="Nombre S.A.">
+                             <div id="company-ai-info" class="mt-4"></div>
+                             <div class="mt-8 flex justify-between"><button onclick="app.previousStep()" class="px-6 py-3">← Anterior</button><button id="next-step-3" class="px-8 py-3 ai-gradient text-white rounded-xl font-medium" disabled>Continuar</button></div>
+                        </div>
+
+                        <!-- Step 4: File Upload -->
+                        <div class="form-step" data-step="4">
+                             <h3 class="text-2xl font-semibold text-gray-900 mb-6">Documentación</h3>
+                             <label class="block text-lg font-medium text-gray-900 mb-3">Sube tu logo o un documento de presentación (Opcional)</label>
+                             <div id="drop-zone" class="drop-zone rounded-xl p-8 text-center bg-gray-50">
+                                <input type="file" id="file-input" class="hidden" multiple>
+                                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true"><path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                                <p class="mt-2 text-sm text-gray-600">Arrastra y suelta archivos aquí o <span class="font-semibold text-purple-600">haz clic para buscar</span></p>
+                             </div>
+                             <div id="file-list" class="mt-4 space-y-2"></div>
+                             <div class="mt-8 flex justify-between"><button onclick="app.previousStep()" class="px-6 py-3">← Anterior</button><button id="next-step-4" class="px-8 py-3 ai-gradient text-white rounded-xl font-medium">Continuar</button></div>
+                        </div>
+
+                        <!-- Step 5: Payment -->
+                        <div class="form-step" data-step="5">
+                             <h3 class="text-2xl font-semibold text-gray-900 mb-6">Información de Pago</h3>
+                             <div class="bg-white border rounded-xl p-6 space-y-4">
+                                <input class="w-full px-3 py-3 border rounded-md" placeholder="Número de Tarjeta">
+                                <div class="flex space-x-4">
+                                    <input class="w-1/2 px-3 py-3 border rounded-md" placeholder="MM / YY">
+                                    <input class="w-1/2 px-3 py-3 border rounded-md" placeholder="CVC">
+                                </div>
+                                <p class="text-xs text-gray-500 flex items-center"><svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 1a4.5 4.5 0 00-4.5 4.5V9H5a2 2 0 00-2 2v6a2 2 0 002 2h10a2 2 0 002-2v-6a2 2 0 00-2-2h-.5V5.5A4.5 4.5 0 0010 1zm3 8V5.5a3 3 0 10-6 0V9h6z" clip-rule="evenodd" /></svg>Pago seguro procesado por Stripe.</p>
+                             </div>
+                             <div class="mt-8 flex justify-between"><button onclick="app.previousStep()" class="px-6 py-3">← Anterior</button><button id="next-step-5" class="px-8 py-3 ai-gradient text-white rounded-xl font-medium">Continuar</button></div>
+                        </div>
+
+                        <!-- Step 6: Challenge -->
+                         <div class="form-step" data-step="6">
+                             <h3 class="text-2xl font-semibold text-gray-900 mb-6">Tu Principal Desafío</h3>
+                             <label class="block text-lg font-medium text-gray-900 mb-3">¿Cuál es el mayor obstáculo que buscas superar con nuestra solución?</label>
+                             <textarea id="challenge-input" rows="5" class="w-full px-4 py-4 text-lg border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500"></textarea>
+                             <div id="challenge-analysis" class="mt-4"></div>
+                             <div class="mt-8 flex justify-between"><button onclick="app.previousStep()" class="px-6 py-3">← Anterior</button><button id="next-step-6" class="px-8 py-3 ai-gradient text-white rounded-xl font-medium">Continuar</button></div>
+                        </div>
+
+                        <!-- Step 7: AI Follow-up -->
+                        <div class="form-step" data-step="7">
+                             <div id="followup-question"></div>
+                             <div class="mt-8 flex justify-between"><button onclick="app.previousStep()" class="px-6 py-3">← Anterior</button><button id="next-step-7" class="px-8 py-3 ai-gradient text-white rounded-xl font-medium">Continuar</button></div>
+                        </div>
+
+                        <!-- Step 8: Signature -->
+                        <div class="form-step" data-step="8">
+                            <h3 class="text-2xl font-semibold text-gray-900 mb-6">Acuerdo Final</h3>
+                            <label class="block text-lg font-medium text-gray-900 mb-3">Por favor, firma para confirmar tu registro.</label>
+                            <canvas id="signature-pad" class="signature-pad w-full h-48 bg-white"></canvas>
+                            <div class="text-right mt-2"><button id="clear-signature" class="text-sm text-gray-600 hover:text-red-600">Limpiar</button></div>
+                            <div class="mt-8 flex justify-between"><button onclick="app.previousStep()" class="px-6 py-3">← Anterior</button><button id="complete-form" class="px-8 py-3 ai-gradient text-white rounded-xl font-medium">Finalizar y Enviar</button></div>
+                        </div>
+                        
+                        <!-- Completion Step -->
+                        <div class="form-step" data-step="9">
+                            <div class="text-center">
+                                <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg></div>
+                                <h2 class="text-2xl font-bold text-gray-900 mb-2">¡Todo listo, <span id="summary-name"></span>!</h2>
+                                <p class="text-gray-600 mb-6">Hemos procesado tu información. Un especialista se pondrá en contacto pronto.</p>
+                                <div id="ai-summary" class="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-xl p-6 text-left"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        
+        <!-- AI Workflow Sidebar -->
+        <aside id="ai-sidebar" class="w-80 bg-white border-l border-gray-200 transform translate-x-full transition-transform duration-300 ease-in-out">
+            <div class="p-6 h-full flex flex-col">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="text-lg font-semibold text-gray-900">SuperAgent Workflow</h3>
+                    <button id="close-ai-view"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg></button>
+                </div>
+                
+                <div id="ai-smart-tip" class="mb-6"></div>
+
+                <h4 class="font-medium text-gray-900 mb-4">Estado del Agente</h4>
+                <div id="workflow-steps-container" class="space-y-6 flex-1 overflow-y-auto pr-2"></div>
+                
+                 <div class="mt-auto pt-6 border-t border-gray-200">
+                    <h4 class="font-medium text-gray-900 mb-4">Log del Agente</h4>
+                    <div id="ai-conversation" class="space-y-2 text-xs text-gray-600 max-h-32 overflow-y-auto pr-2"></div>
+                </div>
+            </div>
+        </aside>
+    </div>
+    
+    <script>
+    class AgentFormPreview {
+        constructor() {
+            this.currentStep = 1;
+            this.totalSteps = 8;
+            this.userData = {};
+            this.aiSidebarOpen = false;
+            this.workflowSteps = [
+                { id: 'data-collection', name: 'Recolección de Datos', task: 'UserInput', status: 'completed' },
+                { id: 'email-validation', name: 'Validación de Email', task: 'ValidateTask', status: 'pending' },
+                { id: 'company-research', name: 'Enriquecimiento de Empresa', task: 'WebSearchTask', status: 'pending' },
+                { id: 'file-upload', name: 'Procesamiento de Archivos', task: 'FileUploadTask', status: 'pending' },
+                { id: 'payment', name: 'Procesar Pago', task: 'PaymentGateway', status: 'pending' },
+                { id: 'sentiment-analysis', name: 'Análisis de Sentimiento', task: 'LlmTask', status: 'pending' },
+                { id: 'bant-qualification', name: 'Cualificación BANT', task: 'LlmTask', status: 'pending' },
+                { id: 'signature', name: 'Verificación de Firma', task: 'SignatureTask', status: 'pending' },
+                { id: 'lead-scoring', name: 'Calificación de Lead Final', task: 'ScoreLeadWorkflow', status: 'pending' },
+                { id: 'crm-sync', name: 'Sincronizar con CRM', task: 'CrmSyncTask', status: 'pending' },
+            ];
+            this.init();
+        }
+        
+        init() { this.bindEvents(); this.renderWorkflow(); }
+        
+        bindEvents() {
+            document.getElementById('toggle-ai-view').addEventListener('click', () => this.toggleAISidebar());
+            document.getElementById('close-ai-view').addEventListener('click', () => this.toggleAISidebar());
+            
+            // Step Navigation
+            document.querySelectorAll('button[id^="next-step-"]').forEach(btn => btn.addEventListener('click', () => this.nextStep()));
+            document.getElementById('complete-form').addEventListener('click', () => this.completeForm());
+
+            // Input validation
+            document.getElementById('name-input').addEventListener('input', e => {
+                const value = e.target.value.trim();
+                document.getElementById('next-step-1').disabled = value.length < 3;
+                if (value) this.userData.name = value;
+            });
+            document.getElementById('email-input').addEventListener('input', e => {
+                const email = e.target.value;
+                const isValid = email.includes('@') && email.includes('.');
+                document.getElementById('next-step-2').disabled = !isValid;
+                if (isValid) {
+                    this.userData.email = email;
+                    this.simulateAI('email-validation', 1000);
+                }
+            });
+            document.getElementById('company-input').addEventListener('input', e => {
+                const company = e.target.value.trim();
+                document.getElementById('next-step-3').disabled = company.length < 2;
+                if (company.length >= 2) this.userData.company = company;
+                if (company.length === 3) this.simulateAI('company-research', 1500, this.showCompanyInfo);
+            });
+            document.getElementById('challenge-input').addEventListener('input', e => {
+                const challenge = e.target.value.trim();
+                if (challenge.length > 20) {
+                    this.userData.challenge = challenge;
+                    this.simulateAI('sentiment-analysis', 1500, this.showChallengeAnalysis);
+                }
+            });
+
+            // File Upload
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+            dropZone.addEventListener('click', () => fileInput.click());
+            dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+            dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); this.handleFiles(e.dataTransfer.files); });
+            fileInput.addEventListener('change', e => this.handleFiles(e.target.files));
+
+            // Signature Pad
+            this.initSignaturePad();
+        }
+
+        handleFiles(files) {
+            this.simulateAI('file-upload', 1200, () => {
+                const fileList = document.getElementById('file-list');
+                fileList.innerHTML = '';
+                Array.from(files).forEach(file => {
+                    fileList.innerHTML += `<div class="bg-gray-100 p-2 rounded-md text-sm flex items-center justify-between animate-fade-in"><span>${file.name}</span><span class="text-green-600 font-semibold">Cargado</span></div>`;
+                });
+            });
+        }
+
+        initSignaturePad() {
+            const canvas = document.getElementById('signature-pad');
+            const ctx = canvas.getContext('2d');
+            let drawing = false;
+
+            function getMousePos(canvas, evt) {
+                const rect = canvas.getBoundingClientRect();
+                return { x: evt.clientX - rect.left, y: evt.clientY - rect.top };
+            }
+
+            canvas.addEventListener('mousedown', e => { drawing = true; ctx.beginPath(); ctx.moveTo(getMousePos(canvas, e).x, getMousePos(canvas, e).y); });
+            canvas.addEventListener('mouseup', () => { drawing = false; this.simulateAI('signature', 500); });
+            canvas.addEventListener('mousemove', e => {
+                if (drawing) {
+                    ctx.lineWidth = 2;
+                    ctx.lineCap = 'round';
+                    ctx.strokeStyle = '#1f2937';
+                    ctx.lineTo(getMousePos(canvas, e).x, getMousePos(canvas, e).y);
+                    ctx.stroke();
+                }
+            });
+            document.getElementById('clear-signature').addEventListener('click', () => ctx.clearRect(0, 0, canvas.width, canvas.height));
+        }
+        
+        simulateAI(stepId, duration, callback) {
+            this.updateWorkflowStatus(stepId, 'active');
+            this.addAILog(`Iniciando tarea: ${stepId}...`);
+            setTimeout(() => {
+                this.updateWorkflowStatus(stepId, 'completed');
+                this.addAILog(`Tarea ${stepId} completada.`);
+                if (callback) callback.call(this);
+            }, duration);
+        }
+
+        showCompanyInfo() {
+            document.getElementById('company-ai-info').innerHTML = `<div class="bg-blue-50 border border-blue-200 rounded-xl p-4 animate-fade-in"><h4 class="font-medium text-blue-900 mb-1">Información Enriquecida</h4><div class="text-sm text-blue-700"><strong>Industria:</strong> SaaS, <strong>Tamaño:</strong> 51-200</div></div>`;
+        }
+
+        showChallengeAnalysis() {
+             document.getElementById('challenge-analysis').innerHTML = `<div class="bg-purple-50 border border-purple-200 rounded-xl p-4 animate-fade-in"><h4 class="font-medium text-purple-900 mb-2">Análisis de Respuesta</h4><div class="text-sm text-purple-700"><strong>Sentimiento:</strong> Positivo, <strong>Intención:</strong> Alta</div></div>`;
+        }
+        
+        nextStep() {
+            if (this.currentStep >= this.totalSteps) return;
+
+            // Piping
+            if (this.currentStep === 1) {
+                document.getElementById('welcome-message').innerText = `¡Hola, ${this.userData.name}! Continuemos.`;
+            }
+            // Trigger AI Followup
+            if (this.currentStep === 6) {
+                this.simulateAI('bant-qualification', 1200, () => {
+                    document.getElementById('followup-question').innerHTML = `<h3 class="text-2xl font-semibold text-gray-900 mb-6 animate-fade-in">Pregunta de seguimiento (IA)</h3><label class="block text-lg font-medium text-gray-900 mb-3">¿Cuál es el presupuesto aproximado que han asignado para resolver este desafío?</label><input type="text" class="w-full px-4 py-4 text-lg border-2 border-purple-300 rounded-xl" placeholder="Ej: $5,000 - $10,000 USD">`;
+                });
+            }
+            // Trigger AI Smart Tip
+             if (this.currentStep === 5) { // When arriving at step 6
+                document.getElementById('ai-smart-tip').innerHTML = `<div class="bg-yellow-50 border-l-4 border-yellow-400 p-3 animate-fade-in"><p class="text-xs font-semibold text-yellow-800">AI Smart Tip</p><p class="text-xs text-yellow-700 mt-1">Esta pregunta tiene una tasa de abandono del 25%. Considera hacerla opcional para mejorar la finalización.</p></div>`;
+            } else {
+                 document.getElementById('ai-smart-tip').innerHTML = '';
+            }
+
+            const currentEl = document.querySelector(`[data-step="${this.currentStep}"]`);
+            currentEl.classList.remove('active');
+            currentEl.classList.add('previous');
+            this.currentStep++;
+            this.updateProgress();
+            const nextEl = document.querySelector(`[data-step="${this.currentStep}"]`);
+            nextEl.classList.remove('previous');
+            nextEl.classList.add('active');
+        }
+        
+        previousStep() {
+            if (this.currentStep <= 1) return;
+            const currentEl = document.querySelector(`[data-step="${this.currentStep}"]`);
+            currentEl.classList.remove('active');
+            this.currentStep--;
+            this.updateProgress();
+            const prevEl = document.querySelector(`[data-step="${this.currentStep}"]`);
+            prevEl.classList.add('active');
+            prevEl.classList.remove('previous');
+        }
+        
+        updateProgress() {
+            document.getElementById('progress-bar').style.width = `${(this.currentStep / this.totalSteps) * 100}%`;
+            document.getElementById('progress-text').textContent = `${this.currentStep}/${this.totalSteps}`;
+        }
+        
+        toggleAISidebar() {
+            this.aiSidebarOpen = !this.aiSidebarOpen;
+            document.getElementById('ai-sidebar').classList.toggle('translate-x-full', !this.aiSidebarOpen);
+        }
+
+        renderWorkflow() {
+            const container = document.getElementById('workflow-steps-container');
+            container.innerHTML = this.workflowSteps.map(step => `
+                <div class="workflow-step ${step.status}">
+                    <div class="flex items-start space-x-3"><div class="mt-1 shrink-0">${this.getIconForStatus(step.status)}</div>
+                        <div><h4 class="font-medium text-gray-900 text-sm">${step.name}</h4>
+                            <div class="mt-1 text-xs ${step.status === 'active' ? 'text-purple-600' : 'text-gray-500'}">${this.getTaskText(step)}</div>
+                        </div>
+                    </div>
+                </div>`).join('');
+        }
+        
+        getIconForStatus(status) {
+            const icons = {
+                completed: '<svg class="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>',
+                active: '<div class="w-5 h-5 flex items-center justify-center"><div class="w-3 h-3 border-2 border-purple-500 rounded-full animate-spin"></div></div>',
+                pending: '<div class="w-5 h-5 flex items-center justify-center"><div class="w-3 h-3 bg-gray-300 rounded-full"></div></div>',
+            };
+            return icons[status];
+        }
+
+        getTaskText(step) {
+            if (step.status === 'active') return `En proceso • ${step.task}`;
+            if (step.status === 'completed') return `Completado`;
+            return `Pendiente • ${step.task}`;
+        }
+
+        updateWorkflowStatus(id, newStatus) {
+            const step = this.workflowSteps.find(s => s.id === id);
+            if (step) step.status = newStatus;
+            this.renderWorkflow();
+        }
+
+        addAILog(message) {
+            const log = document.createElement('div');
+            log.className = 'animate-fade-in';
+            log.textContent = `[${new Date().toLocaleTimeString()}]: ${message}`;
+            const conversation = document.getElementById('ai-conversation');
+            conversation.appendChild(log);
+            conversation.scrollTop = conversation.scrollHeight;
+        }
+        
+        completeForm() {
+            this.simulateAI('lead-scoring', 1500, () => {
+                this.simulateAI('crm-sync', 800, () => {
+                    document.querySelector(`[data-step="8"]`).classList.remove('active');
+                    document.querySelector('[data-step="9"]').classList.add('active');
+                    document.getElementById('progress-bar').style.width = '100%';
+                    document.getElementById('progress-text').textContent = 'Completado';
+                    document.getElementById('summary-name').textContent = this.userData.name;
+                    document.getElementById('ai-summary').innerHTML = `<div class="animate-fade-in"><h3 class="font-semibold text-gray-900 mb-3">Resumen Inteligente</h3><div class="text-gray-700 space-y-2 text-sm"><p><strong>Puntuación de Lead:</strong> <span class="text-green-600 font-semibold">93/100 (Muy Alto Potencial)</span></p><p><strong>Sentimiento Detectado:</strong> Positivo</p><p><strong>Acción Realizada:</strong> Lead enrutado al equipo de ventas senior y sincronizado con Salesforce.</p></div></div>`;
+                });
+            });
+        }
+    }
+    
+    const app = new AgentFormPreview();
+    </script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<div class="space-y-4">
+  <div class="border-2 border-gray-300 rounded-lg p-4 bg-white">
+    <div class="space-y-3">
+      <div class="flex items-center justify-between">
+        <label class="block text-sm font-medium text-gray-700">Digital Signature</label>
+        <button type="button" 
+                class="text-sm text-indigo-600 hover:text-indigo-500"
+                data-action="click->question-response#clearSignature">
+          Clear
+        </button>
+      </div>
+      
+      <!-- Signature canvas -->
+      <div class="border border-gray-200 rounded-md bg-gray-50">
+        <canvas 
+          data-question-response-target="signatureCanvas"
+          width="400" 
+          height="200" 
+          class="w-full h-48 cursor-crosshair rounded-md"
+          data-action="mousedown->question-response#startSignature mousemove->question-response#drawSignature mouseup->question-response#endSignature touchstart->question-response#startSignature touchmove->question-response#drawSignature touchend->question-response#endSignature">
+        </canvas>
+      </div>
+      
+      <!-- Hidden field to store signature data -->
+      <%= form.hidden_field "answer[signature_data]", 
+                           data: { "question-response-target": "signatureData" } %>
+      
+      <div class="flex items-center justify-between text-xs text-gray-500">
+        <span>Sign above using your mouse or finger</span>
+        <span data-question-response-target="signatureStatus">No signature</span>
+      </div>
+    </div>
+  </div>
+  
+  <% if config['help_text'] %>
+    <p class="text-xs text-gray-500"><%= config['help_text'] %></p>
+  <% end %>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const canvas = document.querySelector('[data-question-response-target="signatureCanvas"]');
+    const signatureData = document.querySelector('[data-question-response-target="signatureData"]');
+    const signatureStatus = document.querySelector('[data-question-response-target="signatureStatus"]');
+    const clearButton = document.querySelector('[data-action*="clearSignature"]');
+    
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let lastX = 0;
+    let lastY = 0;
+    
+    // Set up canvas
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    function getEventPos(e) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      
+      let clientX, clientY;
+      
+      if (e.touches && e.touches[0]) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      }
+      
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+      };
+    }
+    
+    function startSignature(e) {
+      e.preventDefault();
+      isDrawing = true;
+      const pos = getEventPos(e);
+      lastX = pos.x;
+      lastY = pos.y;
+    }
+    
+    function drawSignature(e) {
+      if (!isDrawing) return;
+      e.preventDefault();
+      
+      const pos = getEventPos(e);
+      
+      ctx.beginPath();
+      ctx.moveTo(lastX, lastY);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      
+      lastX = pos.x;
+      lastY = pos.y;
+      
+      updateSignatureData();
+    }
+    
+    function endSignature(e) {
+      if (!isDrawing) return;
+      e.preventDefault();
+      isDrawing = false;
+      updateSignatureData();
+    }
+    
+    function clearSignature() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      signatureData.value = '';
+      signatureStatus.textContent = 'No signature';
+      
+      // Trigger validation
+      signatureData.dispatchEvent(new Event('input'));
+    }
+    
+    function updateSignatureData() {
+      const dataURL = canvas.toDataURL('image/png');
+      signatureData.value = dataURL;
+      signatureStatus.textContent = 'Signature captured';
+      
+      // Trigger validation
+      signatureData.dispatchEvent(new Event('input'));
+    }
+    
+    // Event listeners
+    canvas.addEventListener('mousedown', startSignature);
+    canvas.addEventListener('mousemove', drawSignature);
+    canvas.addEventListener('mouseup', endSignature);
+    canvas.addEventListener('mouseout', endSignature);
+    
+    canvas.addEventListener('touchstart', startSignature);
+    canvas.addEventListener('touchmove', drawSignature);
+    canvas.addEventListener('touchend', endSignature);
+    
+    clearButton.addEventListener('click', clearSignature);
+    
+    // Prevent scrolling when touching the canvas
+    canvas.addEventListener('touchstart', function(e) {
+      e.preventDefault();
+    }, { passive: false });
+    
+    canvas.addEventListener('touchend', function(e) {
+      e.preventDefault();
+    }, { passive: false });
+    
+    canvas.addEventListener('touchmove', function(e) {
+      e.preventDefault();
+    }, { passive: false });
+  });
+</script>

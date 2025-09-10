@@ -1,0 +1,53 @@
+<%# Payment Badge Component for Templates %>
+<% 
+  # Default values
+  has_payment_questions ||= false
+  required_features ||= []
+  size ||= 'sm' # sm, md, lg
+  clickable ||= true
+%>
+
+<% if has_payment_questions %>
+  <% 
+    badge_classes = case size
+                   when 'lg'
+                     "inline-flex items-center px-3 py-1.5 text-sm font-medium"
+                   when 'md'
+                     "inline-flex items-center px-2.5 py-1 text-xs font-medium"
+                   else
+                     "inline-flex items-center px-2 py-0.5 text-xs font-medium"
+                   end
+    
+    badge_classes += " bg-purple-100 text-purple-800 rounded-full border border-purple-200"
+    badge_classes += " hover:bg-purple-200 cursor-pointer transition-colors duration-200" if clickable
+    badge_classes += " select-none"
+  %>
+
+  <span data-template-preview-target="paymentBadge" 
+        class="<%= badge_classes %>"
+        <% if clickable %>data-action="click->template-preview#showPaymentRequirements"<% end %>
+        title="This template includes payment questions">
+    
+    <!-- Payment Icon -->
+    <svg class="<%= size == 'lg' ? 'w-4 h-4' : 'w-3 h-3' %> mr-1.5" 
+         fill="currentColor" 
+         viewBox="0 0 20 20">
+      <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4zM18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z"></path>
+    </svg>
+    
+    <!-- Badge Text -->
+    <span>
+      <% if size == 'lg' %>
+        Payment Features
+      <% else %>
+        Payment
+      <% end %>
+    </span>
+    
+    <!-- Setup Required Indicator -->
+    <% if required_features.any? %>
+      <span class="ml-1.5 flex-shrink-0 w-1.5 h-1.5 bg-amber-400 rounded-full" 
+            title="Setup required"></span>
+    <% end %>
+  </span>
+<% end %>

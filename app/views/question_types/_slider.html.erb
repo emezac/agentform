@@ -1,0 +1,79 @@
+<div class="space-y-4">
+  <% min_value = config['min_value'] || 0 %>
+  <% max_value = config['max_value'] || 100 %>
+  <% step_value = config['step'] || 1 %>
+  <% default_value = config['default_value'] || min_value %>
+  <% prefix = config['prefix'] || '' %>
+  <% suffix = config['suffix'] || '' %>
+  
+  <div class="space-y-3">
+    <div class="flex items-center justify-between text-sm text-gray-600">
+      <span><%= prefix %><%= min_value %><%= suffix %></span>
+      <span><%= prefix %><%= max_value %><%= suffix %></span>
+    </div>
+    
+    <div class="relative">
+      <%= form.range_field "answer[value]", 
+                          min: min_value,
+                          max: max_value,
+                          step: step_value,
+                          value: default_value,
+                          required: question.required?,
+                          class: "w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer slider-custom",
+                          data: { 
+                            "question-response-target": "answerInput",
+                            "action": "input->question-response#validateInput change->question-response#updateSliderValue",
+                            "prefix": prefix,
+                            "suffix": suffix
+                          } %>
+    </div>
+    
+    <div class="text-center">
+      <span class="text-xl font-semibold text-indigo-600" data-question-response-target="sliderValue">
+        <%= prefix %><%= default_value %><%= suffix %>
+      </span>
+    </div>
+  </div>
+  
+  <% if config['help_text'] %>
+    <p class="text-xs text-gray-500 text-center"><%= config['help_text'] %></p>
+  <% end %>
+</div>
+
+<style>
+  .slider-custom {
+    background: linear-gradient(to right, #e5e7eb 0%, #e5e7eb 100%);
+  }
+  
+  .slider-custom::-webkit-slider-thumb {
+    appearance: none;
+    height: 24px;
+    width: 24px;
+    border-radius: 50%;
+    background: #6366f1;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+    transition: all 0.2s ease;
+  }
+  
+  .slider-custom::-webkit-slider-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(99, 102, 241, 0.4);
+  }
+  
+  .slider-custom::-moz-range-thumb {
+    height: 24px;
+    width: 24px;
+    border-radius: 50%;
+    background: #6366f1;
+    cursor: pointer;
+    border: none;
+    box-shadow: 0 4px 8px rgba(99, 102, 241, 0.3);
+    transition: all 0.2s ease;
+  }
+  
+  .slider-custom::-moz-range-thumb:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(99, 102, 241, 0.4);
+  }
+</style>

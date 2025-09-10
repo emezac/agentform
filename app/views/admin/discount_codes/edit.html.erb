@@ -1,0 +1,109 @@
+<% content_for :title, "Edit Discount Code" %>
+
+<div class="admin-content">
+  <div class="admin-header">
+    <div class="admin-header-content">
+      <h1 class="admin-title">Edit Discount Code</h1>
+      <p class="admin-subtitle">Modify discount code: <strong><%= @discount_code.code %></strong></p>
+    </div>
+    <div class="admin-header-actions">
+      <%= link_to "View Code", admin_discount_code_path(@discount_code), 
+                  class: "btn btn-ghost" %>
+      <%= link_to "Back to Codes", admin_discount_codes_path, 
+                  class: "btn btn-secondary" %>
+    </div>
+  </div>
+
+  <div class="admin-form-container">
+    <%= form_with model: [:admin, @discount_code], local: true, class: "admin-form" do |form| %>
+      <% if @discount_code.errors.any? %>
+        <div class="alert alert-danger">
+          <h4><%= pluralize(@discount_code.errors.count, "error") %> prohibited this discount code from being saved:</h4>
+          <ul>
+            <% @discount_code.errors.full_messages.each do |message| %>
+              <li><%= message %></li>
+            <% end %>
+          </ul>
+        </div>
+      <% end %>
+
+      <div class="form-section">
+        <h3 class="form-section-title">Basic Information</h3>
+        
+        <div class="form-group">
+          <%= form.label :code, class: "form-label" %>
+          <div class="form-input-readonly">
+            <%= @discount_code.code %>
+          </div>
+          <p class="form-help">
+            Code cannot be changed after creation.
+          </p>
+        </div>
+
+        <div class="form-group">
+          <%= form.label :discount_percentage, "Discount Percentage", class: "form-label" %>
+          <div class="input-group">
+            <%= form.number_field :discount_percentage, 
+                                 class: "form-input",
+                                 min: 1,
+                                 max: 99,
+                                 required: true %>
+            <span class="input-group-text">%</span>
+          </div>
+          <p class="form-help">
+            Enter a value between 1% and 99%.
+          </p>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3 class="form-section-title">Usage Limits</h3>
+        
+        <div class="form-group">
+          <%= form.label :max_usage_count, "Maximum Uses", class: "form-label" %>
+          <%= form.number_field :max_usage_count, 
+                               class: "form-input",
+                               min: [@discount_code.current_usage_count, 1].max,
+                               placeholder: "Leave blank for unlimited" %>
+          <p class="form-help">
+            <% if @discount_code.current_usage_count > 0 %>
+              This code has been used <%= @discount_code.current_usage_count %> times. 
+              Maximum uses cannot be set below current usage.
+            <% else %>
+              Limit how many times this code can be used. Leave blank for unlimited uses.
+            <% end %>
+          </p>
+        </div>
+
+        <div class="form-group">
+          <%= form.label :expires_at, "Expiration Date", class: "form-label" %>
+          <%= form.datetime_local_field :expires_at, 
+                                       class: "form-input",
+                                       min: Date.current.strftime("%Y-%m-%dT%H:%M") %>
+          <p class="form-help">
+            Leave blank if the code should never expire.
+          </p>
+        </div>
+      </div>
+
+      <div class="form-section">
+        <h3 class="form-section-title">Status</h3>
+        
+        <div class="form-group">
+          <div class="checkbox-group">
+            <%= form.check_box :active, class: "form-checkbox" %>
+            <%= form.label :active, "Active", class: "form-label checkbox-label" %>
+          </div>
+          <p class="form-help">
+            Only active codes can be used by customers.
+          </p>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <%= form.submit "Update Discount Code", class: "btn btn-primary" %>
+        <%= link_to "Cancel", admin_discount_code_path(@discount_code), class: "btn btn-secondary" %>
+      </div>
+    <% end %>
+  </div>
+</div>

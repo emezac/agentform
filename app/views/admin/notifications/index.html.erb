@@ -1,0 +1,210 @@
+<% content_for :title, "Admin Notifications" %>
+
+<div class="min-h-screen bg-gray-50" data-controller="admin-notifications" data-turbo-permanent>
+  <!-- Header -->
+  <div class="bg-white shadow-sm border-b border-gray-200">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center py-6">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900">Admin Notifications</h1>
+          <p class="mt-1 text-sm text-gray-500">
+            Monitor user activities and system events
+          </p>
+        </div>
+        
+        <div class="flex items-center space-x-3">
+          <% if @stats[:unread] > 0 %>
+            <%= button_to mark_all_as_read_admin_notifications_path, 
+                method: :patch,
+                class: "inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500",
+                data: { turbo_method: :patch } do %>
+              <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+              Mark All Read
+            <% end %>
+          <% end %>
+          
+          <div class="relative">
+            <span id="notification-counter" class="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-red-600 rounded-full">
+              <%= @stats[:unread] > 0 ? @stats[:unread] : "" %>
+            </span>
+            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-5 5v-5zM11 19H6a2 2 0 01-2-2V7a2 2 0 012-2h5m5 0v5"></path>
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      
+      <!-- Stats Cards -->
+      <div class="lg:col-span-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                    <span class="text-white text-sm font-medium">📊</span>
+                  </div>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Total</dt>
+                    <dd class="text-lg font-medium text-gray-900"><%= @stats[:total] %></dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-red-500 rounded-md flex items-center justify-center">
+                    <span class="text-white text-sm font-medium">🔴</span>
+                  </div>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Unread</dt>
+                    <dd class="text-lg font-medium text-gray-900"><%= @stats[:unread] %></dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+                    <span class="text-white text-sm font-medium">📅</span>
+                  </div>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Today</dt>
+                    <dd class="text-lg font-medium text-gray-900"><%= @stats[:today] %></dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-purple-500 rounded-md flex items-center justify-center">
+                    <span class="text-white text-sm font-medium">📈</span>
+                  </div>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">This Week</dt>
+                    <dd class="text-lg font-medium text-gray-900"><%= @stats[:this_week] %></dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="bg-white overflow-hidden shadow rounded-lg">
+            <div class="p-5">
+              <div class="flex items-center">
+                <div class="flex-shrink-0">
+                  <div class="w-8 h-8 bg-red-600 rounded-md flex items-center justify-center">
+                    <span class="text-white text-sm font-medium">🚨</span>
+                  </div>
+                </div>
+                <div class="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt class="text-sm font-medium text-gray-500 truncate">Critical</dt>
+                    <dd class="text-lg font-medium text-gray-900"><%= @stats[:critical] %></dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filters Sidebar -->
+      <div class="lg:col-span-1">
+        <div class="bg-white shadow rounded-lg p-6">
+          <h3 class="text-lg font-medium text-gray-900 mb-4">Filters</h3>
+          
+          <%= form_with url: admin_notifications_path, method: :get, local: true, class: "space-y-4" do |form| %>
+            
+            <!-- Status Filter -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+              <%= form.select :status, 
+                  options_for_select([
+                    ['All', ''],
+                    ['Unread', 'unread'],
+                    ['Read', 'read']
+                  ], params[:status]),
+                  {},
+                  { class: "block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" } %>
+            </div>
+
+            <!-- Event Type Filter -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Event Type</label>
+              <%= form.select :event_type,
+                  options_for_select([['All Types', '']] + 
+                    AdminNotification::EVENT_TYPES.map { |k, v| [k.humanize, v] }, 
+                    params[:event_type]),
+                  {},
+                  { class: "block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" } %>
+            </div>
+
+            <!-- Priority Filter -->
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-2">Priority</label>
+              <%= form.select :priority,
+                  options_for_select([['All Priorities', '']] + 
+                    AdminNotification::PRIORITIES.map { |k, v| [k.humanize, v] }, 
+                    params[:priority]),
+                  {},
+                  { class: "block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" } %>
+            </div>
+
+            <div class="pt-4">
+              <%= form.submit "Apply Filters", 
+                  class: "w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2" %>
+            </div>
+          <% end %>
+
+          <div class="mt-6 pt-6 border-t border-gray-200">
+            <%= link_to "Clear Filters", admin_notifications_path, 
+                class: "w-full block text-center text-sm text-gray-500 hover:text-gray-700" %>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications List -->
+      <div class="lg:col-span-3">
+        <div class="bg-white shadow rounded-lg">
+          <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">Recent Notifications</h3>
+          </div>
+          
+          <div id="notifications-list" data-turbo-permanent>
+            <%= render "notifications_list", notifications: @notifications %>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%= turbo_stream_from "admin_notifications" %>

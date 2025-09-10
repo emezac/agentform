@@ -1,0 +1,30 @@
+<div class="space-y-2">
+  <%= form.datetime_local_field "answer[value]", 
+                               min: config['min_datetime'],
+                               max: config['max_datetime'],
+                               required: question.required?,
+                               class: "block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm",
+                               data: { 
+                                 "question-response-target": "answerInput",
+                                 "action": "change->question-response#validateInput"
+                               } %>
+  
+  <% if config['min_datetime'] || config['max_datetime'] %>
+    <div class="flex justify-between text-xs text-gray-500">
+      <% if config['min_datetime'] %>
+        <span>From: <%= DateTime.parse(config['min_datetime']).strftime('%B %d, %Y at %I:%M %p') rescue config['min_datetime'] %></span>
+      <% end %>
+      <% if config['max_datetime'] %>
+        <span>Until: <%= DateTime.parse(config['max_datetime']).strftime('%B %d, %Y at %I:%M %p') rescue config['max_datetime'] %></span>
+      <% end %>
+    </div>
+  <% end %>
+  
+  <% if config['timezone'] %>
+    <p class="text-xs text-gray-500">Timezone: <%= config['timezone'] %></p>
+  <% end %>
+  
+  <% if config['help_text'] %>
+    <p class="text-xs text-gray-500"><%= config['help_text'] %></p>
+  <% end %>
+</div>

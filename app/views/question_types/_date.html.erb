@@ -1,0 +1,26 @@
+<div class="space-y-2">
+  <%= form.date_field "answer[value]", 
+                     min: config['min_date'],
+                     max: config['max_date'],
+                     required: question.required?,
+                     class: "block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm",
+                     data: { 
+                       "question-response-target": "answerInput",
+                       "action": "change->question-response#validateInput"
+                     } %>
+  
+  <% if config['min_date'] || config['max_date'] %>
+    <div class="flex justify-between text-xs text-gray-500">
+      <% if config['min_date'] %>
+        <span>From: <%= Date.parse(config['min_date']).strftime('%B %d, %Y') rescue config['min_date'] %></span>
+      <% end %>
+      <% if config['max_date'] %>
+        <span>Until: <%= Date.parse(config['max_date']).strftime('%B %d, %Y') rescue config['max_date'] %></span>
+      <% end %>
+    </div>
+  <% end %>
+  
+  <% if config['help_text'] %>
+    <p class="text-xs text-gray-500"><%= config['help_text'] %></p>
+  <% end %>
+</div>

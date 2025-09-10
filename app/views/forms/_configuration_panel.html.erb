@@ -1,0 +1,183 @@
+<%# Configuration Panel for Form Builder %>
+<div class="p-4">
+  <h3 class="text-lg font-semibold text-gray-900 mb-4">Form Configuration</h3>
+  
+  <!-- Basic Settings -->
+  <div class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Form Name</label>
+      <%= text_field_tag "form_name", @form.name, 
+            class: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500",
+            data: { action: "blur->form-builder#triggerAutoSave", "form-builder-target": "formName" } %>
+    </div>
+    
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Description</label>
+      <%= text_area_tag "form_description", @form.description, 
+            class: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500",
+            rows: 3,
+            data: { action: "blur->form-builder#triggerAutoSave" } %>
+    </div>
+    
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+      <%= select_tag "form_category", 
+            options_for_select(Form.categories.map { |key, value| [key.humanize, key] }, @form.category),
+            class: "w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500",
+            data: { action: "change->form-builder#triggerAutoSave" } %>
+    </div>
+  </div>
+  
+  <!-- AI Settings -->
+  <div class="mt-6">
+    <h4 class="text-md font-medium text-gray-900 mb-3">AI Enhancement</h4>
+    <% if @can_use_ai %>
+      <div class="space-y-2">
+        <label class="flex items-center">
+          <%= check_box_tag "ai_enabled", "1", @form.ai_enabled?, 
+                class: "rounded border-gray-300 text-purple-600 focus:ring-purple-500",
+                data: { action: "change->form-builder#triggerAutoSave" } %>
+          <span class="ml-2 text-sm text-gray-700">Enable AI features</span>
+        </label>
+      </div>
+      
+      <% if @form.ai_enabled? %>
+        <div class="mt-4 space-y-3 border-t pt-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">AI Features</label>
+            <div class="space-y-2">
+              <label class="flex items-center">
+                <%= check_box_tag "ai_configuration[lead_scoring]", "1", @form.ai_configuration&.dig("lead_scoring") == "1", 
+                      class: "rounded border-gray-300 text-purple-600 focus:ring-purple-500",
+                      data: { action: "change->form-builder#triggerAutoSave" } %>
+                <span class="ml-2 text-sm text-gray-700">Lead Qualification Agent</span>
+              </label>
+              
+              <label class="flex items-center">
+                <%= check_box_tag "ai_configuration[response_analysis]", "1", @form.ai_configuration&.dig("response_analysis") == "1", 
+                      class: "rounded border-gray-300 text-purple-600 focus:ring-purple-500",
+                      data: { action: "change->form-builder#triggerAutoSave" } %>
+                <span class="ml-2 text-sm text-gray-700">Response Analysis</span>
+              </label>
+              
+              <label class="flex items-center">
+                <%= check_box_tag "ai_configuration[dynamic_questions]", "1", @form.ai_configuration&.dig("dynamic_questions") == "1", 
+                      class: "rounded border-gray-300 text-purple-600 focus:ring-purple-500",
+                      data: { action: "change->form-builder#triggerAutoSave" } %>
+                <span class="ml-2 text-sm text-gray-700">Dynamic Questions</span>
+              </label>
+              
+              <label class="flex items-center">
+                <%= check_box_tag "ai_configuration[sentiment_analysis]", "1", @form.ai_configuration&.dig("sentiment_analysis") == "1", 
+                      class: "rounded border-gray-300 text-purple-600 focus:ring-purple-500",
+                      data: { action: "change->form-builder#triggerAutoSave" } %>
+                <span class="ml-2 text-sm text-gray-700">Sentiment Analysis</span>
+              </label>
+            </div>
+          </div>
+          
+          <% if @form.ai_configuration&.dig("lead_scoring") == "1" %>
+            <div class="mt-3 p-3 bg-purple-50 rounded-md border border-purple-200">
+              <h5 class="text-sm font-medium text-purple-900 mb-2">🎯 Lead Qualification Agent</h5>
+              <div class="space-y-3">
+                <div>
+                  <label class="block text-xs font-medium text-purple-700 mb-1">Qualification Framework</label>
+                  <%= select_tag "ai_configuration[qualification_framework]", 
+                        options_for_select([
+                          ['BANT (Budget, Authority, Need, Timeline)', 'bant'], 
+                          ['CHAMP (Challenges, Authority, Money, Prioritization)', 'champ'],
+                          ['MEDDIC (Metrics, Economic Buyer, Decision Criteria)', 'meddic'],
+                          ['ANUM (Authority, Need, Urgency, Money)', 'anum']
+                        ], @form.ai_configuration&.dig("qualification_framework") || 'bant'),
+                        class: "w-full mt-1 px-2 py-1 border border-purple-200 rounded text-xs",
+                        data: { action: "change->form-builder#triggerAutoSave" } %>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-2">
+                  <div>
+                    <label class="block text-xs font-medium text-purple-700 mb-1">Hot Leads</label>
+                    <%= number_field_tag "ai_configuration[hot_lead_threshold]", 
+                          @form.ai_configuration&.dig("hot_lead_threshold") || 80, 
+                          min: 0, max: 100, 
+                          class: "w-full mt-1 px-2 py-1 border border-purple-200 rounded text-xs",
+                          data: { action: "change->form-builder#triggerAutoSave" } %>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-purple-700 mb-1">Warm Leads</label>
+                    <%= number_field_tag "ai_configuration[warm_lead_threshold]", 
+                          @form.ai_configuration&.dig("warm_lead_threshold") || 60, 
+                          min: 0, max: 100, 
+                          class: "w-full mt-1 px-2 py-1 border border-purple-200 rounded text-xs",
+                          data: { action: "change->form-builder#triggerAutoSave" } %>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-medium text-purple-700 mb-1">Cold Leads</label>
+                    <%= number_field_tag "ai_configuration[cold_lead_threshold]", 
+                          @form.ai_configuration&.dig("cold_lead_threshold") || 40, 
+                          min: 0, max: 100, 
+                          class: "w-full mt-1 px-2 py-1 border border-purple-200 rounded text-xs",
+                          data: { action: "change->form-builder#triggerAutoSave" } %>
+                  </div>
+                </div>
+                
+                <div class="text-xs text-purple-600 bg-white p-2 rounded border">
+                  <strong>Lead Tiers:</strong> Hot (≥80), Warm (60-79), Lukewarm (40-59), Cold (<40)
+                </div>
+              </div>
+            </div>
+          <% end %>
+        </div>
+      <% end %>
+    <% else %>
+      <div class="flex items-center p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+        <svg class="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div>
+          <p class="text-sm font-medium text-yellow-800">AI features require Premium plan</p>
+          <p class="text-xs text-yellow-700">Upgrade to unlock response analysis, dynamic questions, and more.</p>
+        </div>
+      </div>
+    <% end %>
+  </div>
+  
+  <!-- Form Settings -->
+  <div class="mt-6">
+    <h4 class="text-md font-medium text-gray-900 mb-3">Form Settings</h4>
+    <div class="space-y-2">
+      <label class="flex items-center">
+        <%= check_box_tag "accepts_responses", "1", @form.accepts_responses?, 
+              class: "rounded border-gray-300 text-purple-600 focus:ring-purple-500",
+              data: { action: "change->form-builder#triggerAutoSave" } %>
+        <span class="ml-2 text-sm text-gray-700">Accept new responses</span>
+      </label>
+      
+      <label class="flex items-center">
+        <%= check_box_tag "public", "1", @form.public?, 
+              class: "rounded border-gray-300 text-purple-600 focus:ring-purple-500",
+              data: { action: "change->form-builder#triggerAutoSave" } %>
+        <span class="ml-2 text-sm text-gray-700">Public form</span>
+      </label>
+    </div>
+  </div>
+  
+  <!-- Integrations -->
+  <div class="mt-6">
+    <h4 class="text-md font-medium text-gray-900 mb-3">Integrations</h4>
+    <%= render 'forms/google_sheets_integration', form: @form %>
+  </div>
+  
+  <!-- Actions -->
+  <div class="mt-6 pt-4 border-t border-gray-200">
+    <div class="space-y-2">
+      <%= link_to "Preview", 
+            public_form_path(@form.share_token),
+            target: "_blank",
+            class: "w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50" %>
+      
+      <%= link_to "View Analytics",
+            analytics_form_path(@form),
+            class: "w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50" %>
+    </div>
+  </div>
+</div>
