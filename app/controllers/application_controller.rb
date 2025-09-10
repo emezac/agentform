@@ -32,9 +32,16 @@ class ApplicationController < ActionController::Base
     rescue_from SuperAgent::TaskError, with: :render_workflow_error
   end
   
-  if defined?(SuperAgent::A2A)
+  # Fixed: Check if the specific error classes exist before rescuing from them
+  if defined?(SuperAgent::A2A) && defined?(SuperAgent::A2A::TimeoutError)
     rescue_from SuperAgent::A2A::TimeoutError, with: :render_timeout_error
+  end
+  
+  if defined?(SuperAgent::A2A) && defined?(SuperAgent::A2A::NetworkError)
     rescue_from SuperAgent::A2A::NetworkError, with: :render_network_error
+  end
+  
+  if defined?(SuperAgent::A2A) && defined?(SuperAgent::A2A::AuthenticationError)
     rescue_from SuperAgent::A2A::AuthenticationError, with: :render_unauthorized
   end
 
