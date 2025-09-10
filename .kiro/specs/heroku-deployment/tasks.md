@@ -72,7 +72,7 @@
   - Crear endpoint para verificar status de servicios
   - _Requisitos: 5.1, 5.2, 5.3_
 
-- [ ] 11. Ejecutar primer deploy
+- [x] 11. Ejecutar primer deploy
   - Hacer commit de todos los cambios de configuración
   - Ejecutar `git push heroku main` para deploy inicial
   - Monitorear logs durante el proceso de deploy
