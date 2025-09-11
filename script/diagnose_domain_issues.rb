@@ -6,7 +6,7 @@
 
 puts "🔍 Domain Configuration Diagnostics"
 puts "=" * 50
-puts "Timestamp: #{Time.current}"
+puts "Timestamp: #{Time.now}"
 puts
 
 # Environment variables
