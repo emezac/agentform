@@ -112,7 +112,7 @@ Rails.application.configure do
     authentication:       "plain",
     enable_starttls_auto: true
   }
-  config.action_mailer.default_url_options = { host: "https://mydialogform-b93454ae9225.herokuapp.com/" }
+  config.action_mailer.default_url_options = { host: "mydialogform-b93454ae9225.herokuapp.com", protocol: "https" }
 
   
   # Security configurations

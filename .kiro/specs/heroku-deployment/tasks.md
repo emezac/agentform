@@ -113,3 +113,17 @@
   - Optimizar configuración si es necesario
   - Documentar proceso de deploy para futuros updates
   - _Requisitos: Performance y mantenibilidad_
+
+- [-] 17. Diagnosticar y resolver fallos de deployment
+  - Identificar la causa específica del "pre-receive hook declined"
+  - Revisar logs de build para encontrar errores de compilación
+  - Verificar que todos los archivos de configuración sean válidos
+  - Corregir problemas de sintaxis o configuración que impidan el build
+  - _Requisitos: 6.1, 6.2, 6.3, 6.4_
+
+- [ ] 18. Verificar y corregir configuración problemática
+  - Revisar cambios recientes que puedan causar fallos de build
+  - Validar configuración de CSP (Content Security Policy)
+  - Verificar sintaxis de archivos de configuración (Ruby, YAML, JS)
+  - Probar build localmente antes de push a Heroku
+  - _Requisitos: 6.3, 6.4_

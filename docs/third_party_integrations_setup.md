@@ -259,14 +259,17 @@ end
 ## 📋 Environment Variables Summary
 
 ### Required for Google Sheets
+
 - Rails credentials with `google_sheets` configuration
 
 ### Required for Stripe
+
 - `STRIPE_PUBLISHABLE_KEY` - Your Stripe publishable key
 - `STRIPE_SECRET_KEY` - Your Stripe secret key
 - `STRIPE_ENV` - "test" or "live"
 
 ### Optional for Stripe
+
 - `STRIPE_WEBHOOK_SECRET` - Webhook signing secret
 - `STRIPE_CONNECT_CLIENT_ID` - For Stripe Connect (marketplace)
 - `STRIPE_CURRENCY` - Default currency (default: "usd")

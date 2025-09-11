@@ -51,6 +51,16 @@ Necesitamos hacer deploy de la aplicación mydialogform en Heroku para que esté
 2. CUANDO la aplicación tenga problemas ENTONCES DEBE ser fácil diagnosticar
 3. CUANDO se ejecuten jobs ENTONCES DEBEN ser monitoreables
 
+### Requisito 6: Resolución de Fallos de Deployment
+
+**Historia de Usuario:** Como desarrollador, quiero poder diagnosticar y resolver fallos de deployment rápidamente.
+
+**Criterios de Aceptación:**
+1. CUANDO un deployment falle ENTONCES DEBO poder identificar la causa específica
+2. CUANDO ocurra un "pre-receive hook declined" ENTONCES DEBO poder ver los logs de build
+3. CUANDO haya errores de compilación ENTONCES DEBO poder resolverlos sistemáticamente
+4. CUANDO haya conflictos de configuración ENTONCES DEBO poder identificar y corregir los archivos problemáticos
+
 ## Configuración Técnica Requerida
 
 ### Addons de Heroku Necesarios

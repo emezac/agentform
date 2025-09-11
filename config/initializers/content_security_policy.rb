@@ -3,12 +3,8 @@
 # Content Security Policy Configuration
 # This initializer provides additional CSP configuration and utilities
 
-# CSP violation reporting endpoint (optional)
-if Rails.env.production?
-  Rails.application.routes.draw do
-    post '/csp-report', to: 'application#csp_report'
-  end
-end
+# CSP violation reporting endpoint should be configured in routes.rb
+# See config/routes.rb for the actual route definition
 
 # CSP configuration for different environments
 Rails.application.configure do

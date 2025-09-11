@@ -38,6 +38,9 @@ Rails.application.routes.draw do
   get "health" => "health#show", as: :health_check
   get "health/detailed" => "health#detailed", as: :detailed_health_check
   
+  # CSP violation reporting endpoint
+  post "csp-report", to: "application#csp_report"
+  
   # Landing page route
   get 'landing', to: 'landing#index'
   
