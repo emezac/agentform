@@ -76,10 +76,10 @@ group :development, :test do
   gem "rspec-rails"
   gem "factory_bot_rails"
   gem "rails-controller-testing"
-  
-  # Pagination
-  gem "kaminari"
 end
+
+# Pagination
+gem "kaminari"
 
 group :development do
   # Use console on exceptions pages [https://github.com/rails/web-console]
