@@ -21,6 +21,7 @@ module Mydialogform
     # Session store configuration
     config.session_store :cookie_store, 
       key: '_mydialogform_session',
+      domain: Rails.env.production? ? '.mydialogform.com' : nil,
       httponly: true,
       secure: Rails.env.production?,
       same_site: :lax

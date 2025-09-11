@@ -43,7 +43,11 @@ Rails.application.configure do
   # Prevent health checks from clogging up the logs.
   config.silence_healthcheck_path = "/up"
 
-  config.action_cable.allowed_request_origins = ['https://mydialogform.com']
+  config.action_cable.allowed_request_origins = [
+    'https://mydialogform.com',
+    'https://www.mydialogform.com',
+    'https://mydialogform-b93454ae9225.herokuapp.com'
+  ]
   # Don't log any deprecations.
   config.active_support.report_deprecations = false
 
@@ -120,9 +124,10 @@ Rails.application.configure do
   # Security configurations
   config.force_ssl = true
   
-  # Configure secure cookies
+  # Configure secure cookies for custom domain
   config.session_store :cookie_store, 
     key: '_mydialogform_session',
+    domain: '.mydialogform.com',  # Allow cookies for both mydialogform.com and www.mydialogform.com
     secure: true,
     httponly: true,
     same_site: :lax

@@ -9,6 +9,7 @@ This design addresses the critical production issue where Kaminari pagination is
 ### Current Problem Analysis
 
 The error occurs because:
+
 1. The `page` method is called on ActiveRecord relations
 2. Kaminari gem should provide this method but it's not available at runtime
 3. This suggests either a loading issue or missing configuration in production
@@ -148,16 +149,19 @@ end
 ## Performance Considerations
 
 ### With Kaminari (Optimal)
+
 - Efficient database queries with LIMIT/OFFSET
 - Lazy loading of results
 - Built-in caching support
 
 ### Fallback Mode (Acceptable)
+
 - Still uses LIMIT/OFFSET for database efficiency
 - Slightly more overhead for count queries
 - No built-in caching but still performant
 
 ### Emergency Mode (Last Resort)
+
 - Only for small datasets (< 100 records)
 - Shows warning to users
 - Automatic upgrade when Kaminari becomes available
@@ -165,16 +169,19 @@ end
 ## Deployment Strategy
 
 ### Phase 1: Immediate Fix
+
 1. Deploy SafePagination module
 2. Update FormsController to use safe pagination
 3. Add configuration verification
 
 ### Phase 2: Kaminari Investigation
+
 1. Investigate why Kaminari isn't loading in production
 2. Fix any bundler or configuration issues
 3. Verify proper loading across all environments
 
 ### Phase 3: Monitoring
+
 1. Add metrics for pagination usage
 2. Monitor performance impact
 3. Set up alerts for fallback usage
@@ -182,6 +189,7 @@ end
 ## Rollback Plan
 
 If issues arise:
+
 1. The fallback mechanism ensures the site remains functional
 2. Can temporarily disable pagination entirely if needed
 3. Original error state is avoided through safe method checking
