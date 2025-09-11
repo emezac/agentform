@@ -80,10 +80,12 @@ Rails.application.configure do
   config.active_record.attributes_for_inspect = [ :id ]
 
   # Enable DNS rebinding protection and other `Host` header attacks.
-  # Allow requests from Heroku domain
+  # Allow requests from Heroku domain and custom domains
   config.hosts = [
     ENV.fetch('APP_DOMAIN', 'localhost'),
-    /.*\.herokuapp\.com/
+    /.*\.herokuapp\.com/,
+    'mydialogform.com',
+    'www.mydialogform.com'
   ]
   
   # Skip DNS rebinding protection for the default health check endpoint.
