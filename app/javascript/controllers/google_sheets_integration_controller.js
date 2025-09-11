@@ -24,6 +24,11 @@ export default class extends Controller {
     }, 100)
   }
 
+  disconnect() {
+    // Clean up any resources when controller is disconnected
+    // Remove any pending timeouts or event listeners if needed
+  }
+
   setupTypeChanged() {
     this.updateSetupOptions()
   }
@@ -45,7 +50,7 @@ export default class extends Controller {
     }
   }
 
-  async testConnection() {
+  async testConnection(event) {
     const button = event.target
     const originalText = button.innerHTML
     
@@ -85,7 +90,7 @@ export default class extends Controller {
     }
   }
 
-  async setupIntegration() {
+  async setupIntegration(event) {
     const button = event.target
     const originalText = button.innerHTML
     
@@ -144,7 +149,7 @@ export default class extends Controller {
     }
   }
 
-  async exportNow() {
+  async exportNow(event) {
     const button = event.target
     const originalText = button.innerHTML
     
@@ -184,7 +189,7 @@ export default class extends Controller {
     }
   }
 
-  async toggleAutoSync() {
+  async toggleAutoSync(event) {
     const checkbox = event.target
     const isEnabled = checkbox.checked
 
@@ -212,7 +217,7 @@ export default class extends Controller {
     }
   }
 
-  async disconnect() {
+  async disconnectIntegration(event) {
     if (!confirm('Are you sure you want to disconnect Google Sheets? This will stop automatic syncing.')) {
       return
     }
