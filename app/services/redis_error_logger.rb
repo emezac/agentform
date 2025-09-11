@@ -131,56 +131,56 @@ class RedisErrorLogger
     end
     
     # Test Redis connection and log results
-    def test_and_log_connection(component: 'unknown')
-      start_time = Time.current
+def test_and_log_connection(component: 'unknown')
+  start_time = Time.current
 
-      begin
-        # Test basic Redis connectivity using proper SSL configuration
-        case component
-        when 'sidekiq'
-          if defined?(Sidekiq)
-            Sidekiq.redis(&:ping)
-          else
-            Redis.new(RedisConfig.sidekiq_config).ping
-          end
-        when 'cache'
-          if Rails.cache.respond_to?(:redis)
-            Rails.cache.redis.ping
-          else
-            raise "Rails.cache no responde a :redis. No se puede probar la conexión."
-          end
-        when 'actioncable'
-          if defined?(ActionCable) && ActionCable.server.pubsub.respond_to?(:redis_connection)
-            ActionCable.server.pubsub.redis_connection.ping
-          else
-            raise "Action Cable no parece estar configurado con un adaptador de Redis."
-          end
-        else
-          Redis.new(RedisConfig.connection_config).ping
-        end
-        
-        duration = Time.current - start_time
-        
-        log_redis_info("Redis connection test successful for #{component}", {
-          component: component,
-          duration_ms: (duration * 1000).round(2),
-          test_type: 'connectivity'
-        })
-        
-        true
-      rescue => e
-        duration = Time.current - start_time
-        
-        log_connection_error(e, {
-          component: component,
-          duration_ms: (duration * 1000).round(2),
-          test_type: 'connectivity',
-          operation: 'connection_test'
-        })
-        
-        false
+  begin
+    case component
+    when 'sidekiq'
+      if defined?(Sidekiq)
+        Sidekiq.redis(&:ping)
+      else
+        Redis.new(RedisConfig.sidekiq_config).ping
       end
+    when 'cache'
+      if Rails.cache.respond_to?(:redis)
+        Rails.cache.redis.ping
+      else
+        raise "Rails.cache no responde a :redis. No se puede probar la conexión."
+      end
+    when 'actioncable'
+      if defined?(ActionCable) && ActionCable.server.pubsub.respond_to?(:redis_connection)
+        ActionCable.server.pubsub.redis_connection.ping
+      else
+        raise "Action Cable no parece estar configurado con un adaptador de Redis."
+      end
+    else
+      Redis.new(RedisConfig.connection_config).ping
+    end
     
+    duration = Time.current - start_time
+    
+    log_redis_info("Redis connection test successful for #{component}", {
+      component: component,
+      duration_ms: (duration * 1000).round(2),
+      test_type: 'connectivity'
+    })
+    
+    true
+  rescue => e
+    duration = Time.current - start_time
+    
+    log_connection_error(e, {
+      component: component,
+      duration_ms: (duration * 1000).round(2),
+      test_type: 'connectivity',
+      operation: 'connection_test'
+    })
+    
+    false
+  end
+end
+
     # Get Redis connection diagnostics
     def get_connection_diagnostics
       diagnostics = {
