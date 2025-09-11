@@ -141,25 +141,21 @@ class RedisErrorLogger
           if defined?(Sidekiq)
             Sidekiq.redis(&:ping)
           else
-            # Fallback si Sidekiq no está definido
             Redis.new(RedisConfig.sidekiq_config).ping
           end
         when 'cache'
-          # Usa el cliente de Redis que Rails Cache ya ha configurado
           if Rails.cache.respond_to?(:redis)
             Rails.cache.redis.ping
           else
             raise "Rails.cache no responde a :redis. No se puede probar la conexión."
           end
         when 'actioncable'
-          # Usa el cliente de Redis que Action Cable ya ha configurado
           if defined?(ActionCable) && ActionCable.server.pubsub.respond_to?(:redis_connection)
             ActionCable.server.pubsub.redis_connection.ping
           else
             raise "Action Cable no parece estar configurado con un adaptador de Redis."
           end
         else
-          # Generic Redis test using RedisConfig
           Redis.new(RedisConfig.connection_config).ping
         end
         
