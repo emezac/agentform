@@ -57,20 +57,47 @@ module GoogleSheets
     end
     
     def populate_data(spreadsheet_id)
+      Rails.logger.info "Starting populate_data for form #{@form.id}"
+      
       # Preparar headers
       headers = build_headers
+      Rails.logger.info "Headers: #{headers.inspect}"
+      
+      # Escribir headers primero
+      update_spreadsheet_batch(spreadsheet_id, [headers])
+      Rails.logger.info "Headers written to spreadsheet"
+      
+      # Contar respuestas totales
+      total_responses = @responses.count
+      Rails.logger.info "Total responses to export: #{total_responses}"
       
       # Preparar filas de datos en lotes
+      all_rows = []
       @responses.find_in_batches(batch_size: @options[:max_rows_per_batch]) do |batch|
-        rows = [headers] if batch == @responses.first(@options[:max_rows_per_batch])
-        rows ||= []
-        
+        Rails.logger.info "Processing batch of #{batch.size} responses"
         batch.each do |response|
-          rows << build_response_row(response)
+          all_rows << build_response_row(response)
         end
+      end
+      
+      Rails.logger.info "Total rows prepared: #{all_rows.size}"
+      
+      # Escribir todas las filas de datos si hay respuestas
+      if all_rows.any?
+        Rails.logger.info "Writing #{all_rows.size} rows to spreadsheet"
+        # Append data starting from row 2 (after headers)
+        range = "Form Responses!A2:Z"
+        value_range = Google::Apis::SheetsV4::ValueRange.new(values: all_rows)
         
-        update_spreadsheet_batch(spreadsheet_id, rows)
-        rows.clear
+        google_client(@integration).update_spreadsheet_values(
+          spreadsheet_id,
+          range,
+          value_range,
+          value_input_option: 'USER_ENTERED'
+        )
+        Rails.logger.info "Data successfully written to spreadsheet"
+      else
+        Rails.logger.warn "No rows to write to spreadsheet"
       end
     end
     
@@ -91,6 +118,8 @@ module GoogleSheets
     end
     
     def build_response_row(response)
+      Rails.logger.info "Building row for response #{response.id}"
+      
       row = [
         response.id,
         response.completed_at&.strftime(@options[:date_format]) || 'In Progress',
@@ -98,10 +127,14 @@ module GoogleSheets
         response.ip_address
       ]
       
+      Rails.logger.info "Base row data: #{row.inspect}"
+      
       # Agregar respuestas de preguntas del formulario
       @form.form_questions.order(:position).each do |question|
         answer = response.question_responses.find_by(form_question: question)
-        row << format_answer_value(answer&.answer_text)
+        answer_value = format_answer_value(answer&.answer_text)
+        Rails.logger.info "Question '#{question.title}': answer = #{answer_value.inspect}"
+        row << answer_value
       end
       
       # Agregar preguntas dinámicas si está habilitado
@@ -112,8 +145,10 @@ module GoogleSheets
         end&.join(' | ') || ''
         
         row += [dynamic_count, dynamic_responses]
+        Rails.logger.info "Added dynamic questions: count=#{dynamic_count}, responses=#{dynamic_responses}"
       end
       
+      Rails.logger.info "Final row: #{row.inspect}"
       row
     end
     
@@ -124,8 +159,7 @@ module GoogleSheets
       value.to_s.gsub(/[\r\n]+/, ' ').strip
     end
     
-    def update_spreadsheet_batch(spreadsheet_id, rows)
-      range = "Form Responses!A:Z"
+    def update_spreadsheet_batch(spreadsheet_id, rows, range = "Form Responses!A1:Z")
       value_range = Google::Apis::SheetsV4::ValueRange.new(values: rows)
       
       google_client(@integration).update_spreadsheet_values(
