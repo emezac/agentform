@@ -169,4 +169,185 @@ RSpec.describe AdminNotificationService, type: :service do
       expect(Rails.logger).to have_received(:error).with(/Failed to create admin notification/)
     end
   end
+
+  describe 'Redis error handling' do
+    before { allow(Rails.env).to receive(:test?).and_return(false) }
+
+    describe 'notification creation with Redis failures' do
+      before { allow(Rails.env).to receive(:test?).and_return(false) }
+
+      it 'handles Redis connection errors during notification creation' do
+        allow(AdminNotification).to receive(:notify_user_registered)
+          .and_raise(Redis::CannotConnectError.new('Connection refused'))
+        allow(Rails.logger).to receive(:warn)
+        allow(Rails.logger).to receive(:info)
+        allow(Rails.logger).to receive(:debug)
+
+        result = AdminNotificationService.notify(:user_registered, user: user)
+
+        expect(result).to be_nil
+        expect(Rails.logger).to have_received(:warn)
+          .with(/Redis unavailable during admin notification creation/)
+        expect(Rails.logger).to have_received(:info)
+          .with(/Critical operation can continue/)
+      end
+
+      it 'handles Redis timeout errors during notification creation' do
+        allow(AdminNotification).to receive(:notify_user_registered)
+          .and_raise(Redis::TimeoutError.new('Timeout'))
+        allow(Rails.logger).to receive(:warn)
+        allow(Rails.logger).to receive(:info)
+        allow(Rails.logger).to receive(:debug)
+
+        expect {
+          AdminNotificationService.notify(:user_registered, user: user)
+        }.not_to raise_error
+
+        expect(Rails.logger).to have_received(:warn)
+          .with(/Redis unavailable during admin notification creation/)
+      end
+    end
+
+    describe 'broadcast with Redis failures' do
+      let(:notification) { create(:admin_notification, user: user) }
+
+      before do
+        allow(Rails.env).to receive(:test?).and_return(false)
+        allow(AdminNotification).to receive(:notify_user_registered).and_return(notification)
+        allow(notification).to receive(:persisted?).and_return(true)
+        allow(AdminNotification).to receive(:unread).and_return(double(count: 5))
+      end
+
+      it 'handles Redis connection errors during broadcast' do
+        allow(Turbo::StreamsChannel).to receive(:broadcast_prepend_to)
+          .and_raise(Redis::CannotConnectError.new('Connection refused'))
+        allow(Rails.logger).to receive(:warn)
+        allow(Rails.logger).to receive(:info)
+        allow(Rails.logger).to receive(:debug)
+
+        expect {
+          AdminNotificationService.notify(:user_registered, user: user)
+        }.not_to raise_error
+
+        expect(Rails.logger).to have_received(:warn)
+          .with(/Redis unavailable for admin notification broadcast/)
+        expect(Rails.logger).to have_received(:info)
+          .with(/Admin notification created successfully, but real-time broadcast skipped/)
+      end
+
+      it 'handles Redis timeout errors during broadcast' do
+        allow(Turbo::StreamsChannel).to receive(:broadcast_prepend_to)
+          .and_raise(Redis::TimeoutError.new('Timeout'))
+        allow(Rails.logger).to receive(:warn)
+        allow(Rails.logger).to receive(:info)
+        allow(Rails.logger).to receive(:debug)
+
+        expect {
+          AdminNotificationService.notify(:user_registered, user: user)
+        }.not_to raise_error
+
+        expect(Rails.logger).to have_received(:warn)
+          .with(/Redis unavailable for admin notification broadcast/)
+      end
+
+      it 'handles Redis connection errors during counter update' do
+        allow(Turbo::StreamsChannel).to receive(:broadcast_prepend_to)
+        allow(Turbo::StreamsChannel).to receive(:broadcast_update_to)
+          .and_raise(Redis::ConnectionError.new('Connection lost'))
+        allow(Rails.logger).to receive(:warn)
+        allow(Rails.logger).to receive(:info)
+        allow(Rails.logger).to receive(:debug)
+
+        expect {
+          AdminNotificationService.notify(:user_registered, user: user)
+        }.not_to raise_error
+
+        expect(Rails.logger).to have_received(:warn)
+          .with(/Redis unavailable for admin notification broadcast/)
+      end
+
+      it 'identifies Redis-related errors correctly' do
+        service = AdminNotificationService.new(:user_registered, user: user)
+        
+        redis_error = StandardError.new('Redis connection failed')
+        connection_error = StandardError.new('Connection timeout occurred')
+        other_error = StandardError.new('Some other error')
+
+        expect(service.send(:redis_related_error?, redis_error)).to be true
+        expect(service.send(:redis_related_error?, connection_error)).to be true
+        expect(service.send(:redis_related_error?, other_error)).to be false
+      end
+    end
+
+    describe 'duplicate notification check with Redis failures' do
+      it 'handles Redis errors during duplicate check gracefully' do
+        allow(AdminNotification).to receive(:where)
+          .and_raise(Redis::CannotConnectError.new('Connection refused'))
+        allow(AdminNotification).to receive(:notify_user_registered) do
+          create(:admin_notification, user: user, event_type: 'user_registered')
+        end
+        allow(Rails.logger).to receive(:warn)
+        allow(Rails.logger).to receive(:info)
+
+        # Should still create notification when Redis is unavailable
+        result = AdminNotificationService.notify(:user_registered, user: user, force_in_test: true)
+
+        expect(result).to be_present
+        expect(Rails.logger).to have_received(:warn)
+          .with(/Redis unavailable for notification validation/)
+        expect(Rails.logger).to have_received(:info)
+          .with(/Proceeding with notification due to Redis connectivity issues/)
+      end
+    end
+
+    describe 'Sentry integration' do
+      before do
+        allow(Rails.env).to receive(:test?).and_return(false)
+        stub_const('Sentry', double('Sentry'))
+        allow(Sentry).to receive(:capture_exception)
+      end
+
+      it 'sends Redis errors to Sentry during notification creation' do
+        error = Redis::CannotConnectError.new('Connection refused')
+        allow(AdminNotification).to receive(:notify_user_registered).and_raise(error)
+        allow(Rails.logger).to receive(:warn)
+        allow(Rails.logger).to receive(:info)
+        allow(Rails.logger).to receive(:debug)
+
+        AdminNotificationService.notify(:user_registered, user: user)
+
+        expect(Sentry).to have_received(:capture_exception).with(
+          error,
+          extra: hash_including(
+            context: 'admin_notification_redis_failure',
+            event_type: :user_registered,
+            user_id: user.id
+          )
+        )
+      end
+
+      it 'sends Redis errors to Sentry during broadcast' do
+        notification = create(:admin_notification, user: user)
+        allow(AdminNotification).to receive(:notify_user_registered).and_return(notification)
+        allow(notification).to receive(:persisted?).and_return(true)
+        allow(AdminNotification).to receive(:unread).and_return(double(count: 5))
+
+        error = Redis::CannotConnectError.new('Connection refused')
+        allow(Turbo::StreamsChannel).to receive(:broadcast_prepend_to).and_raise(error)
+        allow(Rails.logger).to receive(:warn)
+        allow(Rails.logger).to receive(:info)
+        allow(Rails.logger).to receive(:debug)
+
+        AdminNotificationService.notify(:user_registered, user: user)
+
+        expect(Sentry).to have_received(:capture_exception).with(
+          error,
+          extra: hash_including(
+            context: 'admin_notification_broadcast',
+            user_id: user.id
+          )
+        )
+      end
+    end
+  end
 end

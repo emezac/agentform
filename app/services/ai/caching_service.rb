@@ -33,30 +33,55 @@ module Ai
           cache_version: '1.0'
         }
         
-        Rails.cache.write(cache_key, cache_data, expires_in: CACHE_TTLS[:content_analysis])
-        
-        Rails.logger.info "Cached content analysis for hash: #{content_hash[0..8]}..."
-        cache_data
+        begin
+          Rails.cache.write(cache_key, cache_data, expires_in: CACHE_TTLS[:content_analysis])
+          
+          Rails.logger.info "Cached content analysis for hash: #{content_hash[0..8]}..."
+          cache_data
+        rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+          RedisErrorLogger.log_connection_error(e, {
+            component: 'ai_caching_service',
+            operation: 'cache_content_analysis',
+            cache_key: cache_key,
+            content_hash: content_hash[0..8]
+          })
+          
+          # Return the data even if caching failed
+          cache_data
+        end
       end
       
       # Retrieve cached content analysis
       def get_cached_content_analysis(content_hash)
         cache_key = build_cache_key(:content_analysis, content_hash)
-        cached_data = Rails.cache.read(cache_key)
         
-        if cached_data
-          Rails.logger.info "Cache hit for content analysis: #{content_hash[0..8]}..."
+        begin
+          cached_data = Rails.cache.read(cache_key)
           
-          # Track cache hit for analytics
-          track_cache_hit(:content_analysis, content_hash)
+          if cached_data
+            Rails.logger.info "Cache hit for content analysis: #{content_hash[0..8]}..."
+            
+            # Track cache hit for analytics
+            track_cache_hit(:content_analysis, content_hash)
+            
+            cached_data[:analysis_result]
+          else
+            Rails.logger.debug "Cache miss for content analysis: #{content_hash[0..8]}..."
+            
+            # Track cache miss for analytics
+            track_cache_miss(:content_analysis, content_hash)
+            
+            nil
+          end
+        rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+          RedisErrorLogger.log_connection_error(e, {
+            component: 'ai_caching_service',
+            operation: 'get_cached_content_analysis',
+            cache_key: cache_key,
+            content_hash: content_hash[0..8]
+          })
           
-          cached_data[:analysis_result]
-        else
-          Rails.logger.debug "Cache miss for content analysis: #{content_hash[0..8]}..."
-          
-          # Track cache miss for analytics
-          track_cache_miss(:content_analysis, content_hash)
-          
+          # Return nil when cache is unavailable
           nil
         end
       end
@@ -430,7 +455,18 @@ module Ai
       # Get cache keys by pattern (Redis-specific)
       def get_cache_keys_by_pattern(pattern)
         if Rails.cache.respond_to?(:redis)
-          Rails.cache.redis.keys(pattern)
+          begin
+            Rails.cache.redis.keys(pattern)
+          rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+            RedisErrorLogger.log_connection_error(e, {
+              component: 'ai_caching_service',
+              operation: 'get_cache_keys_by_pattern',
+              pattern: pattern
+            })
+            
+            # Return empty array when Redis is unavailable
+            []
+          end
         else
           []
         end

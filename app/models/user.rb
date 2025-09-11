@@ -464,28 +464,68 @@ class User < ApplicationRecord
   # Admin notification methods
   def notify_admin_of_registration
     AdminNotificationService.notify(:user_registered, user: self)
+  rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+    Rails.logger.warn "Redis unavailable during user registration notification: #{e.message}"
+    Rails.logger.info "User registration completed successfully, but admin notification skipped due to Redis connectivity"
+    # Don't re-raise the error - allow user creation to continue
+  rescue => e
+    Rails.logger.error "Unexpected error during user registration notification: #{e.message}"
+    Rails.logger.error "User ID: #{id}, Email: #{email}"
+    
+    # Send to error tracking service if available
+    if defined?(Sentry)
+      Sentry.capture_exception(e, extra: {
+        context: 'user_registration_notification',
+        user_id: id,
+        user_email: email
+      })
+    end
+    
+    # Don't re-raise the error - allow user creation to continue
   end
 
   def notify_admin_of_subscription_changes
-    if subscription_tier_changed? && subscription_tier_was.present?
-      if subscription_tier == 'premium' && subscription_tier_was == 'basic'
-        AdminNotificationService.notify(:user_upgraded, 
-          user: self, 
-          from_plan: subscription_tier_was, 
-          to_plan: subscription_tier
-        )
-      elsif subscription_tier == 'basic' && subscription_tier_was == 'premium'
-        AdminNotificationService.notify(:user_downgraded, 
-          user: self, 
-          from_plan: subscription_tier_was, 
-          to_plan: subscription_tier
-        )
+    begin
+      if subscription_tier_changed? && subscription_tier_was.present?
+        if subscription_tier == 'premium' && subscription_tier_was == 'basic'
+          AdminNotificationService.notify(:user_upgraded, 
+            user: self, 
+            from_plan: subscription_tier_was, 
+            to_plan: subscription_tier
+          )
+        elsif subscription_tier == 'basic' && subscription_tier_was == 'premium'
+          AdminNotificationService.notify(:user_downgraded, 
+            user: self, 
+            from_plan: subscription_tier_was, 
+            to_plan: subscription_tier
+          )
+        end
       end
-    end
 
-    # Notify when trial starts
-    if trial_ends_at_changed? && trial_ends_at.present? && trial_ends_at_was.nil?
-      AdminNotificationService.notify(:trial_started, user: self)
+      # Notify when trial starts
+      if trial_ends_at_changed? && trial_ends_at.present? && trial_ends_at_was.nil?
+        AdminNotificationService.notify(:trial_started, user: self)
+      end
+    rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+      Rails.logger.warn "Redis unavailable during subscription change notification: #{e.message}"
+      Rails.logger.info "Subscription change completed successfully, but admin notification skipped due to Redis connectivity"
+      # Don't re-raise the error - allow subscription change to continue
+    rescue => e
+      Rails.logger.error "Unexpected error during subscription change notification: #{e.message}"
+      Rails.logger.error "User ID: #{id}, Email: #{email}"
+      
+      # Send to error tracking service if available
+      if defined?(Sentry)
+        Sentry.capture_exception(e, extra: {
+          context: 'subscription_change_notification',
+          user_id: id,
+          user_email: email,
+          subscription_tier_was: subscription_tier_was,
+          subscription_tier: subscription_tier
+        })
+      end
+      
+      # Don't re-raise the error - allow subscription change to continue
     end
   end
 end

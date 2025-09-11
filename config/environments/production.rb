@@ -93,16 +93,27 @@ Rails.application.configure do
   config.public_file_server.enabled = ENV['RAILS_SERVE_STATIC_FILES'].present?
   
   # Configure email delivery via SendGrid
+  #config.action_mailer.delivery_method = :smtp
+  # config.action_mailer.smtp_settings = {
+  #   user_name: ENV['SMTP_USERNAME'],
+  #   password: ENV['SENDGRID_API_KEY'],
+  #   domain: ENV.fetch('APP_DOMAIN', 'localhost'),
+  #   address: ENV.fetch('SMTP_ADDRESS', 'smtp.sendgrid.net'),
+  #   port: ENV.fetch('SMTP_PORT', 587).to_i,
+  #   authentication: :plain,
+  #   enable_starttls_auto: true
+  # }
   config.action_mailer.delivery_method = :smtp
   config.action_mailer.smtp_settings = {
-    user_name: ENV['SMTP_USERNAME'],
-    password: ENV['SENDGRID_API_KEY'],
-    domain: ENV.fetch('APP_DOMAIN', 'localhost'),
-    address: ENV.fetch('SMTP_ADDRESS', 'smtp.sendgrid.net'),
-    port: ENV.fetch('SMTP_PORT', 587).to_i,
-    authentication: :plain,
+    address:              "smtp.gmail.com",
+    port:                 587,
+    user_name:            ENV["GMAIL_USER"],
+    password:             ENV["GMAIL_PASS"],
+    authentication:       "plain",
     enable_starttls_auto: true
   }
+  config.action_mailer.default_url_options = { host: "https://mydialogform-b93454ae9225.herokuapp.com/" }
+
   
   # Security configurations
   config.force_ssl = true

@@ -372,6 +372,18 @@ example_id                                                                      
 ./spec/helpers/admin_helper_spec.rb[1:1:5:2]                                       | passed  | 0.02275 seconds |
 ./spec/helpers/admin_helper_spec.rb[1:1:5:3]                                       | passed  | 0.0007 seconds  |
 ./spec/helpers/admin_helper_spec.rb[1:1:5:4]                                       | passed  | 0.00057 seconds |
+./spec/integration/actioncable_ssl_configuration_spec.rb[1:1:1:1]                  | passed  | 0.00127 seconds |
+./spec/integration/actioncable_ssl_configuration_spec.rb[1:1:2]                    | passed  | 0.0148 seconds  |
+./spec/integration/actioncable_ssl_configuration_spec.rb[1:2:1]                    | passed  | 0.00042 seconds |
+./spec/integration/actioncable_ssl_configuration_spec.rb[1:2:2]                    | passed  | 0.00074 seconds |
+./spec/integration/actioncable_ssl_configuration_spec.rb[1:3:1]                    | passed  | 0.00102 seconds |
+./spec/integration/actioncable_ssl_configuration_spec.rb[1:3:2]                    | passed  | 0.00037 seconds |
+./spec/integration/actioncable_ssl_configuration_spec.rb[1:4:1]                    | passed  | 0.0015 seconds  |
+./spec/integration/actioncable_ssl_configuration_spec.rb[1:5:1]                    | passed  | 0.00162 seconds |
+./spec/integration/actioncable_ssl_configuration_spec.rb[1:5:2]                    | passed  | 0.00037 seconds |
+./spec/integration/actioncable_ssl_configuration_spec.rb[1:6:1]                    | passed  | 0.00099 seconds |
+./spec/integration/actioncable_ssl_configuration_spec.rb[1:6:2]                    | passed  | 0.0004 seconds  |
+./spec/integration/actioncable_ssl_configuration_spec.rb[1:6:3]                    | passed  | 0.00047 seconds |
 ./spec/integration/ai_form_generation_integration_spec.rb[1:1:1]                   | failed  | 0.00058 seconds |
 ./spec/integration/ai_form_generation_integration_spec.rb[1:1:2]                   | failed  | 0.00037 seconds |
 ./spec/integration/ai_form_generation_integration_spec.rb[1:1:3]                   | failed  | 0.00043 seconds |
@@ -390,6 +402,56 @@ example_id                                                                      
 ./spec/integration/ai_form_generation_integration_spec.rb[1:5:2]                   | failed  | 0.00042 seconds |
 ./spec/integration/ai_form_generation_integration_spec.rb[1:5:3]                   | failed  | 0.00048 seconds |
 ./spec/integration/ai_form_generation_integration_spec.rb[1:5:4]                   | failed  | 0.00049 seconds |
+./spec/integration/redis_cache_ssl_configuration_spec.rb[1:1:1:1]                  | passed  | 0.001 seconds   |
+./spec/integration/redis_cache_ssl_configuration_spec.rb[1:1:2:1]                  | passed  | 0.00068 seconds |
+./spec/integration/redis_cache_ssl_configuration_spec.rb[1:1:3:1]                  | passed  | 0.0806 seconds  |
+./spec/integration/redis_cache_ssl_configuration_spec.rb[1:2:1]                    | passed  | 0.02083 seconds |
+./spec/integration/redis_cache_ssl_configuration_spec.rb[1:3:1:1]                  | passed  | 0.00212 seconds |
+./spec/integration/redis_cache_ssl_configuration_spec.rb[1:3:2:1]                  | passed  | 0.00038 seconds |
+./spec/integration/redis_comprehensive_error_logging_spec.rb[1:1:1]                | failed  | 0.1213 seconds  |
+./spec/integration/redis_comprehensive_error_logging_spec.rb[1:1:2]                | failed  | 0.02413 seconds |
+./spec/integration/redis_comprehensive_error_logging_spec.rb[1:2:1]                | failed  | 0.00121 seconds |
+./spec/integration/redis_comprehensive_error_logging_spec.rb[1:3:1]                | passed  | 0.00409 seconds |
+./spec/integration/redis_comprehensive_error_logging_spec.rb[1:3:2]                | passed  | 0.02359 seconds |
+./spec/integration/redis_comprehensive_error_logging_spec.rb[1:4:1]                | failed  | 0.00134 seconds |
+./spec/integration/redis_comprehensive_error_logging_spec.rb[1:5:1]                | passed  | 0.00573 seconds |
+./spec/integration/redis_comprehensive_error_logging_spec.rb[1:6:1]                | failed  | 0.00901 seconds |
+./spec/integration/redis_comprehensive_error_logging_spec.rb[1:7:1]                | passed  | 0.00287 seconds |
+./spec/integration/redis_comprehensive_error_logging_spec.rb[1:7:2]                | passed  | 0.02028 seconds |
+./spec/integration/redis_comprehensive_error_logging_spec.rb[1:8:1]                | failed  | 0.0153 seconds  |
+./spec/integration/redis_comprehensive_error_logging_spec.rb[1:8:2]                | failed  | 0.01117 seconds |
+./spec/integration/redis_comprehensive_error_logging_spec.rb[1:9:1]                | passed  | 0.00087 seconds |
+./spec/integration/redis_comprehensive_error_logging_spec.rb[1:9:2]                | passed  | 0.0006 seconds  |
+./spec/integration/redis_graceful_degradation_spec.rb[1:1:1:1]                     | failed  | 0.03525 seconds |
+./spec/integration/redis_graceful_degradation_spec.rb[1:1:1:2]                     | unknown |                 |
+./spec/integration/redis_graceful_degradation_spec.rb[1:1:1:3]                     | unknown |                 |
+./spec/integration/redis_graceful_degradation_spec.rb[1:1:1:4]                     | unknown |                 |
+./spec/integration/redis_graceful_degradation_spec.rb[1:2:1:1]                     | unknown |                 |
+./spec/integration/redis_graceful_degradation_spec.rb[1:3:1:1]                     | unknown |                 |
+./spec/integration/redis_graceful_degradation_spec.rb[1:4:1:1]                     | unknown |                 |
+./spec/integration/redis_graceful_degradation_spec.rb[1:4:1:2]                     | unknown |                 |
+./spec/integration/redis_graceful_degradation_spec.rb[1:5:1:1]                     | unknown |                 |
+./spec/integration/redis_graceful_degradation_spec.rb[1:5:1:2]                     | unknown |                 |
+./spec/integration/redis_graceful_degradation_spec.rb[1:6:1:1]                     | unknown |                 |
+./spec/integration/redis_graceful_degradation_spec.rb[1:7:1]                       | unknown |                 |
+./spec/integration/redis_graceful_degradation_spec.rb[1:8:1]                       | unknown |                 |
+./spec/integration/redis_ssl_error_handling_spec.rb[1:1:1]                         | failed  | 0.00874 seconds |
+./spec/integration/redis_ssl_error_handling_spec.rb[1:1:2]                         | failed  | 0.06156 seconds |
+./spec/integration/redis_ssl_error_handling_spec.rb[1:2:1]                         | passed  | 0.01021 seconds |
+./spec/integration/redis_ssl_error_handling_spec.rb[1:2:2]                         | failed  | 0.16978 seconds |
+./spec/integration/redis_ssl_error_handling_spec.rb[1:3:1]                         | passed  | 0.00763 seconds |
+./spec/integration/redis_ssl_error_handling_spec.rb[1:4:1]                         | passed  | 0.00702 seconds |
+./spec/integration/redis_ssl_test_summary_spec.rb[1:1:1]                           | passed  | 0.00067 seconds |
+./spec/integration/redis_ssl_test_summary_spec.rb[1:1:2]                           | passed  | 0.02508 seconds |
+./spec/integration/redis_ssl_test_summary_spec.rb[1:1:3]                           | passed  | 0.00144 seconds |
+./spec/integration/redis_ssl_test_summary_spec.rb[1:1:4]                           | passed  | 0.00034 seconds |
+./spec/integration/redis_ssl_test_summary_spec.rb[1:1:5]                           | passed  | 0.02709 seconds |
+./spec/integration/redis_ssl_test_summary_spec.rb[1:1:6]                           | passed  | 0.00034 seconds |
+./spec/integration/redis_ssl_test_summary_spec.rb[1:1:7]                           | passed  | 0.00034 seconds |
+./spec/integration/redis_ssl_test_summary_spec.rb[1:1:8]                           | passed  | 0.0004 seconds  |
+./spec/integration/redis_ssl_test_summary_spec.rb[1:1:9]                           | passed  | 0.00033 seconds |
+./spec/integration/redis_ssl_test_summary_spec.rb[1:1:10]                          | passed  | 0.002 seconds   |
+./spec/integration/redis_ssl_test_summary_spec.rb[1:2:1]                           | passed  | 0.00031 seconds |
 ./spec/javascript/template_preview_basic_spec.rb[1:1:1]                            | failed  | 0.74073 seconds |
 ./spec/javascript/template_preview_basic_spec.rb[1:1:2]                            | failed  | 0.67043 seconds |
 ./spec/javascript/template_preview_basic_spec.rb[1:1:3]                            | failed  | 0.92733 seconds |
@@ -1520,6 +1582,29 @@ example_id                                                                      
 ./spec/services/admin_monitoring_service_spec.rb[1:6:1:2]                          | failed  | 0.04869 seconds |
 ./spec/services/admin_monitoring_service_spec.rb[1:6:1:3]                          | passed  | 1.38 seconds    |
 ./spec/services/admin_monitoring_service_spec.rb[1:6:1:4]                          | failed  | 0.00996 seconds |
+./spec/services/admin_notification_service_spec.rb[1:1:1]                          | failed  | 0.00785 seconds |
+./spec/services/admin_notification_service_spec.rb[1:1:2]                          | passed  | 0.00768 seconds |
+./spec/services/admin_notification_service_spec.rb[1:1:3]                          | passed  | 0.00707 seconds |
+./spec/services/admin_notification_service_spec.rb[1:1:4]                          | passed  | 0.01056 seconds |
+./spec/services/admin_notification_service_spec.rb[1:2:1]                          | passed  | 0.01198 seconds |
+./spec/services/admin_notification_service_spec.rb[1:2:2]                          | passed  | 0.01447 seconds |
+./spec/services/admin_notification_service_spec.rb[1:3:1:1]                        | passed  | 0.01507 seconds |
+./spec/services/admin_notification_service_spec.rb[1:3:2:1]                        | failed  | 0.01402 seconds |
+./spec/services/admin_notification_service_spec.rb[1:3:3:1]                        | failed  | 0.01432 seconds |
+./spec/services/admin_notification_service_spec.rb[1:3:4:1]                        | passed  | 0.01614 seconds |
+./spec/services/admin_notification_service_spec.rb[1:3:5:1]                        | failed  | 0.05314 seconds |
+./spec/services/admin_notification_service_spec.rb[1:3:6:1]                        | failed  | 0.01513 seconds |
+./spec/services/admin_notification_service_spec.rb[1:4:1]                          | passed  | 0.00847 seconds |
+./spec/services/admin_notification_service_spec.rb[1:4:2]                          | failed  | 0.00887 seconds |
+./spec/services/admin_notification_service_spec.rb[1:5:1:1]                        | failed  | 0.00981 seconds |
+./spec/services/admin_notification_service_spec.rb[1:5:1:2]                        | failed  | 0.1569 seconds  |
+./spec/services/admin_notification_service_spec.rb[1:5:2:1]                        | failed  | 0.0117 seconds  |
+./spec/services/admin_notification_service_spec.rb[1:5:2:2]                        | failed  | 0.01429 seconds |
+./spec/services/admin_notification_service_spec.rb[1:5:2:3]                        | failed  | 0.08798 seconds |
+./spec/services/admin_notification_service_spec.rb[1:5:2:4]                        | passed  | 0.20661 seconds |
+./spec/services/admin_notification_service_spec.rb[1:5:3:1]                        | failed  | 0.0129 seconds  |
+./spec/services/admin_notification_service_spec.rb[1:5:4:1]                        | failed  | 0.0091 seconds  |
+./spec/services/admin_notification_service_spec.rb[1:5:4:2]                        | failed  | 0.01232 seconds |
 ./spec/services/ai/document_processor_spec.rb[1:1:1:1]                             | passed  | 0.00068 seconds |
 ./spec/services/ai/document_processor_spec.rb[1:1:1:2]                             | passed  | 0.00067 seconds |
 ./spec/services/ai/document_processor_spec.rb[1:1:2:1]                             | passed  | 0.07677 seconds |
@@ -1773,6 +1858,28 @@ example_id                                                                      
 ./spec/services/payment_setup_validation_service_spec.rb[1:2:2]                    | passed  | 0.00977 seconds |
 ./spec/services/payment_setup_validation_service_spec.rb[1:2:3]                    | passed  | 0.16167 seconds |
 ./spec/services/payment_setup_validation_service_spec.rb[1:2:4]                    | passed  | 0.00972 seconds |
+./spec/services/redis_error_logger_spec.rb[1:1:1]                                  | failed  | 0.00056 seconds |
+./spec/services/redis_error_logger_spec.rb[1:1:2]                                  | failed  | 0.0004 seconds  |
+./spec/services/redis_error_logger_spec.rb[1:1:3]                                  | failed  | 0.00041 seconds |
+./spec/services/redis_error_logger_spec.rb[1:1:4]                                  | failed  | 0.00104 seconds |
+./spec/services/redis_error_logger_spec.rb[1:1:5]                                  | failed  | 0.00061 seconds |
+./spec/services/redis_error_logger_spec.rb[1:1:6]                                  | failed  | 0.00102 seconds |
+./spec/services/redis_error_logger_spec.rb[1:2:1]                                  | failed  | 0.00058 seconds |
+./spec/services/redis_error_logger_spec.rb[1:3:1]                                  | failed  | 0.00052 seconds |
+./spec/services/redis_error_logger_spec.rb[1:4:1]                                  | failed  | 0.00167 seconds |
+./spec/services/redis_error_logger_spec.rb[1:5:1]                                  | passed  | 0.00078 seconds |
+./spec/services/redis_error_logger_spec.rb[1:6:1]                                  | failed  | 0.00841 seconds |
+./spec/services/redis_error_logger_spec.rb[1:6:2]                                  | passed  | 0.01986 seconds |
+./spec/services/redis_error_logger_spec.rb[1:7:1:1]                                | passed  | 0.00137 seconds |
+./spec/services/redis_error_logger_spec.rb[1:7:2:1]                                | failed  | 0.00163 seconds |
+./spec/services/redis_error_logger_spec.rb[1:8:1]                                  | passed  | 0.00296 seconds |
+./spec/services/redis_error_logger_spec.rb[1:8:2:1]                                | failed  | 0.001 seconds   |
+./spec/services/redis_error_logger_spec.rb[1:9:1]                                  | failed  | 0.00205 seconds |
+./spec/services/redis_error_logger_spec.rb[1:9:2]                                  | failed  | 0.00063 seconds |
+./spec/services/redis_error_logger_spec.rb[1:9:3]                                  | failed  | 0.00065 seconds |
+./spec/services/redis_error_logger_spec.rb[1:10:1]                                 | passed  | 0.00109 seconds |
+./spec/services/redis_error_logger_spec.rb[1:10:2]                                 | passed  | 0.00342 seconds |
+./spec/services/redis_error_logger_spec.rb[1:10:3]                                 | failed  | 0.00126 seconds |
 ./spec/services/stripe/checkout_completed_service_spec.rb[1:1:1:1]                 | passed  | 0.03139 seconds |
 ./spec/services/stripe/checkout_completed_service_spec.rb[1:1:1:2]                 | passed  | 0.03316 seconds |
 ./spec/services/stripe/checkout_completed_service_spec.rb[1:1:1:3]                 | passed  | 0.0262 seconds  |
@@ -1908,6 +2015,13 @@ example_id                                                                      
 ./spec/system/trial_subscription_management_spec.rb[1:4:1:1]                       | failed  | 0.07093 seconds |
 ./spec/system/trial_subscription_management_spec.rb[1:4:2:1]                       | failed  | 0.06267 seconds |
 ./spec/system/trial_subscription_management_spec.rb[1:4:3:1]                       | failed  | 10.98 seconds   |
+./spec/tasks/create_superadmin_spec.rb[1:1:1]                                      | passed  | 0.01825 seconds |
+./spec/tasks/create_superadmin_spec.rb[1:1:2]                                      | passed  | 0.00869 seconds |
+./spec/tasks/create_superadmin_spec.rb[1:1:3]                                      | passed  | 0.02563 seconds |
+./spec/tasks/create_superadmin_spec.rb[1:2:1:1]                                    | passed  | 0.00838 seconds |
+./spec/tasks/create_superadmin_spec.rb[1:3:1:1]                                    | passed  | 0.00657 seconds |
+./spec/tasks/create_superadmin_spec.rb[1:3:2:1]                                    | passed  | 0.17568 seconds |
+./spec/tasks/create_superadmin_spec.rb[1:3:2:2]                                    | passed  | 0.0071 seconds  |
 ./spec/unit/payment_setup_controller_unit_spec.rb[1:1:1:1]                         | passed  | 0.00642 seconds |
 ./spec/unit/payment_setup_controller_unit_spec.rb[1:1:1:2]                         | passed  | 0.00816 seconds |
 ./spec/unit/payment_setup_controller_unit_spec.rb[1:1:1:3]                         | passed  | 0.00662 seconds |
@@ -1928,6 +2042,24 @@ example_id                                                                      
 ./spec/unit/payment_setup_controller_unit_spec.rb[1:4:3]                           | passed  | 0.11629 seconds |
 ./spec/unit/payment_setup_controller_unit_spec.rb[1:5:1]                           | passed  | 0.00033 seconds |
 ./spec/unit/payment_setup_controller_unit_spec.rb[1:6:1]                           | passed  | 0.01407 seconds |
+./spec/unit/redis_config_spec.rb[1:1:1:1]                                          | failed  | 0.00013 seconds |
+./spec/unit/redis_config_spec.rb[1:1:2:1]                                          | failed  | 0.00036 seconds |
+./spec/unit/redis_config_spec.rb[1:1:2:2]                                          | unknown |                 |
+./spec/unit/redis_config_spec.rb[1:1:3:1]                                          | failed  | 0.00015 seconds |
+./spec/unit/redis_config_spec.rb[1:1:4:1]                                          | failed  | 0.00012 seconds |
+./spec/unit/redis_config_spec.rb[1:2:1]                                            | passed  | 0.02604 seconds |
+./spec/unit/redis_config_spec.rb[1:2:2]                                            | passed  | 0.00164 seconds |
+./spec/unit/redis_config_spec.rb[1:2:3]                                            | passed  | 0.00097 seconds |
+./spec/unit/redis_config_spec.rb[1:3:1]                                            | passed  | 0.00116 seconds |
+./spec/unit/redis_config_spec.rb[1:3:2]                                            | passed  | 0.00035 seconds |
+./spec/unit/redis_config_spec.rb[1:4:1]                                            | passed  | 0.01352 seconds |
+./spec/unit/redis_config_spec.rb[1:5:1:1:1]                                        | failed  | 0.00015 seconds |
+./spec/unit/redis_config_spec.rb[1:5:1:2:1]                                        | failed  | 0.00016 seconds |
+./spec/unit/redis_config_spec.rb[1:5:1:3:1]                                        | passed  | 0.00081 seconds |
+./spec/unit/redis_config_spec.rb[1:5:2:1]                                          | passed  | 0.00086 seconds |
+./spec/unit/redis_config_spec.rb[1:5:3:1]                                          | passed  | 0.00032 seconds |
+./spec/unit/redis_config_spec.rb[1:5:3:2]                                          | passed  | 0.00037 seconds |
+./spec/unit/redis_config_spec.rb[1:6:1]                                            | failed  | 0.01606 seconds |
 ./spec/views/subscription_management/show_trial_spec.rb[1:1:1:1]                   | passed  | 0.01073 seconds |
 ./spec/views/subscription_management/show_trial_spec.rb[1:1:1:2]                   | passed  | 0.00942 seconds |
 ./spec/views/subscription_management/show_trial_spec.rb[1:1:1:3]                   | passed  | 0.00974 seconds |
