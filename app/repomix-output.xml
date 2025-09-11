@@ -49,6 +49,9 @@ agents/
     response_agent.rb
   application_agent.rb
 channels/
+  application_cable/
+    channel.rb
+    connection.rb
   form_response_channel.rb
   session_channel.rb
 controllers/
@@ -71,6 +74,7 @@ controllers/
   concerns/
     admin_security.rb
     payment_error_handling.rb
+    safe_pagination.rb
   forms/
     exports_controller.rb
   integrations/
@@ -84,10 +88,10 @@ controllers/
   blogs_controller.rb
   dynamic_questions_controller.rb
   form_questions_controller.rb
-  forms_controller_backup.rb
   forms_controller.rb
   google_integrations_controller.rb
   google_oauth_controller.rb
+  health_controller.rb
   landing_controller.rb
   payment_setup_controller.rb
   payments_controller.rb
@@ -104,6 +108,7 @@ controllers/
 helpers/
   admin_helper.rb
   application_helper.rb
+  content_security_policy_helper.rb
   google_integration_helper.rb
   payment_error_helper.rb
 javascript/
@@ -154,7 +159,7 @@ jobs/
     dynamic_question_generation_job.rb
     integration_trigger_job.rb
     lead_scoring_job.rb
-    process_ai_workflow_job.rb
+    process_a_i_workflow_job.rb
     report_generation_job.rb
     response_analysis_job.rb
     workflow_generation_job.rb
@@ -175,6 +180,9 @@ jobs/
   user_invitation_job.rb
   user_reactivation_job.rb
   user_suspension_job.rb
+lib/
+  circuit_breaker/
+    job_integration.rb
 mailers/
   application_mailer.rb
   user_mailer.rb
@@ -242,6 +250,7 @@ services/
     workflow_generator_service.rb
   google_sheets/
     base_service.rb
+    config_service.rb
     connection_test_service.rb
     export_service.rb
     rate_limiter.rb
@@ -262,6 +271,7 @@ services/
   application_service.rb
   discount_code_service.rb
   form_publish_validation_service.rb
+  lead_scoring_calculator.rb
   payment_analytics_service.rb
   payment_configuration_service.rb
   payment_error_recovery_service.rb
@@ -269,6 +279,7 @@ services/
   payment_readiness_checker.rb
   payment_requirement_detector.rb
   payment_setup_validation_service.rb
+  redis_error_logger.rb
   service_object.rb
   stripe_configuration_checker.rb
   stripe_payment_service.rb
@@ -2576,6 +2587,34 @@ class ApplicationAgent
       (current_user.ai_credits_remaining || Float::INFINITY) >= estimated_cost
   end
 end
+</file>
+
+<file path="channels/application_cable/channel.rb">
+# app/channels/application_cable/channel.rb
+module ApplicationCable
+    class Channel < ActionCable::Channel::Base
+    end
+end
+</file>
+
+<file path="channels/application_cable/connection.rb">
+# app/channels/application_cable/connection.rb
+module ApplicationCable
+    class Connection < ActionCable::Connection::Base
+      # Aquí puedes agregar autenticación si la necesitas
+      # identified_by :current_user
+      
+      # def connect
+      #   self.current_user = find_verified_user
+      # end
+      
+      # private
+      
+      # def find_verified_user
+      #   # Lógica de autenticación
+      # end
+    end
+  end
 </file>
 
 <file path="channels/form_response_channel.rb">
@@ -5197,16 +5236,34 @@ class Api::BaseController < ActionController::API
 
   # Global rescue handlers for API (most specific first)
   
-  # SuperAgent specific error handling (conditional on SuperAgent being loaded)
-  if defined?(SuperAgent)
-    rescue_from SuperAgent::WorkflowError, with: :render_workflow_error
-    rescue_from SuperAgent::TaskError, with: :render_workflow_error
-  end
-  
-  if defined?(SuperAgent::A2A)
-    rescue_from SuperAgent::A2A::TimeoutError, with: :render_timeout_error
-    rescue_from SuperAgent::A2A::NetworkError, with: :render_network_error
-    rescue_from SuperAgent::A2A::AuthenticationError, with: :render_unauthorized
+  # SuperAgent specific error handling (conditional and safer)
+  begin
+    # Only define these rescue_from blocks if the constants exist
+    if defined?(SuperAgent) && defined?(SuperAgent::WorkflowError)
+      rescue_from SuperAgent::WorkflowError, with: :render_workflow_error
+    end
+    
+    if defined?(SuperAgent) && defined?(SuperAgent::TaskError)
+      rescue_from SuperAgent::TaskError, with: :render_workflow_error
+    end
+    
+    # Check for A2A module and its error classes more safely
+    if defined?(SuperAgent::A2A)
+      if SuperAgent::A2A.const_defined?(:TimeoutError)
+        rescue_from SuperAgent::A2A::TimeoutError, with: :render_timeout_error
+      end
+      
+      if SuperAgent::A2A.const_defined?(:NetworkError)
+        rescue_from SuperAgent::A2A::NetworkError, with: :render_network_error
+      end
+      
+      if SuperAgent::A2A.const_defined?(:AuthenticationError)
+        rescue_from SuperAgent::A2A::AuthenticationError, with: :render_unauthorized
+      end
+    end
+  rescue NameError => e
+    # Silently ignore if SuperAgent constants are not available
+    Rails.logger.debug "[API] SuperAgent error classes not available: #{e.message}"
   end
 
   # ActiveRecord specific errors
@@ -5580,6 +5637,135 @@ module PaymentErrorHandling
              show_actions: true,
              context: controller_name
            }
+  end
+end
+</file>
+
+<file path="controllers/concerns/safe_pagination.rb">
+# frozen_string_literal: true
+
+# SafePagination provides resilient pagination that gracefully degrades
+# when Kaminari is not available, preventing NoMethodError exceptions
+module SafePagination
+  extend ActiveSupport::Concern
+
+  # Safely paginate an ActiveRecord relation with fallback support
+  # 
+  # @param relation [ActiveRecord::Relation] The relation to paginate
+  # @param page [String, Integer, nil] The page number (defaults to 1)
+  # @param per_page [Integer] Number of records per page (defaults to 20)
+  # @return [ActiveRecord::Relation] Paginated relation with metadata methods
+  def safe_paginate(relation, page: nil, per_page: 20)
+    page_num = normalize_page_number(page)
+    per_page = normalize_per_page(per_page)
+
+    if kaminari_available?(relation)
+      use_kaminari_pagination(relation, page_num, per_page)
+    else
+      use_fallback_pagination(relation, page_num, per_page)
+    end
+  end
+
+  private
+
+  # Check if Kaminari is available and the relation supports pagination
+  def kaminari_available?(relation)
+    defined?(Kaminari) && relation.respond_to?(:page)
+  end
+
+  # Use Kaminari for pagination (optimal path)
+  def use_kaminari_pagination(relation, page, per_page)
+    Rails.logger.debug "Using Kaminari pagination (page: #{page}, per_page: #{per_page})"
+    relation.page(page).per(per_page)
+  end
+
+  # Use fallback pagination with LIMIT/OFFSET
+  def use_fallback_pagination(relation, page, per_page)
+    log_fallback_usage(page, per_page)
+    
+    offset = (page - 1) * per_page
+    limited_relation = relation.limit(per_page).offset([offset, 0].max)
+    
+    add_pagination_metadata(limited_relation, relation, page, per_page)
+  end
+
+  # Add pagination metadata methods to the relation
+  def add_pagination_metadata(limited_relation, original_relation, page, per_page)
+    # Cache the total count to avoid multiple queries
+    total_count = original_relation.count
+    total_pages = (total_count.to_f / per_page).ceil
+    
+    # Add pagination methods to the relation instance
+    limited_relation.define_singleton_method(:current_page) { page }
+    limited_relation.define_singleton_method(:total_pages) { total_pages }
+    limited_relation.define_singleton_method(:total_count) { total_count }
+    limited_relation.define_singleton_method(:limit_value) { per_page }
+    limited_relation.define_singleton_method(:total_entries) { total_count } # Alias for compatibility
+    
+    # Add navigation helper methods
+    limited_relation.define_singleton_method(:next_page) do
+      page < total_pages ? page + 1 : nil
+    end
+    
+    limited_relation.define_singleton_method(:prev_page) do
+      page > 1 ? page - 1 : nil
+    end
+    
+    limited_relation.define_singleton_method(:first_page?) { page == 1 }
+    limited_relation.define_singleton_method(:last_page?) { page >= total_pages }
+    
+    # Add range information
+    limited_relation.define_singleton_method(:offset_value) { (page - 1) * per_page }
+    limited_relation.define_singleton_method(:size) { limited_relation.to_a.size }
+    
+    limited_relation
+  end
+
+  # Normalize page number to ensure it's a positive integer
+  def normalize_page_number(page)
+    page_num = page.to_i
+    page_num > 0 ? page_num : 1
+  end
+
+  # Normalize per_page to ensure it's within reasonable bounds
+  def normalize_per_page(per_page)
+    per_page = per_page.to_i
+    
+    # Ensure per_page is between 1 and 100 for performance
+    case per_page
+    when 0..1
+      20 # Default
+    when 2..100
+      per_page
+    else
+      100 # Maximum
+    end
+  end
+
+  # Log when fallback pagination is used for monitoring
+  def log_fallback_usage(page, per_page)
+    Rails.logger.warn "⚠️  Using fallback pagination - Kaminari not available (page: #{page}, per_page: #{per_page})"
+    
+    # Send to error tracking if available
+    if defined?(Sentry)
+      Sentry.capture_message(
+        "Pagination fallback used",
+        level: :warning,
+        extra: {
+          page: page,
+          per_page: per_page,
+          controller: self.class.name,
+          action: action_name,
+          kaminari_defined: defined?(Kaminari),
+          timestamp: Time.current
+        }
+      )
+    end
+    
+    # Increment metrics if available
+    if defined?(StatsD)
+      StatsD.increment('pagination.fallback_used')
+    end
   end
 end
 </file>
@@ -5980,9 +6166,16 @@ class ApplicationController < ActionController::Base
     rescue_from SuperAgent::TaskError, with: :render_workflow_error
   end
   
-  if defined?(SuperAgent::A2A)
+  # Fixed: Check if the specific error classes exist before rescuing from them
+  if defined?(SuperAgent::A2A) && defined?(SuperAgent::A2A::TimeoutError)
     rescue_from SuperAgent::A2A::TimeoutError, with: :render_timeout_error
+  end
+  
+  if defined?(SuperAgent::A2A) && defined?(SuperAgent::A2A::NetworkError)
     rescue_from SuperAgent::A2A::NetworkError, with: :render_network_error
+  end
+  
+  if defined?(SuperAgent::A2A) && defined?(SuperAgent::A2A::AuthenticationError)
     rescue_from SuperAgent::A2A::AuthenticationError, with: :render_unauthorized
   end
 
@@ -7690,1239 +7883,13 @@ end
 end
 </file>
 
-<file path="controllers/forms_controller_backup.rb">
-# frozen_string_literal: true
-
-class FormsController < ApplicationController
-  before_action :authenticate_user!
-  before_action :set_form, only: [:show, :edit, :update, :destroy, :publish, :unpublish, :duplicate, :analytics, :export, :preview, :responses, :download_responses]
-  before_action :authorize_form, only: [:show, :edit, :update, :destroy, :publish, :unpublish, :analytics, :preview]
-
-  # GET /forms
-  def index
-    @forms = policy_scope(Form)
-                        .includes(:form_questions, :form_responses)
-                        .order(created_at: :desc)
-    
-    # Permit and extract parameters to avoid warnings
-    permitted_params = params.permit(:user_id, :query, :status, :category, :sort_by, :sort_direction, :commit)
-    
-    # For superadmin, add user filtering capability
-    if current_user.superadmin? && permitted_params[:user_id].present?
-      @forms = @forms.where(user_id: permitted_params[:user_id])
-    end
-
-    # Apply search filter
-    if permitted_params[:query].present?
-      @forms = @forms.where("name ILIKE ? OR description ILIKE ?", 
-                           "%#{permitted_params[:query]}%", 
-                           "%#{permitted_params[:query]}%")
-    end
-
-    # Apply status filter
-    if permitted_params[:status].present? && Form.statuses.key?(permitted_params[:status])
-      @forms = @forms.where(status: permitted_params[:status])
-    end
-
-    # Apply category filter
-    if permitted_params[:category].present? && Form.categories.key?(permitted_params[:category])
-      @forms = @forms.where(category: permitted_params[:category])
-    end
-
-    # Apply sorting
-    case permitted_params[:sort_by]
-    when 'name'
-      @forms = @forms.order(:name)
-    when 'responses'
-      @forms = @forms.order(:responses_count)
-    when 'completion_rate'
-      @forms = @forms.order(:completions_count)
-    else
-      @forms = @forms.order(created_at: :desc)
-    end
-
-    # Pagination would be added here with Kaminari gem
-    # @forms = @forms.page(params[:page]).per(20)
-
-    respond_to do |format|
-      format.html
-      format.json { render json: @forms }
-    end
-  end
-
-  # GET /forms/:id
-  def show
-    @form_questions = @form.form_questions.includes(:question_responses)
-    @recent_responses = @form.form_responses.includes(:question_responses)
-                             .order(created_at: :desc)
-                             .limit(10)
-
-    respond_to do |format|
-      format.html
-      format.json { render json: @form, include: [:form_questions, :form_responses] }
-    end
-  end
-
-  # GET /forms/new
-  def new
-    @form = current_user.forms.build
-    authorize @form
-    @form.assign_attributes(default_form_settings)
-    @templates = [] # FormTemplate.public_templates.featured - will be implemented later
-  end
-
-  # GET /forms/new_from_ai
-  def new_from_ai
-    authorize Form, :create?
-    
-    # Track user behavior - page viewed
-    Ai::UserBehaviorTrackingService.track_event({
-      user_id: current_user.id,
-      session_id: session.id,
-      event_type: 'page_viewed',
-      page_url: request.url,
-      user_agent: request.user_agent,
-      ip_address: request.remote_ip
-    })
-    
-    # Check if user can use AI features
-    unless current_user.can_use_ai_features?
-      # Track feature access denied
-      Ai::UserBehaviorTrackingService.track_event({
-        user_id: current_user.id,
-        session_id: session.id,
-        event_type: 'error_encountered',
-        event_data: { error_type: 'subscription_required', feature: 'ai_form_generation' }
-      })
-      
-      redirect_to new_form_path, alert: 'AI form generation requires a premium subscription.'
-      return
-    end
-
-    # Check AI credits
-    if current_user.ai_credits_remaining <= 0
-      # Track credit limit reached
-      Ai::UserBehaviorTrackingService.track_event({
-        user_id: current_user.id,
-        session_id: session.id,
-        event_type: 'error_encountered',
-        event_data: { error_type: 'credit_limit_exceeded', credits_remaining: 0 }
-      })
-      
-      redirect_to new_form_path, alert: 'You have exceeded your monthly AI usage limit. Please upgrade your plan.'
-      return
-    end
-
-    @ai_credits_remaining = current_user.ai_credits_remaining
-    @estimated_cost = 0.05 # Base cost for form generation
-  end
-
-  # POST /forms
-  def create
-    @form = current_user.forms.build(form_params)
-    authorize @form
-    @form.assign_attributes(default_form_settings) if @form.form_settings.blank?
-    @form.assign_attributes(default_ai_configuration) if @form.ai_configuration.blank?
-
-    # Check subscription tier for AI features
-    if @form.ai_enabled? && !current_user.can_use_ai_features?
-      @form.ai_enabled = false
-      flash.now[:alert] = 'AI features require a premium subscription. Form created without AI enhancements.'
-    end
-
-    if @form.save
-      # Trigger workflow generation if AI is enabled and user has access
-      if @form.ai_enabled? && current_user.can_use_ai_features?
-        Forms::WorkflowGenerationJob.perform_later(@form.id)
-      end
-
-      respond_to do |format|
-        format.html { redirect_to edit_form_path(@form), notice: 'Form was successfully created.' }
-        format.json { render json: @form, status: :created }
-      end
-    else
-      @templates = [] # FormTemplate.public_templates.featured - will be implemented later
-      respond_to do |format|
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @form.errors, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  # POST /forms/generate_from_ai
-def generate_from_ai
-  authorize Form, :create?
-  
-  # Track form generation started
-  Ai::UserBehaviorTrackingService.track_event({
-    user_id: current_user.id,
-    session_id: session.id,
-    event_type: 'form_generation_started',
-    event_data: { 
-      input_type: params[:document].present? ? 'document' : 'prompt',
-      credits_remaining: current_user.ai_credits_remaining
-    }
-  })
-  
-  # Check if user can use AI features
-  unless current_user.can_use_ai_features?
-    # Track feature access denied
-    Ai::UserBehaviorTrackingService.track_event({
-      user_id: current_user.id,
-      session_id: session.id,
-      event_type: 'error_encountered',
-      event_data: { error_type: 'subscription_required', feature: 'ai_form_generation' }
-    })
-    
-    respond_to do |format|
-      format.html { redirect_to new_from_ai_forms_path, alert: 'AI form generation requires a premium subscription.' }
-      format.json { render json: { error: 'AI features require a premium subscription' }, status: :forbidden }
-    end
-    return
-  end
-
-  # Check AI credits
-  if current_user.ai_credits_remaining <= 0
-    # Track credit limit reached
-    Ai::UserBehaviorTrackingService.track_event({
-      user_id: current_user.id,
-      session_id: session.id,
-      event_type: 'error_encountered',
-      event_data: { error_type: 'credit_limit_exceeded', credits_remaining: 0 }
-    })
-    
-    respond_to do |format|
-      format.html { redirect_to new_from_ai_forms_path, alert: 'You have exceeded your monthly AI usage limit. Please upgrade your plan.' }
-      format.json { render json: { error: 'Monthly AI usage limit exceeded' }, status: :forbidden }
-    end
-    return
-  end
-
-  # Extract and validate parameters
-  generation_params = ai_generation_params
-  
-  # Validate parameters before processing
-  validation_errors = validate_generation_params(generation_params)
-  if validation_errors.any?
-    respond_to do |format|
-      format.html { 
-        flash[:alert] = validation_errors.join(', ')
-        redirect_to new_from_ai_forms_path 
-      }
-      format.json { 
-        render json: { 
-          error: validation_errors.first,
-          errors: validation_errors 
-        }, status: :unprocessable_entity 
-      }
-    end
-    return
-  end
-  
-  # Track input type
-  if generation_params[:document].present?
-    Ai::UserBehaviorTrackingService.track_event({
-      user_id: current_user.id,
-      session_id: session.id,
-      event_type: 'document_uploaded',
-      event_data: { 
-        file_size: generation_params[:document].size,
-        content_type: generation_params[:document].content_type
-      }
-    })
-  elsif generation_params[:prompt].present?
-    Ai::UserBehaviorTrackingService.track_event({
-      user_id: current_user.id,
-      session_id: session.id,
-      event_type: 'prompt_entered',
-      event_data: { 
-        prompt_length: generation_params[:prompt].length,
-        word_count: generation_params[:prompt].split.length
-      }
-    })
-  end
-  
-  begin
-    # Use the real AI workflow for form generation
-    Rails.logger.info "Invoking AI form generation workflow"
-    
-    # Determine input type and prepare parameters
-    input_type = generation_params[:document].present? ? 'document' : 'prompt'
-    content_input = input_type == 'document' ? generation_params[:document] : generation_params[:prompt]
-    
-    # Prepare metadata for the workflow
-    metadata = {
-      ip_address: request.remote_ip,
-      user_agent: request.user_agent,
-      max_questions: generation_params[:max_questions] || 10,
-      complexity_preference: generation_params[:complexity] || 'moderate',
-      session_id: session.id
-    }
-    
-    # Execute the AI workflow
-    workflow_result = Forms::AiFormGenerationWorkflow.execute(
-      user_id: current_user.id,
-      content_input: content_input,
-      input_type: input_type,
-      metadata: metadata
-    )
-
-    if workflow_result[:success]
-      @form = workflow_result[:form]
-      
-      # Track successful form generation
-      Ai::UserBehaviorTrackingService.track_event({
-        user_id: current_user.id,
-        session_id: session.id,
-        event_type: 'form_generation_completed',
-        event_data: { 
-          form_id: @form.id,
-          questions_count: @form.form_questions.count,
-          generation_cost: workflow_result[:generation_cost] || 0.05,
-          ai_features_enabled: @form.ai_enabled?
-        }
-      })
-      
-      respond_to do |format|
-        format.html { redirect_to edit_form_path(@form), notice: 'AI form generated successfully!' }
-        format.json { 
-          render json: { 
-            success: true, 
-            form: @form.as_json(include: :form_questions), 
-            redirect_url: edit_form_path(@form),
-            message: 'AI form generated successfully!'
-          } 
-        }
-      end
-    else
-      # Track failed form generation
-      Ai::UserBehaviorTrackingService.track_event({
-        user_id: current_user.id,
-        session_id: session.id,
-        event_type: 'form_generation_failed',
-        event_data: { 
-          error_type: workflow_result[:error_type] || 'unknown_error',
-          error_message: workflow_result[:message] || workflow_result[:error] || 'Unknown error'
-        }
-      })
-      
-      respond_to do |format|
-        format.html { 
-          flash[:alert] = workflow_result[:message] || workflow_result[:error] || 'Failed to generate form'
-          redirect_to new_from_ai_forms_path
-        }
-        format.json { 
-          render json: { 
-            error: workflow_result[:message] || workflow_result[:error] || 'Failed to generate form',
-            error_type: workflow_result[:error_type] || 'generation_error'
-          }, status: :unprocessable_entity 
-        }
-      end
-    end
-
-  rescue StandardError => e
-    Rails.logger.error "AI form generation failed: #{e.message}"
-    Rails.logger.error e.backtrace.join("\n")
-    
-    # Track exception during form generation
-    Ai::UserBehaviorTrackingService.track_event({
-      user_id: current_user.id,
-      session_id: session.id,
-      event_type: 'form_generation_failed',
-      event_data: { 
-        error_type: 'exception',
-        error_class: e.class.name,
-        error_message: e.message
-      }
-    })
-    
-    error_message = case e.message
-    when /Monthly AI usage limit exceeded/
-      'You have exceeded your monthly AI usage limit. Please upgrade your plan.'
-    when /Content too long/
-      'The provided content is too long. Please provide content with fewer than 5000 words.'
-    when /Content too short/
-      'Please provide more detailed information to generate a comprehensive form.'
-    when /Unsupported file type/
-      'Please upload a PDF, Markdown, or text file.'
-    when /File too large/
-      'The uploaded file is too large. Please upload a file smaller than 10MB.'
-    else
-      'An error occurred while generating your form. Please try again.'
-    end
-
-    respond_to do |format|
-      format.html { 
-        flash[:alert] = error_message
-        redirect_to new_from_ai_forms_path
-      }
-      format.json { 
-        render json: { 
-          error: error_message,
-          error_type: 'exception'
-        }, status: :unprocessable_entity 
-      }
-    end
-  end
-end
-
-  private
-
-  def validate_generation_params(params)
-  errors = []
-  
-  # Must have either prompt or document
-  if params[:prompt].blank? && (params[:document].blank? || params[:document].size == 0)
-    errors << "Please provide either a text prompt or upload a document"
-    return errors
-  end
-  
-  # Validate prompt if provided
-  if params[:prompt].present?
-    prompt = params[:prompt].strip
-    if prompt.length < 20
-      errors << "Prompt must be at least 20 characters long"
-    elsif prompt.length > 10000
-      errors << "Prompt is too long (maximum 10,000 characters)"
-    end
-    
-    # Check for potentially problematic content
-    if prompt.match?(/\A\s*\z/) # Only whitespace
-      errors << "Prompt cannot be empty or contain only whitespace"
-    end
-  end
-  
-  # Validate document if provided
-  if params[:document].present? && params[:document].respond_to?(:size)
-    document = params[:document]
-    
-    # Check file size (10MB limit)
-    if document.size > 10.megabytes
-      errors << "File size must be less than 10MB"
-    end
-    
-    # Check file type
-    allowed_types = ['application/pdf', 'text/markdown', 'text/plain', 'text/md']
-    allowed_extensions = ['.pdf', '.md', '.txt', '.markdown']
-    
-    content_type_valid = allowed_types.include?(document.content_type)
-    extension_valid = allowed_extensions.any? { |ext| 
-      document.original_filename&.downcase&.end_with?(ext) 
-    }
-    
-    unless content_type_valid || extension_valid
-      errors << "Please upload a PDF, Markdown (.md), or text (.txt) file"
-    end
-  end
-  
-  errors
-end
-
-  # GET /forms/:id/edit
-  def edit
-    @form_questions = @form.form_questions.order(:position)
-    @question_types = FormQuestion::QUESTION_TYPES
-    @ai_features = %w[response_analysis dynamic_questions sentiment_analysis lead_scoring]
-    @can_use_ai = current_user.can_use_ai_features?
-  end
-
-  # PATCH/PUT /forms/:id
-  def update
-    old_ai_config = @form.ai_configuration.dup
-    old_structure = @form.form_questions.pluck(:id, :position, :question_type)
-
-    # Check subscription tier for AI features
-    if form_params[:ai_enabled] == 'true' && !current_user.can_use_ai_features?
-      @form.errors.add(:ai_enabled, 'requires a premium subscription')
-      @form_questions = @form.form_questions.order(:position)
-      @question_types = FormQuestion::QUESTION_TYPES
-      @ai_features = %w[response_analysis dynamic_questions sentiment_analysis lead_scoring]
-      @can_use_ai = current_user.can_use_ai_features?
-      
-      respond_to do |format|
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: { error: 'AI features require a premium subscription' }, status: :unprocessable_entity }
-      end
-      return
-    end
-
-    if @form.update(form_params)
-      handle_form_update(old_ai_config, old_structure)
-
-      respond_to do |format|
-        format.html { redirect_to @form, notice: 'Form was successfully updated.' }
-        format.json { render json: @form }
-      end
-    else
-      @form_questions = @form.form_questions.order(:position)
-      @question_types = FormQuestion::QUESTION_TYPES
-      @ai_features = %w[response_analysis dynamic_questions sentiment_analysis lead_scoring]
-      @can_use_ai = current_user.can_use_ai_features?
-      
-      respond_to do |format|
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @form.errors, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  # DELETE /forms/:id
-  def destroy
-    @form.destroy!
-
-    respond_to do |format|
-      format.html { redirect_to forms_path, notice: 'Form was successfully deleted.' }
-      format.json { head :no_content }
-    end
-  end
-
-  # POST /forms/:id/publish
-  def publish
-    if @form.form_questions.any?
-      @form.update!(status: 'published', published_at: Time.current)
-      
-      respond_to do |format|
-        format.html { redirect_to @form, notice: 'Form has been published successfully.' }
-        format.json { render json: { status: 'published', public_url: @form.public_url } }
-      end
-    else
-      error_message = if @form.ai_enabled?
-        'This AI-generated form appears to be incomplete. Please regenerate the form or add questions manually before publishing.'
-      else
-        'Cannot publish form without questions. Please add at least one question before publishing.'
-      end
-      
-      respond_to do |format|
-        format.html { redirect_to edit_form_path(@form), alert: error_message }
-        format.json { render json: { error: error_message }, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  # POST /forms/:id/unpublish
-  def unpublish
-    @form.update!(status: 'draft', published_at: nil)
-    
-    respond_to do |format|
-      format.html { redirect_to @form, notice: 'Form has been unpublished.' }
-      format.json { render json: { status: 'draft' } }
-    end
-  end
-
-  # POST /forms/:id/duplicate
-  def duplicate
-    begin
-      duplicated_form = Forms::ManagementAgent.new.duplicate_form(@form, current_user, {
-        name: "#{@form.name} (Copy)",
-        status: 'draft'
-      })
-
-      respond_to do |format|
-        format.html { redirect_to edit_form_path(duplicated_form), notice: 'Form duplicated successfully.' }
-        format.json { render json: duplicated_form, status: :created }
-      end
-    rescue StandardError => e
-      respond_to do |format|
-        format.html { redirect_to @form, alert: "Failed to duplicate form: #{e.message}" }
-        format.json { render json: { error: e.message }, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  # GET /forms/:id/analytics
-  def analytics
-    @analytics_period = params[:period]&.to_i&.days || 30.days
-    @analytics_data = @form.cached_analytics_summary(period: @analytics_period)
-    
-    @question_analytics = @form.form_questions.includes(:question_responses)
-                               .map { |q| [q, q.analytics_summary(@analytics_period)] }
-                               .to_h
-
-    @response_trends = @form.form_analytics
-                            .for_period(@analytics_period.ago.to_date, Date.current)
-                            .daily
-                            .order(:date)
-
-    respond_to do |format|
-      format.html
-      format.json do
-        render json: {
-          summary: @analytics_data,
-          questions: @question_analytics,
-          trends: @response_trends
-        }
-      end
-    end
-  end
-
-  # GET /forms/:id/export
-  def export
-    export_format = params[:format] || 'csv'
-    export_options = {
-      format: export_format,
-      include_metadata: params[:include_metadata] == 'true',
-      date_range: params[:date_range]
-    }
-
-    begin
-      export_data = Forms::ManagementAgent.new.export_form_data(@form, export_options)
-      
-      respond_to do |format|
-        format.csv do
-          send_data export_data[:content], 
-                    filename: export_data[:filename],
-                    type: 'text/csv'
-        end
-        format.json do
-          render json: {
-            download_url: export_data[:download_url],
-            expires_at: export_data[:expires_at]
-          }
-        end
-      end
-    rescue StandardError => e
-      respond_to do |format|
-        format.html { redirect_to analytics_form_path(@form), alert: "Export failed: #{e.message}" }
-        format.json { render json: { error: e.message }, status: :unprocessable_entity }
-      end
-    end
-  end
-
-  # GET /forms/:id/preview
-  def preview
-    @preview_mode = true
-    @form_response = @form.form_responses.build
-    
-    respond_to do |format|
-      format.html { render 'forms/preview' }
-      format.json { render json: @form, include: :form_questions }
-    end
-  end
-
-  # POST /forms/:id/test_ai_feature
-  def test_ai_feature
-    feature_type = params[:feature_type]
-    test_data = params[:test_data] || {}
-
-    unless @form.ai_enhanced?
-      return render json: { error: 'AI features not enabled for this form' }, status: :unprocessable_entity
-    end
-
-    begin
-      case feature_type
-      when 'response_analysis'
-        result = test_response_analysis(test_data)
-      when 'dynamic_questions'
-        result = test_dynamic_question_generation(test_data)
-      when 'sentiment_analysis'
-        result = test_sentiment_analysis(test_data)
-      else
-        return render json: { error: 'Unknown AI feature type' }, status: :bad_request
-      end
-
-      render json: { success: true, result: result }
-    rescue StandardError => e
-      render json: { error: "AI test failed: #{e.message}" }, status: :unprocessable_entity
-    end
-  end
-
-  # GET /forms/:id/responses
-  def responses
-    authorize @form, :responses?
-    
-    @responses = @form.form_responses
-                      .includes(:question_responses, :dynamic_questions)
-                      .order(created_at: :desc)
-                      .page(params[:page]).per(20)
-
-    respond_to do |format|
-      format.html
-      format.csv { download_responses_csv }
-    end
-  end
-
-  # GET /forms/:id/download_responses
-  def download_responses
-    authorize @form, :download_responses?
-    
-    @responses = @form.form_responses
-                      .completed
-                      .includes(:question_responses, :dynamic_questions)
-                      .order(completed_at: :desc)
-
-    csv_data = download_responses_csv
-    send_data csv_data,
-              filename: "#{@form.name.parameterize}_responses_#{Date.current}.csv",
-              type: 'text/csv'
-  end
-
-  private
-
-
-
-  def set_form
-    if current_user.superadmin?
-      @form = Form.find(params[:id])
-    else
-      @form = current_user.forms.find(params[:id])
-    end
-  rescue ActiveRecord::RecordNotFound
-    respond_to do |format|
-      format.html { redirect_to forms_path, alert: 'Form not found.' }
-      format.json { render json: { error: 'Form not found' }, status: :not_found }
-    end
-  end
-
-  def authorize_form
-    authorize @form
-  end
-
-  def form_params
-    params.require(:form).permit(
-      :name, :description, :category, :ai_enabled,
-      form_settings: {},
-      ai_configuration: {},
-      style_configuration: {},
-      integration_settings: {}
-    )
-  end
-
-  def search_params
-    params.permit(:query, :status, :category, :user_id, :commit)
-  end
-
-  def sort_params
-    params.permit(:sort_by, :sort_direction)
-  end
-
-  def default_form_settings
-    {
-      form_settings: {
-        one_question_per_page: true,
-        show_progress_bar: true,
-        allow_multiple_submissions: false,
-        require_login: false,
-        collect_email: true,
-        thank_you_message: "Thank you for your response!",
-        redirect_url: nil
-      }
-    }
-  end
-
-  def default_ai_configuration
-    {
-      ai_configuration: {
-        version: "1.0",
-        enabled_features: [],
-        rules_engine: {
-          rule_sets: []
-        },
-        ai_engine: {
-          primary_model: "gpt-4o-mini",
-          fallback_model: "gpt-3.5-turbo",
-          max_tokens: 500,
-          temperature: 0.7,
-          rate_limiting: {
-            max_requests_per_minute: 60,
-            max_requests_per_hour: 1000,
-            backoff_strategy: "exponential"
-          },
-          response_validation: {
-            enabled: true,
-            required_fields: ["question", "type"],
-            max_title_length: 100,
-            allowed_question_types: ["text", "email", "phone", "number", "multiple_choice", "rating", "date"]
-          }
-        }
-      }
-    }
-  end
-
-  def handle_form_update(old_ai_config, old_structure)
-    # Check if AI configuration changed
-    if ai_configuration_changed?(old_ai_config)
-      # Regenerate workflow if AI settings changed
-      if @form.ai_enabled?
-        Forms::WorkflowGenerationJob.perform_async(@form.id)
-      end
-    end
-
-    # Check if form structure changed
-    if form_structure_changed?(old_structure)
-      # Update form cache and analytics
-      @form.update_form_cache
-      
-      # Trigger analytics recalculation if form has responses
-      if @form.form_responses.any?
-        Forms::AnalysisWorkflow.perform_async(@form.id)
-      end
-    end
-  end
-
-  def form_structure_changed?(old_structure)
-    current_structure = @form.form_questions.pluck(:id, :position, :question_type)
-    old_structure != current_structure
-  end
-
-  def ai_configuration_changed?(old_config)
-    @form.ai_configuration != old_config
-  end
-
-  def test_response_analysis(test_data)
-    # Create a temporary response for testing
-    sample_answer = test_data[:sample_answer] || "This is a test response"
-    
-    # Use the response processing workflow to analyze
-    workflow_result = Forms::ResponseProcessingWorkflow.execute(
-      form_id: @form.id,
-      test_mode: true,
-      sample_data: { answer: sample_answer }
-    )
-    
-    {
-      sentiment: workflow_result[:ai_analysis][:sentiment],
-      confidence: workflow_result[:ai_analysis][:confidence],
-      insights: workflow_result[:ai_analysis][:insights]
-    }
-  end
-
-  def test_dynamic_question_generation(test_data)
-    # Test dynamic question generation
-    context_answer = test_data[:context_answer] || "I'm interested in your premium features"
-    
-    workflow_result = Forms::DynamicQuestionWorkflow.execute(
-      form_id: @form.id,
-      test_mode: true,
-      context_data: { answer: context_answer }
-    )
-    
-    {
-      generated_question: workflow_result[:dynamic_question][:title],
-      question_type: workflow_result[:dynamic_question][:question_type],
-      reasoning: workflow_result[:generation_reasoning]
-    }
-  end
-
-  def test_sentiment_analysis(test_data)
-    # Test sentiment analysis on sample text
-    sample_text = test_data[:sample_text] || "I love this product, it's amazing!"
-    
-    # Use a simple sentiment analysis workflow
-    {
-      sentiment: analyze_sentiment(sample_text),
-      confidence: 0.85,
-      keywords: extract_keywords(sample_text)
-    }
-  end
-
-  def analyze_sentiment(text)
-    # Placeholder sentiment analysis - would use actual AI service
-    positive_words = %w[love amazing great excellent wonderful fantastic good]
-    negative_words = %w[hate terrible awful bad horrible disappointing poor]
-    
-    positive_count = positive_words.count { |word| text.downcase.include?(word) }
-    negative_count = negative_words.count { |word| text.downcase.include?(word) }
-    
-    if positive_count > negative_count
-      'positive'
-    elsif negative_count > positive_count
-      'negative'
-    else
-      'neutral'
-    end
-  end
-
-  def extract_keywords(text)
-    # Simple keyword extraction - would use actual NLP service
-    words = text.downcase.gsub(/[^\w\s]/, '').split
-    stop_words = %w[the a an and or but in on at to for of with by]
-    
-    (words - stop_words).tally.sort_by { |_, count| -count }.first(5).to_h
-  end
-
-  def download_responses_csv
-    require 'csv'
-    
-    CSV.generate(headers: true) do |csv|
-      # Headers
-      headers = ['ID', 'Completado en', 'Tiempo total (segundos)', 'Direccion IP', 'Agente de usuario']
-      
-      # Add form question headers
-      @form.form_questions.order(:position).each do |question|
-        headers << "#{question.title} (#{question.question_type})"
-      end
-      
-      # Add dynamic question headers
-      dynamic_questions_titles = []
-      @responses.each do |response|
-        response.dynamic_questions.answered.each do |dq|
-          title = "Dynamic: #{dq.title}"
-          dynamic_questions_titles << title unless dynamic_questions_titles.include?(title)
-        end
-      end
-      dynamic_questions_titles.each { |title| headers << title }
-      
-      csv << headers
-      
-      # Data rows
-      @responses.each do |response|
-        # Calculate total time in seconds
-        total_seconds = if response.completed_at && response.started_at
-                          (response.completed_at - response.started_at).to_i
-                        else
-                          0
-                        end
-        
-        row = [
-          response.id,
-          response.completed_at&.strftime('%Y-%m-%d %H:%M:%S'),
-          total_seconds,
-          response.ip_address,
-          response.user_agent
-        ]
-        
-        # Add form question answers
-        @form.form_questions.order(:position).each do |question|
-          answer = response.question_responses.find { |qr| qr.form_question_id == question.id }
-          if answer
-            row << format_answer_value(answer.answer_data['value'])
-          else
-            row << ''
-          end
-        end
-        
-        # Add dynamic question answers
-        dynamic_questions_titles.each do |title|
-          dynamic_title = title.gsub('Dynamic: ', '')
-          dynamic_answer = response.dynamic_questions.answered.find { |dq| dq.title == dynamic_title }
-          if dynamic_answer
-            row << format_answer_value(dynamic_answer.answer_data['value'])
-          else
-            row << ''
-          end
-        end
-        
-        csv << row
-      end
-    end
-  end
-
-  def format_answer_value(value)
-    case value
-    when Array
-      value.join(', ')
-    when Hash
-      value.to_json
-    when nil
-      ''
-    else
-      value.to_s
-    end
-  end
-
-  def ai_generation_params
-    params.permit(:prompt, :document, :max_questions, :complexity)
-  end
-
-  def handle_generation_error(error_data, generation_params)
-    @ai_credits_remaining = current_user.ai_credits_remaining
-    @estimated_cost = 0.05
-    
-    # Extract error information
-    if error_data.is_a?(Hash)
-      error_type = error_data[:error_type] || 'unknown_error'
-      error_message = error_data[:message] || error_data[:error] || 'An error occurred'
-      retry_count = error_data[:retry_attempts] || 0
-      context = error_data.except(:error_type, :message, :error, :retry_attempts)
-    else
-      error_type = classify_error_from_message(error_data.to_s)
-      error_message = error_data.to_s
-      retry_count = 0
-      context = {}
-    end
-    
-    # Get user-friendly error information
-    @error_info = Ai::ErrorMessageService.get_user_friendly_error(error_type, context.merge({
-      user: current_user,
-      retry_count: retry_count,
-      current_url: request.url
-    }))
-    
-    # Get retry plan if applicable
-    @retry_plan = Ai::RetryMechanismService.create_retry_plan(error_type, retry_count, context)
-    
-    # Preserve user input for retry
-    @prompt = generation_params[:prompt]
-    @max_questions = generation_params[:max_questions]
-    @complexity = generation_params[:complexity]
-    @document = generation_params[:document]
-    
-    # Track error recovery attempt
-    Ai::UserBehaviorTrackingService.track_event({
-      user_id: current_user.id,
-      session_id: session.id,
-      event_type: 'error_encountered',
-      event_data: { 
-        error_type: error_type,
-        retry_count: retry_count,
-        recoverable: @error_info[:recoverable],
-        severity: @error_info[:severity]
-      }
-    })
-
-    respond_to do |format|
-      format.html { render :ai_generation_error, status: :unprocessable_entity }
-      format.json { 
-        render json: { 
-          success: false,
-          error: @error_info,
-          retry_plan: @retry_plan,
-          preserved_input: {
-            prompt: @prompt,
-            max_questions: @max_questions,
-            complexity: @complexity
-          }
-        }, status: :unprocessable_entity 
-      }
-    end
-  end
-  
-  private
-
-def create_demo_form(generation_params)
-  # Create a simple demo form for testing when AI workflow is not available
-  begin
-    prompt_text = generation_params[:prompt] || "Demo form from document upload"
-    
-    # Create the form
-    form = current_user.forms.create!(
-      name: extract_form_name_from_prompt(prompt_text),
-      description: "Generated from AI prompt: #{prompt_text.truncate(100)}",
-      category: 'survey',
-      ai_enabled: true,
-      status: 'draft',
-      form_settings: default_form_settings[:form_settings],
-      ai_configuration: default_ai_configuration[:ai_configuration]
-    )
-    
-    # Create some demo questions based on the prompt
-    demo_questions = generate_demo_questions(prompt_text)
-    
-    demo_questions.each_with_index do |question_data, index|
-      form.form_questions.create!(
-        title: question_data[:title],
-        description: question_data[:description],
-        question_type: question_data[:type],
-        position: index + 1,
-        required: question_data[:required] || false,
-        question_config: question_data[:config] || {}
-      )
-    end
-    
-    {
-      success: true,
-      form: form,
-      generation_cost: 0.05,
-      questions_created: demo_questions.length
-    }
-    
-  rescue StandardError => e
-    Rails.logger.error "Failed to create demo form: #{e.message}"
-    {
-      success: false,
-      error_type: 'form_creation_error',
-      message: "Failed to create form: #{e.message}"
-    }
-  end
-end
-
-def extract_form_name_from_prompt(prompt)
-  # Simple extraction logic - look for keywords that suggest form type
-  prompt_lower = prompt.downcase
-  
-  case prompt_lower
-  when /survey|feedback|satisfaction/
-    "Customer Feedback Survey"
-  when /lead|qualification|sales/
-    "Lead Qualification Form"
-  when /registration|signup|event/
-    "Registration Form"
-  when /contact|inquiry|question/
-    "Contact Inquiry Form"
-  when /application|apply|job/
-    "Application Form"
-  when /order|purchase|request/
-    "Service Request Form"
-  else
-    "AI Generated Form"
-  end
-end
-
-def generate_demo_questions(prompt)
-  # Generate demo questions based on prompt keywords
-  prompt_lower = prompt.downcase
-  questions = []
-  
-  # Always include basic contact info
-  questions << {
-    title: "What's your name?",
-    description: "Please provide your full name",
-    type: "text_short",
-    required: true,
-    config: { max_length: 100 }
-  }
-  
-  questions << {
-    title: "What's your email address?",
-    description: "We'll use this to contact you",
-    type: "email",
-    required: true
-  }
-  
-  # Add specific questions based on prompt content
-  if prompt_lower.include?('survey') || prompt_lower.include?('feedback')
-    questions << {
-      title: "How satisfied are you with our service?",
-      type: "rating",
-      required: true,
-      config: { min_value: 1, max_value: 5, labels: { 1 => "Very Dissatisfied", 5 => "Very Satisfied" } }
-    }
-    
-    questions << {
-      title: "What could we improve?",
-      type: "text_long",
-      config: { max_length: 500 }
-    }
-  end
-  
-  if prompt_lower.include?('lead') || prompt_lower.include?('business')
-    questions << {
-      title: "What's your company name?",
-      type: "text_short",
-      required: true
-    }
-    
-    questions << {
-      title: "What's your budget range?",
-      type: "single_choice",
-      config: { 
-        options: ["Under $1,000", "$1,000 - $5,000", "$5,000 - $10,000", "$10,000+"] 
-      }
-    }
-  end
-  
-  if prompt_lower.include?('event') || prompt_lower.include?('registration')
-    questions << {
-      title: "How did you hear about this event?",
-      type: "single_choice",
-      config: { 
-        options: ["Social Media", "Email", "Website", "Friend Referral", "Other"] 
-      }
-    }
-    
-    questions << {
-      title: "Any dietary restrictions?",
-      type: "text_short",
-      config: { placeholder: "Please specify any dietary needs" }
-    }
-  end
-  
-  # Always end with an open feedback question
-  questions << {
-    title: "Is there anything else you'd like us to know?",
-    type: "text_long",
-    config: { max_length: 1000, placeholder: "Optional additional comments..." }
-  }
-  
-  questions
-end
-
-  def classify_error_from_message(message)
-    case message.downcase
-    when /monthly ai usage limit exceeded/, /credit.*limit.*exceeded/
-      'credit_limit_exceeded'
-    when /insufficient.*credit/
-      'insufficient_credits'
-    when /premium.*subscription/, /subscription.*required/
-      'subscription_required'
-    when /content too long/
-      'content_length_error'
-    when /content too short/
-      'content_length_error'
-    when /unsupported file type/
-      'invalid_file_type'
-    when /file.*too large/
-      'file_too_large'
-    when /failed to process document/
-      'document_processing_error'
-    when /ai.*failed/, /llm.*failed/
-      'llm_error'
-    when /invalid json/, /json.*parse/
-      'json_parse_error'
-    when /analysis.*failed/
-      'analysis_validation_error'
-    when /generation.*failed/
-      'generation_validation_error'
-    when /timeout/
-      'timeout_error'
-    when /network/, /connection/
-      'network_error'
-    when /database/, /save.*failed/
-      'database_error'
-    else
-      'unknown_error'
-    end
-  end
-
-  def ai_generation_params
-    params.permit(:prompt, :document, :max_questions, :complexity)
-  end
-
-  def categorize_error_type(error_message)
-    case error_message.downcase
-    when /monthly.*ai.*usage.*limit.*exceeded/, /credit.*limit.*exceeded/
-      'credit_limit_exceeded'
-    when /insufficient.*credit/
-      'insufficient_credits'
-    when /premium.*subscription/, /subscription.*required/
-      'subscription_required'
-    when /content too long/
-      'content_length_error'
-    when /content too short/
-      'content_length_error'
-    when /unsupported file type/
-      'invalid_file_type'
-    when /file.*too large/
-      'file_too_large'
-    when /failed to process document/
-      'document_processing_error'
-    when /ai.*failed/, /llm.*failed/
-      'llm_error'
-    when /invalid json/, /json.*parse/
-      'json_parse_error'
-    when /analysis.*failed/
-      'analysis_validation_error'
-    when /generation.*failed/
-      'generation_validation_error'
-    when /timeout/
-      'timeout_error'
-    when /network/, /connection/
-      'network_error'
-    when /database/, /save.*failed/
-      'database_error'
-    else
-      'unknown_error'
-    end
-  end
-end
-</file>
-
 <file path="controllers/forms_controller.rb">
 # frozen_string_literal: true
 
 class FormsController < ApplicationController
   include PaymentErrorHandling
   include PaymentAnalyticsTrackable
+  include SafePagination
   
   before_action :authenticate_user!
   before_action :set_form, only: [:show, :edit, :update, :destroy, :publish, :unpublish, :duplicate, :analytics, :export, :preview, :responses, :download_responses, :payment_setup_status, :has_payment_questions]
@@ -9379,10 +8346,13 @@ class FormsController < ApplicationController
   def responses
     authorize @form, :responses?
     
-    @responses = @form.form_responses
-                      .includes(:question_responses, :dynamic_questions)
-                      .order(created_at: :desc)
-                      .page(params[:page]).per(20)
+    @responses = safe_paginate(
+      @form.form_responses
+           .includes(:question_responses, :dynamic_questions)
+           .order(created_at: :desc),
+      page: params[:page],
+      per_page: params[:per_page] || 20
+    )
 
     respond_to do |format|
       format.html
@@ -10049,8 +9019,8 @@ class GoogleIntegrationsController < ApplicationController
   def revoke_google_token(integration)
     begin
       auth = Signet::OAuth2::Client.new(
-        client_id: Rails.application.credentials.dig(:google_sheets_integration, :client_id),
-        client_secret: Rails.application.credentials.dig(:google_sheets_integration, :client_secret),
+        client_id: GoogleSheets::ConfigService.oauth_client_id,
+        client_secret: GoogleSheets::ConfigService.oauth_client_secret,
         access_token: integration.access_token
       )
       
@@ -10186,21 +9156,13 @@ class GoogleOauthController < ApplicationController
   private
 
   def oauth_client
-    credentials = Rails.application.credentials.google_sheets_integration
-    
-    unless credentials.present?
-      raise "Google OAuth credentials not configured. Please configure google_sheets_integration in Rails credentials."
-    end
-    
-    env_credentials = credentials[Rails.env.to_sym]
-    
-    unless env_credentials.present?
-      raise "Google OAuth credentials not found for #{Rails.env} environment."
+    unless GoogleSheets::ConfigService.oauth_configured?
+      raise "Google OAuth credentials not configured. Please configure GOOGLE_SHEETS_CLIENT_ID and GOOGLE_SHEETS_CLIENT_SECRET environment variables for production, or google_sheets_integration in Rails credentials for development."
     end
     
     Signet::OAuth2::Client.new(
-      client_id: env_credentials[:client_id],
-      client_secret: env_credentials[:client_secret],
+      client_id: GoogleSheets::ConfigService.oauth_client_id,
+      client_secret: GoogleSheets::ConfigService.oauth_client_secret,
       authorization_uri: 'https://accounts.google.com/o/oauth2/auth',
       token_credential_uri: 'https://oauth2.googleapis.com/token',
       redirect_uri: google_oauth_callback_url
@@ -10236,6 +9198,92 @@ class GoogleOauthController < ApplicationController
     else
       raise "Failed to fetch user info: #{response.code}"
     end
+  end
+end
+</file>
+
+<file path="controllers/health_controller.rb">
+class HealthController < ApplicationController
+  # Skip authentication for health checks
+  skip_before_action :authenticate_user!, if: :devise_controller?
+  
+  def show
+    # Basic health check - just return 200 if app is running
+    render json: { 
+      status: 'ok', 
+      timestamp: Time.current.iso8601,
+      version: Rails.application.config.version || '1.0.0'
+    }
+  end
+  
+  def detailed
+    # Detailed health check with service status
+    checks = {
+      database: check_database,
+      redis: check_redis,
+      sidekiq: check_sidekiq
+    }
+    
+    overall_status = checks.values.all? { |check| check[:status] == 'ok' } ? 'ok' : 'error'
+    
+    render json: {
+      status: overall_status,
+      timestamp: Time.current.iso8601,
+      version: Rails.application.config.version || '1.0.0',
+      checks: checks
+    }, status: overall_status == 'ok' ? 200 : 503
+  end
+  
+  private
+  
+  def check_database
+    ActiveRecord::Base.connection.execute('SELECT 1')
+    { status: 'ok', message: 'Database connection successful' }
+  rescue => e
+    { status: 'error', message: e.message }
+  end
+  
+  def check_redis
+    # Use RedisErrorLogger for comprehensive testing and logging
+    connection_successful = RedisErrorLogger.test_and_log_connection(component: 'health_check')
+    
+    if connection_successful
+      diagnostics = RedisErrorLogger.get_connection_diagnostics
+      { 
+        status: 'ok', 
+        message: 'Redis connection successful',
+        diagnostics: diagnostics.slice(:redis_version, :connected_clients, :used_memory_human)
+      }
+    else
+      diagnostics = RedisErrorLogger.get_connection_diagnostics
+      { 
+        status: 'error', 
+        message: diagnostics[:connection_error] || 'Redis connection failed',
+        diagnostics: diagnostics
+      }
+    end
+  rescue => e
+    RedisErrorLogger.log_redis_error(e, {
+      component: 'health_controller',
+      operation: 'health_check'
+    })
+    
+    { status: 'error', message: e.message }
+  end
+  
+  def check_sidekiq
+    # Check if Sidekiq is processing jobs
+    stats = Sidekiq::Stats.new
+    { 
+      status: 'ok', 
+      message: 'Sidekiq is running',
+      processed: stats.processed,
+      failed: stats.failed,
+      busy: stats.workers_size,
+      queues: stats.queues
+    }
+  rescue => e
+    { status: 'error', message: e.message }
   end
 end
 </file>
@@ -12508,21 +11556,60 @@ module ApplicationHelper
 end
 </file>
 
+<file path="helpers/content_security_policy_helper.rb">
+# frozen_string_literal: true
+
+# Content Security Policy Helper
+# Provides utilities for working with CSP nonces and secure inline scripts
+module ContentSecurityPolicyHelper
+  # Get the current CSP nonce for scripts
+  def csp_script_nonce
+    content_security_policy_nonce
+  end
+
+  # Get the current CSP nonce for styles
+  def csp_style_nonce
+    content_security_policy_nonce
+  end
+
+  # Create a script tag with proper CSP nonce
+  def safe_javascript_tag(content = nil, **options, &block)
+    options[:nonce] = csp_script_nonce if Rails.env.production?
+    
+    if block_given?
+      javascript_tag(**options, &block)
+    else
+      javascript_tag(content, **options)
+    end
+  end
+
+  # Create a style tag with proper CSP nonce
+  def safe_style_tag(content = nil, **options, &block)
+    options[:nonce] = csp_style_nonce if Rails.env.production?
+    
+    if block_given?
+      content_tag(:style, **options, &block)
+    else
+      content_tag(:style, content, **options)
+    end
+  end
+
+  # Check if CSP is enabled
+  def csp_enabled?
+    Rails.env.production? && Rails.application.config.content_security_policy.present?
+  end
+
+  # Get CSP report URI if configured
+  def csp_report_uri
+    Rails.application.config.content_security_policy_report_only ? '/csp-report' : nil
+  end
+end
+</file>
+
 <file path="helpers/google_integration_helper.rb">
 module GoogleIntegrationHelper
   def google_oauth_configured?
-    begin
-      credentials = Rails.application.credentials.google_sheets_integration
-      return false unless credentials.present?
-      
-      env_credentials = credentials[Rails.env.to_sym]
-      return false unless env_credentials.present?
-      
-      env_credentials[:client_id].present? && env_credentials[:client_secret].present?
-    rescue => e
-      Rails.logger.warn "Error checking Google OAuth configuration: #{e.message}"
-      false
-    end
+    GoogleSheets::ConfigService.oauth_configured?
   end
 
   def google_oauth_status_for_user(user)
@@ -16282,6 +15369,11 @@ export default class extends Controller {
     }, 100)
   }
 
+  disconnect() {
+    // Clean up any resources when controller is disconnected
+    // Remove any pending timeouts or event listeners if needed
+  }
+
   setupTypeChanged() {
     this.updateSetupOptions()
   }
@@ -16303,7 +15395,7 @@ export default class extends Controller {
     }
   }
 
-  async testConnection() {
+  async testConnection(event) {
     const button = event.target
     const originalText = button.innerHTML
     
@@ -16343,7 +15435,7 @@ export default class extends Controller {
     }
   }
 
-  async setupIntegration() {
+  async setupIntegration(event) {
     const button = event.target
     const originalText = button.innerHTML
     
@@ -16402,7 +15494,7 @@ export default class extends Controller {
     }
   }
 
-  async exportNow() {
+  async exportNow(event) {
     const button = event.target
     const originalText = button.innerHTML
     
@@ -16442,7 +15534,7 @@ export default class extends Controller {
     }
   }
 
-  async toggleAutoSync() {
+  async toggleAutoSync(event) {
     const checkbox = event.target
     const isEnabled = checkbox.checked
 
@@ -16470,7 +15562,7 @@ export default class extends Controller {
     }
   }
 
-  async disconnect() {
+  async disconnectIntegration(event) {
     if (!confirm('Are you sure you want to disconnect Google Sheets? This will stop automatic syncing.')) {
       return
     }
@@ -21440,6 +20532,8 @@ end
 
 <file path="jobs/forms/integration_trigger_job.rb">
 # frozen_string_literal: true
+require 'net/http'
+require 'openssl'
 
 module Forms
   # Background job responsible for triggering external integrations when form events occur
@@ -21449,9 +20543,10 @@ module Forms
     
     # Retry on specific errors that might be temporary (network issues, API rate limits)
     retry_on StandardError, wait: :polynomially_longer, attempts: 3
-    retry_on Net::TimeoutError, wait: 5.seconds, attempts: 5
+    retry_on Timeout::Error, wait: 5.seconds, attempts: 5
     retry_on Net::HTTPError, wait: 10.seconds, attempts: 3
-    
+
+        
     # Discard if records are not found or configuration is invalid
     discard_on ActiveRecord::RecordNotFound, ArgumentError
     
@@ -22599,7 +21694,7 @@ module Forms
 end
 </file>
 
-<file path="jobs/forms/process_ai_workflow_job.rb">
+<file path="jobs/forms/process_a_i_workflow_job.rb">
 # frozen_string_literal: true
 
 class Forms::ProcessAIWorkflowJob < ApplicationJob
@@ -22611,11 +21706,12 @@ class Forms::ProcessAIWorkflowJob < ApplicationJob
   circuit_breaker_options(
     failure_threshold: 5,    # Open after 5 failures
     recovery_timeout: 60,    # Try to close after 60 seconds
-    expected_errors: [OpenAI::RateLimitError, Timeout::Error, Net::TimeoutError]
+    expected_errors: [OpenAI::Error, Timeout::Error, Net::OpenTimeout, Net::ReadTimeout]
   )
   
-  retry_on OpenAI::RateLimitError, wait: :exponentially_longer, attempts: 5
-  retry_on Net::TimeoutError, wait: 10.seconds, attempts: 3
+  retry_on OpenAI::Error, wait: :exponentially_longer, attempts: 5
+  retry_on Net::OpenTimeout, wait: 10.seconds, attempts: 3
+  retry_on Net::ReadTimeout, wait: 10.seconds, attempts: 3
   retry_on StandardError, wait: 5.seconds, attempts: 3
   
   def perform(form_response_id, question_id, answer_data)
@@ -22663,9 +21759,14 @@ class Forms::ProcessAIWorkflowJob < ApplicationJob
       Rails.logger.error "AI Circuit breaker open for form #{form_response.form_id}: #{e.message}"
       handle_circuit_breaker_open(form_response)
       
-    rescue OpenAI::RateLimitError => e
-      Rails.logger.warn "OpenAI rate limit hit: #{e.message}"
-      reschedule_job(30.seconds.from_now, form_response_id, question_id, answer_data)
+    rescue OpenAI::Error => e
+      if e.message.include?("rate limit")
+        Rails.logger.warn "OpenAI rate limit hit: #{e.message}"
+        reschedule_job(30.seconds.from_now, form_response_id, question_id, answer_data)
+      else
+        Rails.logger.error "OpenAI API error: #{e.message}"
+        raise e
+      end
       
     rescue StandardError => e
       Rails.logger.error "AI Workflow failed for form #{form_response.form_id}: #{e.message}"
@@ -24943,47 +24044,24 @@ class TrialExpirationJob < ApplicationJob
   queue_as :default
 
   def perform
-    # Find users whose trial expires today
-    expiring_today = User.where(
-      subscription_status: 'trialing',
-      trial_ends_at: Date.current.beginning_of_day..Date.current.end_of_day
+    # Find users whose trials have expired
+    expired_users = User.where(
+      'trial_expires_at < ? AND subscription_status = ?',
+      Time.current,
+      'trial'
     )
 
-    expiring_today.find_each do |user|
-      # Send expiration warning email
-      UserMailer.trial_expiring_today(user).deliver_now
-      Rails.logger.info "Trial expiring today for user: #{user.email}"
-    end
-
-    # Find users whose trial expired yesterday (grace period)
-    expired_yesterday = User.where(
-      subscription_status: 'trialing',
-      trial_ends_at: 1.day.ago.beginning_of_day..1.day.ago.end_of_day
-    )
-
-    expired_yesterday.find_each do |user|
-      # Downgrade user to basic tier
-      user.update!(
-        subscription_tier: 'basic',
-        subscription_status: 'expired'
-      )
+    expired_users.find_each do |user|
+      # Update user status
+      user.update!(subscription_status: 'expired')
       
-      # Send trial expired email with upgrade link
+      # Send expiration notification
       UserMailer.trial_expired(user).deliver_now
-      Rails.logger.info "Trial expired for user: #{user.email}, downgraded to basic"
+      
+      Rails.logger.info "Trial expired for user #{user.id} (#{user.email})"
     end
 
-    # Find users whose trial expires in 3 days (early warning)
-    expiring_in_3_days = User.where(
-      subscription_status: 'trialing',
-      trial_ends_at: 3.days.from_now.beginning_of_day..3.days.from_now.end_of_day
-    )
-
-    expiring_in_3_days.find_each do |user|
-      # Send early warning email
-      UserMailer.trial_expiring_soon(user).deliver_now
-      Rails.logger.info "Trial expiring in 3 days for user: #{user.email}"
-    end
+    Rails.logger.info "Processed #{expired_users.count} expired trials"
   end
 end
 </file>
@@ -25159,6 +24237,188 @@ class UserSuspensionJob < ApplicationJob
     Rails.logger.error "User with ID #{user_id} not found for suspension notification"
   end
 end
+</file>
+
+<file path="lib/circuit_breaker/job_integration.rb">
+# frozen_string_literal: true
+
+module CircuitBreaker
+    class OpenError < StandardError; end
+    
+    module JobIntegration
+      extend ActiveSupport::Concern
+      
+      included do
+        class_attribute :circuit_breaker_config
+      end
+      
+      class_methods do
+        def circuit_breaker_options(options = {})
+          self.circuit_breaker_config = {
+            failure_threshold: options[:failure_threshold] || 5,
+            recovery_timeout: options[:recovery_timeout] || 60,
+            expected_errors: options[:expected_errors] || []
+          }.freeze
+        end
+      end
+      
+      private
+      
+      def with_circuit_breaker(&block)
+        circuit_breaker = get_or_create_circuit_breaker
+        
+        if circuit_breaker.open?
+          if circuit_breaker.should_attempt_reset?
+            circuit_breaker.attempt_reset
+          else
+            raise CircuitBreaker::OpenError, "Circuit breaker is open"
+          end
+        end
+        
+        begin
+          result = block.call
+          circuit_breaker.record_success
+          result
+        rescue => error
+          if expected_error?(error)
+            circuit_breaker.record_failure
+            if circuit_breaker.should_trip?
+              circuit_breaker.trip!
+            end
+          end
+          raise error
+        end
+      end
+      
+      def get_or_create_circuit_breaker
+        @circuit_breaker ||= CircuitBreakerState.new(
+          job_class: self.class.name,
+          config: self.class.circuit_breaker_config || {}
+        )
+      end
+      
+      def expected_error?(error)
+        expected_errors = self.class.circuit_breaker_config&.dig(:expected_errors) || []
+        expected_errors.any? { |error_class| error.is_a?(error_class) }
+      end
+    end
+    
+    class CircuitBreakerState
+      attr_reader :job_class, :config, :failure_count, :last_failure_time, :state
+      
+      def initialize(job_class:, config:)
+        @job_class = job_class
+        @config = config
+        @failure_count = get_failure_count
+        @last_failure_time = get_last_failure_time
+        @state = determine_state
+      end
+      
+      def open?
+        @state == :open
+      end
+      
+      def closed?
+        @state == :closed
+      end
+      
+      def half_open?
+        @state == :half_open
+      end
+      
+      def should_attempt_reset?
+        open? && time_since_last_failure > recovery_timeout
+      end
+      
+      def should_trip?
+        @failure_count >= failure_threshold
+      end
+      
+      def record_success
+        reset_circuit_breaker
+      end
+      
+      def record_failure
+        increment_failure_count
+        update_last_failure_time
+        @failure_count = get_failure_count
+      end
+      
+      def trip!
+        @state = :open
+        Rails.logger.warn "Circuit breaker tripped for #{@job_class}"
+      end
+      
+      def attempt_reset
+        @state = :half_open
+        Rails.logger.info "Circuit breaker attempting reset for #{@job_class}"
+      end
+      
+      private
+      
+      def failure_threshold
+        @config[:failure_threshold] || 5
+      end
+      
+      def recovery_timeout
+        @config[:recovery_timeout] || 60
+      end
+      
+      def cache_key_prefix
+        "circuit_breaker:#{@job_class}"
+      end
+      
+      def failure_count_key
+        "#{cache_key_prefix}:failures"
+      end
+      
+      def last_failure_key
+        "#{cache_key_prefix}:last_failure"
+      end
+      
+      def get_failure_count
+        Rails.cache.read(failure_count_key) || 0
+      end
+      
+      def get_last_failure_time
+        Rails.cache.read(last_failure_key)
+      end
+      
+      def increment_failure_count
+        Rails.cache.write(failure_count_key, get_failure_count + 1, expires_in: 1.hour)
+      end
+      
+      def update_last_failure_time
+        Rails.cache.write(last_failure_key, Time.current, expires_in: 1.hour)
+      end
+      
+      def reset_circuit_breaker
+        Rails.cache.delete(failure_count_key)
+        Rails.cache.delete(last_failure_key)
+        @failure_count = 0
+        @last_failure_time = nil
+        @state = :closed
+        Rails.logger.info "Circuit breaker reset for #{@job_class}"
+      end
+      
+      def time_since_last_failure
+        return Float::INFINITY unless @last_failure_time
+        Time.current - @last_failure_time
+      end
+      
+      def determine_state
+        if @failure_count >= failure_threshold
+          if @last_failure_time && time_since_last_failure > recovery_timeout
+            :half_open
+          else
+            :open
+          end
+        else
+          :closed
+        end
+      end
+    end
+  end
 </file>
 
 <file path="mailers/application_mailer.rb">
@@ -30259,28 +29519,68 @@ class User < ApplicationRecord
   # Admin notification methods
   def notify_admin_of_registration
     AdminNotificationService.notify(:user_registered, user: self)
+  rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+    Rails.logger.warn "Redis unavailable during user registration notification: #{e.message}"
+    Rails.logger.info "User registration completed successfully, but admin notification skipped due to Redis connectivity"
+    # Don't re-raise the error - allow user creation to continue
+  rescue => e
+    Rails.logger.error "Unexpected error during user registration notification: #{e.message}"
+    Rails.logger.error "User ID: #{id}, Email: #{email}"
+    
+    # Send to error tracking service if available
+    if defined?(Sentry)
+      Sentry.capture_exception(e, extra: {
+        context: 'user_registration_notification',
+        user_id: id,
+        user_email: email
+      })
+    end
+    
+    # Don't re-raise the error - allow user creation to continue
   end
 
   def notify_admin_of_subscription_changes
-    if subscription_tier_changed? && subscription_tier_was.present?
-      if subscription_tier == 'premium' && subscription_tier_was == 'basic'
-        AdminNotificationService.notify(:user_upgraded, 
-          user: self, 
-          from_plan: subscription_tier_was, 
-          to_plan: subscription_tier
-        )
-      elsif subscription_tier == 'basic' && subscription_tier_was == 'premium'
-        AdminNotificationService.notify(:user_downgraded, 
-          user: self, 
-          from_plan: subscription_tier_was, 
-          to_plan: subscription_tier
-        )
+    begin
+      if subscription_tier_changed? && subscription_tier_was.present?
+        if subscription_tier == 'premium' && subscription_tier_was == 'basic'
+          AdminNotificationService.notify(:user_upgraded, 
+            user: self, 
+            from_plan: subscription_tier_was, 
+            to_plan: subscription_tier
+          )
+        elsif subscription_tier == 'basic' && subscription_tier_was == 'premium'
+          AdminNotificationService.notify(:user_downgraded, 
+            user: self, 
+            from_plan: subscription_tier_was, 
+            to_plan: subscription_tier
+          )
+        end
       end
-    end
 
-    # Notify when trial starts
-    if trial_ends_at_changed? && trial_ends_at.present? && trial_ends_at_was.nil?
-      AdminNotificationService.notify(:trial_started, user: self)
+      # Notify when trial starts
+      if trial_ends_at_changed? && trial_ends_at.present? && trial_ends_at_was.nil?
+        AdminNotificationService.notify(:trial_started, user: self)
+      end
+    rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+      Rails.logger.warn "Redis unavailable during subscription change notification: #{e.message}"
+      Rails.logger.info "Subscription change completed successfully, but admin notification skipped due to Redis connectivity"
+      # Don't re-raise the error - allow subscription change to continue
+    rescue => e
+      Rails.logger.error "Unexpected error during subscription change notification: #{e.message}"
+      Rails.logger.error "User ID: #{id}, Email: #{email}"
+      
+      # Send to error tracking service if available
+      if defined?(Sentry)
+        Sentry.capture_exception(e, extra: {
+          context: 'subscription_change_notification',
+          user_id: id,
+          user_email: email,
+          subscription_tier_was: subscription_tier_was,
+          subscription_tier: subscription_tier
+        })
+      end
+      
+      # Don't re-raise the error - allow subscription change to continue
     end
   end
 end
@@ -31467,30 +30767,55 @@ module Ai
           cache_version: '1.0'
         }
         
-        Rails.cache.write(cache_key, cache_data, expires_in: CACHE_TTLS[:content_analysis])
-        
-        Rails.logger.info "Cached content analysis for hash: #{content_hash[0..8]}..."
-        cache_data
+        begin
+          Rails.cache.write(cache_key, cache_data, expires_in: CACHE_TTLS[:content_analysis])
+          
+          Rails.logger.info "Cached content analysis for hash: #{content_hash[0..8]}..."
+          cache_data
+        rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+          RedisErrorLogger.log_connection_error(e, {
+            component: 'ai_caching_service',
+            operation: 'cache_content_analysis',
+            cache_key: cache_key,
+            content_hash: content_hash[0..8]
+          })
+          
+          # Return the data even if caching failed
+          cache_data
+        end
       end
       
       # Retrieve cached content analysis
       def get_cached_content_analysis(content_hash)
         cache_key = build_cache_key(:content_analysis, content_hash)
-        cached_data = Rails.cache.read(cache_key)
         
-        if cached_data
-          Rails.logger.info "Cache hit for content analysis: #{content_hash[0..8]}..."
+        begin
+          cached_data = Rails.cache.read(cache_key)
           
-          # Track cache hit for analytics
-          track_cache_hit(:content_analysis, content_hash)
+          if cached_data
+            Rails.logger.info "Cache hit for content analysis: #{content_hash[0..8]}..."
+            
+            # Track cache hit for analytics
+            track_cache_hit(:content_analysis, content_hash)
+            
+            cached_data[:analysis_result]
+          else
+            Rails.logger.debug "Cache miss for content analysis: #{content_hash[0..8]}..."
+            
+            # Track cache miss for analytics
+            track_cache_miss(:content_analysis, content_hash)
+            
+            nil
+          end
+        rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+          RedisErrorLogger.log_connection_error(e, {
+            component: 'ai_caching_service',
+            operation: 'get_cached_content_analysis',
+            cache_key: cache_key,
+            content_hash: content_hash[0..8]
+          })
           
-          cached_data[:analysis_result]
-        else
-          Rails.logger.debug "Cache miss for content analysis: #{content_hash[0..8]}..."
-          
-          # Track cache miss for analytics
-          track_cache_miss(:content_analysis, content_hash)
-          
+          # Return nil when cache is unavailable
           nil
         end
       end
@@ -31864,7 +31189,18 @@ module Ai
       # Get cache keys by pattern (Redis-specific)
       def get_cache_keys_by_pattern(pattern)
         if Rails.cache.respond_to?(:redis)
-          Rails.cache.redis.keys(pattern)
+          begin
+            Rails.cache.redis.keys(pattern)
+          rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+            RedisErrorLogger.log_connection_error(e, {
+              component: 'ai_caching_service',
+              operation: 'get_cache_keys_by_pattern',
+              pattern: pattern
+            })
+            
+            # Return empty array when Redis is unavailable
+            []
+          end
         else
           []
         end
@@ -36498,8 +35834,8 @@ module GoogleSheets
       auth = Signet::OAuth2::Client.new(
         access_token: integration.access_token,
         refresh_token: integration.refresh_token,
-        client_id: Rails.application.credentials.dig(:google_sheets_integration, :client_id),
-        client_secret: Rails.application.credentials.dig(:google_sheets_integration, :client_secret)
+        client_id: GoogleSheets::ConfigService.oauth_client_id,
+        client_secret: GoogleSheets::ConfigService.oauth_client_secret
       )
       
       auth
@@ -36521,6 +35857,105 @@ module GoogleSheets
         ServiceResult.failure("Google API error: #{error.message}")
       else
         ServiceResult.failure("Unexpected error: #{error.message}")
+      end
+    end
+  end
+end
+</file>
+
+<file path="services/google_sheets/config_service.rb">
+# frozen_string_literal: true
+
+module GoogleSheets
+  class ConfigService
+    class << self
+      # Get Google OAuth client credentials
+      def oauth_client_id
+        if Rails.env.production?
+          ENV['GOOGLE_SHEETS_CLIENT_ID']
+        else
+          Rails.application.credentials.dig(:google_sheets_integration, :client_id)
+        end
+      end
+
+      def oauth_client_secret
+        if Rails.env.production?
+          ENV['GOOGLE_SHEETS_CLIENT_SECRET']
+        else
+          Rails.application.credentials.dig(:google_sheets_integration, :client_secret)
+        end
+      end
+
+      # Check if OAuth credentials are configured
+      def oauth_configured?
+        oauth_client_id.present? && oauth_client_secret.present?
+      end
+
+      # Get service account credentials (for API access)
+      def service_account_credentials
+        if Rails.env.production?
+          # In production, we might use service account JSON from env var
+          service_account_json = ENV['GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON']
+          if service_account_json.present?
+            JSON.parse(service_account_json)
+          else
+            nil
+          end
+        else
+          # In development, use Rails credentials
+          Rails.application.credentials.google_sheets
+        end
+      end
+
+      # Check if service account is configured
+      def service_account_configured?
+        if Rails.env.production?
+          ENV['GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON'].present?
+        else
+          Rails.application.credentials.google_sheets.present?
+        end
+      end
+
+      # Get configuration summary for debugging
+      def configuration_summary
+        {
+          environment: Rails.env,
+          oauth_configured: oauth_configured?,
+          service_account_configured: service_account_configured?,
+          oauth_client_id_present: oauth_client_id.present?,
+          oauth_client_secret_present: oauth_client_secret.present?,
+          production_env_vars: Rails.env.production? ? {
+            google_sheets_client_id: ENV['GOOGLE_SHEETS_CLIENT_ID'].present?,
+            google_sheets_client_secret: ENV['GOOGLE_SHEETS_CLIENT_SECRET'].present?,
+            google_sheets_service_account_json: ENV['GOOGLE_SHEETS_SERVICE_ACCOUNT_JSON'].present?
+          } : nil
+        }
+      end
+
+      # Log configuration status
+      def log_configuration_status
+        summary = configuration_summary
+        
+        Rails.logger.info "Google Sheets Configuration Summary:"
+        Rails.logger.info "  Environment: #{summary[:environment]}"
+        Rails.logger.info "  OAuth configured: #{summary[:oauth_configured]}"
+        Rails.logger.info "  Service Account configured: #{summary[:service_account_configured]}"
+        
+        if Rails.env.production? && summary[:production_env_vars]
+          Rails.logger.info "  Production Environment Variables:"
+          summary[:production_env_vars].each do |key, present|
+            status = present ? "✅" : "❌"
+            Rails.logger.info "    #{key.to_s.upcase}: #{status}"
+          end
+        end
+
+        unless summary[:oauth_configured]
+          Rails.logger.warn "Google Sheets OAuth not configured - integration features will be disabled"
+        end
+
+        unless summary[:service_account_configured]
+          Rails.logger.warn "Google Sheets Service Account not configured - API features may be limited"
+        end
       end
     end
   end
@@ -36644,45 +36079,91 @@ end
 <file path="services/google_sheets/rate_limiter.rb">
 # frozen_string_literal: true
 
-class RateLimiter
-  def initialize(key)
-    @key = key
-    @redis = Redis.current
-  end
-  
-  def execute(&block)
-    if within_limits?
-      increment_counter
+module GoogleSheets
+  class RateLimiter
+    def initialize(key)
+      @key = key
+      @redis = Redis.current
+    end
+    
+    def execute(&block)
+      if within_limits?
+        increment_counter
+        yield
+      else
+        raise Google::Apis::RateLimitError.new("Rate limit exceeded for #{@key}")
+      end
+    rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+      # Log Redis error but allow operation to continue
+      RedisErrorLogger.log_connection_error(e, {
+        component: 'google_sheets_rate_limiter',
+        operation: 'rate_limit_check',
+        rate_limit_key: @key
+      })
+      
+      # When Redis is unavailable, allow the operation to proceed
+      # This ensures Google Sheets integration doesn't fail due to Redis issues
+      Rails.logger.warn "Rate limiting disabled due to Redis connectivity issues for key: #{@key}"
       yield
-    else
-      raise Google::Apis::RateLimitError.new("Rate limit exceeded for #{@key}")
     end
-  end
-  
-  private
-  
-  def within_limits?
-    current_count < max_requests_per_minute
-  end
-  
-  def current_count
-    @redis.get("rate_limit:#{@key}:#{current_minute}").to_i
-  end
-  
-  def increment_counter
-    key = "rate_limit:#{@key}:#{current_minute}"
-    @redis.multi do |multi|
-      multi.incr(key)
-      multi.expire(key, 60)
+    
+    private
+    
+    def within_limits?
+      current_count < max_requests_per_minute
+    rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+      RedisErrorLogger.log_connection_error(e, {
+        component: 'google_sheets_rate_limiter',
+        operation: 'within_limits_check',
+        rate_limit_key: @key
+      })
+      
+      # When Redis is unavailable, assume we're within limits to avoid blocking operations
+      true
     end
-  end
-  
-  def current_minute
-    Time.current.strftime('%Y%m%d%H%M')
-  end
-  
-  def max_requests_per_minute
-    Rails.application.credentials.dig(:google_sheets_integration, :rate_limits, :requests_per_minute) || 60
+    
+    def current_count
+      @redis.get("rate_limit:#{@key}:#{current_minute}").to_i
+    rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+      RedisErrorLogger.log_connection_error(e, {
+        component: 'google_sheets_rate_limiter',
+        operation: 'current_count_check',
+        rate_limit_key: @key
+      })
+      
+      # Return 0 when Redis is unavailable
+      0
+    end
+    
+    def increment_counter
+      key = "rate_limit:#{@key}:#{current_minute}"
+      @redis.multi do |multi|
+        multi.incr(key)
+        multi.expire(key, 60)
+      end
+    rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+      RedisErrorLogger.log_connection_error(e, {
+        component: 'google_sheets_rate_limiter',
+        operation: 'increment_counter',
+        rate_limit_key: @key,
+        cache_key: key
+      })
+      
+      # Don't raise error, just log it - rate limiting will be disabled
+    end
+    
+    def current_minute
+      Time.current.strftime('%Y%m%d%H%M')
+    end
+    
+    def max_requests_per_minute
+      # Use environment variable in production, fallback to credentials in development
+      if Rails.env.production?
+        ENV['GOOGLE_SHEETS_RATE_LIMIT_PER_MINUTE']&.to_i || 60
+      else
+        Rails.application.credentials.dig(:google_sheets_integration, :rate_limits, :requests_per_minute) || 60
+      end
+    end
   end
 end
 </file>
@@ -36747,20 +36228,47 @@ module GoogleSheets
     end
     
     def populate_data(spreadsheet_id)
+      Rails.logger.info "Starting populate_data for form #{@form.id}"
+      
       # Preparar headers
       headers = build_headers
+      Rails.logger.info "Headers: #{headers.inspect}"
+      
+      # Escribir headers primero
+      update_spreadsheet_batch(spreadsheet_id, [headers])
+      Rails.logger.info "Headers written to spreadsheet"
+      
+      # Contar respuestas totales
+      total_responses = @responses.count
+      Rails.logger.info "Total responses to export: #{total_responses}"
       
       # Preparar filas de datos en lotes
+      all_rows = []
       @responses.find_in_batches(batch_size: @options[:max_rows_per_batch]) do |batch|
-        rows = [headers] if batch == @responses.first(@options[:max_rows_per_batch])
-        rows ||= []
-        
+        Rails.logger.info "Processing batch of #{batch.size} responses"
         batch.each do |response|
-          rows << build_response_row(response)
+          all_rows << build_response_row(response)
         end
+      end
+      
+      Rails.logger.info "Total rows prepared: #{all_rows.size}"
+      
+      # Escribir todas las filas de datos si hay respuestas
+      if all_rows.any?
+        Rails.logger.info "Writing #{all_rows.size} rows to spreadsheet"
+        # Append data starting from row 2 (after headers)
+        range = "Form Responses!A2:Z"
+        value_range = Google::Apis::SheetsV4::ValueRange.new(values: all_rows)
         
-        update_spreadsheet_batch(spreadsheet_id, rows)
-        rows.clear
+        google_client(@integration).update_spreadsheet_values(
+          spreadsheet_id,
+          range,
+          value_range,
+          value_input_option: 'USER_ENTERED'
+        )
+        Rails.logger.info "Data successfully written to spreadsheet"
+      else
+        Rails.logger.warn "No rows to write to spreadsheet"
       end
     end
     
@@ -36781,6 +36289,8 @@ module GoogleSheets
     end
     
     def build_response_row(response)
+      Rails.logger.info "Building row for response #{response.id}"
+      
       row = [
         response.id,
         response.completed_at&.strftime(@options[:date_format]) || 'In Progress',
@@ -36788,10 +36298,14 @@ module GoogleSheets
         response.ip_address
       ]
       
+      Rails.logger.info "Base row data: #{row.inspect}"
+      
       # Agregar respuestas de preguntas del formulario
       @form.form_questions.order(:position).each do |question|
         answer = response.question_responses.find_by(form_question: question)
-        row << format_answer_value(answer&.answer_text)
+        answer_value = format_answer_value(answer&.answer_text)
+        Rails.logger.info "Question '#{question.title}': answer = #{answer_value.inspect}"
+        row << answer_value
       end
       
       # Agregar preguntas dinámicas si está habilitado
@@ -36802,8 +36316,10 @@ module GoogleSheets
         end&.join(' | ') || ''
         
         row += [dynamic_count, dynamic_responses]
+        Rails.logger.info "Added dynamic questions: count=#{dynamic_count}, responses=#{dynamic_responses}"
       end
       
+      Rails.logger.info "Final row: #{row.inspect}"
       row
     end
     
@@ -36814,8 +36330,7 @@ module GoogleSheets
       value.to_s.gsub(/[\r\n]+/, ' ').strip
     end
     
-    def update_spreadsheet_batch(spreadsheet_id, rows)
-      range = "Form Responses!A:Z"
+    def update_spreadsheet_batch(spreadsheet_id, rows, range = "Form Responses!A1:Z")
       value_range = Google::Apis::SheetsV4::ValueRange.new(values: rows)
       
       google_client(@integration).update_spreadsheet_values(
@@ -36918,8 +36433,8 @@ module GoogleSheets
     
     def refresh_authorization_token
       auth = Signet::OAuth2::Client.new(
-        client_id: Rails.application.credentials.dig(:google_sheets_integration, :client_id),
-        client_secret: Rails.application.credentials.dig(:google_sheets_integration, :client_secret),
+        client_id: GoogleSheets::ConfigService.oauth_client_id,
+        client_secret: GoogleSheets::ConfigService.oauth_client_secret,
         refresh_token: @integration.refresh_token
       )
       
@@ -37005,20 +36520,43 @@ class Integrations::GoogleSheetsService < ApplicationService
     return self.class.failure("No integration configured") unless @integration&.can_sync?
 
     begin
-      # Clear existing data (except headers)
-      clear_data_rows
+      Rails.logger.info "Starting export for form #{@form.id} (#{@form.name})"
       
-      # Get all responses
-      responses = @form.form_responses.includes(:question_responses)
-      
-      if responses.any?
-        rows = build_response_rows(responses)
-        append_rows(rows)
+      # Validate form has questions
+      if @form.form_questions.empty?
+        return self.class.failure("Form has no questions to export")
       end
-
+      
+      # Load responses with proper associations
+      responses = load_responses_for_export
+      Rails.logger.info "Found #{responses.count} responses to export"
+      
+      # Validate responses have data
+      responses_with_data = responses.select { |r| r.question_responses.any? }
+      Rails.logger.info "#{responses_with_data.count} responses have answer data"
+      
+      if responses_with_data.empty?
+        Rails.logger.warn "No responses with data found"
+        return self.class.success("No responses with data to export")
+      end
+      
+      # Clear and rebuild data
+      clear_data_rows
+      rows = build_response_rows(responses_with_data)
+      
+      Rails.logger.info "Built #{rows.size} data rows"
+      rows.each_with_index do |row, index|
+        Rails.logger.debug "Row #{index + 1}: #{row.inspect}"
+      end
+      
+      append_rows(rows) if rows.any?
+      
       @integration.mark_sync_success!
-      self.class.success("Exported #{responses.count} responses successfully")
+      self.class.success("Exported #{responses_with_data.count} responses successfully")
+      
     rescue => e
+      Rails.logger.error "Export failed: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
       @integration.mark_sync_error!(e)
       self.class.failure("Export failed: #{e.message}")
     end
@@ -37028,6 +36566,22 @@ class Integrations::GoogleSheetsService < ApplicationService
     return unless @integration&.can_sync? && @integration.auto_sync?
 
     begin
+      # Validate response has data and is in exportable status
+      unless ['completed', 'partial'].include?(response.status)
+        Rails.logger.info "Skipping sync for response #{response.id} with status: #{response.status}"
+        return self.class.success("Response not in exportable status")
+      end
+      
+      unless response.question_responses.any?
+        Rails.logger.info "Skipping sync for response #{response.id} - no answer data"
+        return self.class.success("Response has no answer data")
+      end
+      
+      # Ensure response is loaded with proper associations
+      response = @form.form_responses
+                      .includes(question_responses: :form_question)
+                      .find(response.id)
+      
       row = build_response_row(response)
       append_rows([row])
       
@@ -37040,19 +36594,24 @@ class Integrations::GoogleSheetsService < ApplicationService
 
   private
 
+  def load_responses_for_export
+    @form.form_responses
+      .includes(question_responses: :form_question)
+      .where(status: ['completed', 'partial'])
+      .order(created_at: :desc)
+  end
+
   def authorize_service
     # Use user's OAuth token if available, fallback to service account
     user_integration = @form.user.google_integration
     
     if user_integration&.valid_token?
       # Use user's OAuth2 credentials
-      credentials = Rails.application.credentials.google_sheets_integration[Rails.env.to_sym]
-      
       Signet::OAuth2::Client.new(
         access_token: user_integration.access_token,
         refresh_token: user_integration.refresh_token,
-        client_id: credentials[:client_id],
-        client_secret: credentials[:client_secret],
+        client_id: GoogleSheets::ConfigService.oauth_client_id,
+        client_secret: GoogleSheets::ConfigService.oauth_client_secret,
         token_credential_uri: 'https://oauth2.googleapis.com/token'
       )
     else
@@ -37101,37 +36660,43 @@ class Integrations::GoogleSheetsService < ApplicationService
   end
 
   def build_response_row(response)
+    Rails.logger.info "Building row for response #{response.id} (status: #{response.status})"
+    
     row = [
       response.created_at.strftime('%Y-%m-%d %H:%M:%S'),
       response.id
     ]
 
     @form.form_questions.order(:position).each do |question|
-      answer = response.question_responses.find { |a| a.form_question_id == question.id }
-      row << format_answer_value(answer, question)
+      answer = response.question_responses.find_by(form_question_id: question.id)
+      Rails.logger.info "Question '#{question.title}' (ID: #{question.id}): found answer = #{answer.present?}"
+      
+      if answer.present?
+        Rails.logger.info "Answer data: #{answer.answer_data.inspect}"
+        Rails.logger.info "Answer text: #{answer.answer_text.inspect}"
+      end
+      
+      formatted_value = format_answer_value(answer, question)
+      Rails.logger.info "Question '#{question.title}': formatted value = #{formatted_value.inspect}"
+      row << formatted_value
     end
 
+    Rails.logger.info "Final row: #{row.inspect}"
     row
   end
 
   def format_answer_value(answer, question)
-    return '' unless answer&.answer_data.present?
+    Rails.logger.debug "Formatting answer for question #{question.id}: #{answer.inspect}"
+    
+    return '' unless answer.present?
 
-    value = answer.answer_data['value'] || answer.answer_data
-
-    case question.question_type
-    when 'rating'
-      max_value = question.question_config&.dig('max_value') || 5
-      "#{value}/#{max_value}"
-    when 'multiple_choice'
-      value.to_s
-    when 'checkbox'
-      value.is_a?(Array) ? value.join(', ') : value.to_s
-    when 'date'
-      Date.parse(value.to_s).strftime('%Y-%m-%d') rescue value.to_s
-    else
-      value.to_s
-    end
+    # Use the formatted_answer method from QuestionResponse model
+    formatted_value = answer.formatted_answer
+    Rails.logger.debug "Formatted answer: #{formatted_value.inspect}"
+    
+    return '' if formatted_value.blank?
+    
+    formatted_value.to_s
   end
 
   def clear_data_rows
@@ -37986,7 +37551,12 @@ class AdminNotificationService < ApplicationService
     return unless should_notify?
 
     notification = create_notification
-    broadcast_notification(notification) if notification.persisted?
+    
+    # Only attempt broadcast if notification was successfully created
+    if notification&.persisted?
+      broadcast_notification(notification)
+    end
+    
     notification
   end
 
@@ -38001,10 +37571,23 @@ class AdminNotificationService < ApplicationService
     # Skip if event type is not valid
     return false unless AdminNotification::EVENT_TYPES.value?(event_type.to_s)
     
-    # Skip duplicate notifications for certain events
-    return false if duplicate_notification_exists?
+    # Skip duplicate notifications for certain events (with Redis error handling)
+    return false if duplicate_notification_exists_safely?
     
     true
+  end
+
+  def duplicate_notification_exists_safely?
+    return false unless options[:user]
+
+    begin
+      duplicate_notification_exists?
+    rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+      Rails.logger.warn "Redis unavailable for notification validation: #{e.message}"
+      Rails.logger.info "Proceeding with notification due to Redis connectivity issues"
+      # Continue with notification creation when Redis is unavailable
+      false
+    end
   end
 
   def create_notification
@@ -38042,9 +37625,44 @@ class AdminNotificationService < ApplicationService
     else
       create_generic_notification
     end
+  rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+    handle_redis_notification_error(e)
+    nil
   rescue => e
     Rails.logger.error "Failed to create admin notification: #{e.message}"
+    Rails.logger.error "Event type: #{event_type}, User ID: #{options[:user]&.id}"
+    Rails.logger.error "Backtrace: #{e.backtrace.first(5).join("\n")}" if Rails.env.development?
+    
+    # Send to error tracking service if available
+    if defined?(Sentry)
+      Sentry.capture_exception(e, extra: {
+        context: 'admin_notification_creation',
+        event_type: event_type,
+        user_id: options[:user]&.id,
+        options: options.except(:user) # Exclude user object to avoid serialization issues
+      })
+    end
+    
     nil
+  end
+
+  def handle_redis_notification_error(error)
+    Rails.logger.warn "Redis unavailable during admin notification creation: #{error.message}"
+    Rails.logger.info "Critical operation can continue, but notification creation failed due to Redis connectivity"
+    
+    # Log additional context for debugging
+    Rails.logger.debug "Event type: #{event_type}"
+    Rails.logger.debug "User ID: #{options[:user]&.id}"
+    Rails.logger.debug "Redis URL: #{ENV['REDIS_URL']&.gsub(/:[^:@]*@/, ':***@')}"
+    
+    # Send to error tracking service if available
+    if defined?(Sentry)
+      Sentry.capture_exception(error, extra: {
+        context: 'admin_notification_redis_failure',
+        event_type: event_type,
+        user_id: options[:user]&.id
+      })
+    end
   end
 
   def create_generic_notification
@@ -38061,8 +37679,6 @@ class AdminNotificationService < ApplicationService
 
   def duplicate_notification_exists?
     # Prevent duplicate notifications for the same user and event within a short time
-    return false unless options[:user]
-
     AdminNotification.where(
       event_type: event_type.to_s,
       user: options[:user],
@@ -38071,21 +37687,61 @@ class AdminNotificationService < ApplicationService
   end
 
   def broadcast_notification(notification)
-    # Broadcast to admin dashboard using Turbo Streams
-    Turbo::StreamsChannel.broadcast_prepend_to(
-      "admin_notifications",
-      target: "notifications-list",
-      partial: "admin/notifications/notification",
-      locals: { notification: notification }
-    )
+    # Broadcast to admin dashboard using Turbo Streams with Redis error handling
+    broadcast_with_redis_fallback do
+      Turbo::StreamsChannel.broadcast_prepend_to(
+        "admin_notifications",
+        target: "notifications-list",
+        partial: "admin/notifications/notification",
+        locals: { notification: notification }
+      )
 
-    # Update notification counter
-    unread_count = AdminNotification.unread.count
-    Turbo::StreamsChannel.broadcast_update_to(
-      "admin_notifications",
-      target: "notification-counter",
-      html: unread_count > 0 ? unread_count.to_s : ""
-    )
+      # Update notification counter
+      unread_count = AdminNotification.unread.count
+      Turbo::StreamsChannel.broadcast_update_to(
+        "admin_notifications",
+        target: "notification-counter",
+        html: unread_count > 0 ? unread_count.to_s : ""
+      )
+    end
+  end
+
+  def broadcast_with_redis_fallback
+    yield
+  rescue Redis::CannotConnectError, Redis::ConnectionError, Redis::TimeoutError => e
+    handle_redis_broadcast_error(e)
+  rescue StandardError => e
+    # Catch any other Redis-related errors that might not be explicitly Redis exceptions
+    if redis_related_error?(e)
+      handle_redis_broadcast_error(e)
+    else
+      raise e
+    end
+  end
+
+  def handle_redis_broadcast_error(error)
+    Rails.logger.warn "Redis unavailable for admin notification broadcast: #{error.message}"
+    Rails.logger.info "Admin notification created successfully, but real-time broadcast skipped due to Redis connectivity"
+    
+    # Log additional context for debugging
+    Rails.logger.debug "Redis URL: #{ENV['REDIS_URL']&.gsub(/:[^:@]*@/, ':***@')}"
+    
+    # Send to error tracking service if available, but don't re-raise
+    if defined?(Sentry)
+      Sentry.capture_exception(error, extra: {
+        context: 'admin_notification_broadcast',
+        service: self.class.name,
+        event_type: @event_type,
+        user_id: @options[:user]&.id
+      })
+    end
+  end
+
+  def redis_related_error?(error)
+    # Check if the error message contains Redis-related keywords
+    error.message.downcase.include?('redis') ||
+    error.message.downcase.include?('connection') ||
+    error.class.name.include?('Redis')
   end
 end
 </file>
@@ -38986,6 +38642,303 @@ class FormPublishValidationService < ApplicationService
           }
         )
       end
+    end
+  end
+end
+</file>
+
+<file path="services/lead_scoring_calculator.rb">
+# frozen_string_literal: true
+
+class LeadScoringCalculator
+  class << self
+    def calculate_technical_score(response_data)
+      answers = response_data[:answers]
+      technical_score = 0
+      
+      # Technical maturity indicators
+      tech_maturity = answers['technical_maturity_score']&.to_i || 5
+      ai_experience = answers['ai_experience']&.downcase || 'none'
+      current_infrastructure = answers['current_infrastructure']&.downcase || 'basic'
+      
+      # Scoring based on technical readiness
+      technical_score += (tech_maturity * 2)  # 0-20 points
+      
+      case ai_experience
+      when 'experto', 'advanced'
+        technical_score += 20
+      when 'intermedio', 'intermediate'
+        technical_score += 15
+      when 'básico', 'basic'
+        technical_score += 10
+      else
+        technical_score += 5
+      end
+      
+      case current_infrastructure
+      when 'cloud-native', 'modern'
+        technical_score += 15
+      when 'hybrid', 'moderate'
+        technical_score += 10
+      when 'legacy', 'basic'
+        technical_score += 5
+      else
+        technical_score += 8
+      end
+      
+      [[technical_score, 0].max, 50].min
+    end
+
+    def calculate_business_impact_score(analysis, response_data)
+      answers = response_data[:answers]
+      impact_score = 0
+      
+      # Business impact indicators
+      use_case_clarity = answers['ai_use_cases']&.length || 0
+      strategic_alignment = answers['strategic_alignment']&.downcase || 'neutral'
+      pain_points = answers['main_challenge']&.length || 0
+      
+      # Scoring based on business impact potential
+      impact_score += [use_case_clarity * 2, 20].min  # 0-20 points
+      impact_score += [pain_points / 10, 15].min      # 0-15 points
+      
+      case strategic_alignment
+      when 'high', 'critical'
+        impact_score += 20
+      when 'medium', 'important'
+        impact_score += 15
+      when 'low', 'nice_to_have'
+        impact_score += 10
+      else
+        impact_score += 12
+      end
+      
+      # Bonus for specific business impact indicators
+      business_impact_keywords = ['revenue', 'cost', 'efficiency', 'competitive', 'growth']
+      challenge_text = answers['main_challenge']&.downcase || ''
+      business_impact_keywords.each { |kw| impact_score += 3 if challenge_text.include?(kw) }
+      
+      [[impact_score, 0].max, 55].min
+    end
+
+    def calculate_financial_score(response_data)
+      answers = response_data[:answers]
+      financial_score = 0
+      
+      # Financial capacity indicators
+      budget_amount = extract_budget_numeric(answers['budget_amount'])
+      company_size = response_data[:enriched_data]&.[](:company_size) || 0
+      
+      # Budget-based scoring
+      if budget_amount
+        case budget_amount
+        when 100000..Float::INFINITY
+          financial_score += 25
+        when 50000..99999
+          financial_score += 20
+        when 20000..49999
+          financial_score += 15
+        when 5000..19999
+          financial_score += 10
+        else
+          financial_score += 5
+        end
+      end
+      
+      # Company size-based scoring
+      case company_size
+      when 1000..Float::INFINITY
+        financial_score += 20
+      when 100..999
+        financial_score += 15
+      when 50..99
+        financial_score += 10
+      when 10..49
+        financial_score += 8
+      else
+        financial_score += 5
+      end
+      
+      [[financial_score, 0].max, 45].min
+    end
+
+    def calculate_urgency_score(analysis, response_data)
+      answers = response_data[:answers]
+      urgency_score = 0
+      
+      # Timeline-based urgency
+      timeline = answers['timeline']&.downcase || 'long_term'
+      case timeline
+      when 'immediately', '1-3 meses'
+        urgency_score += 25
+      when '3-6 meses', 'short_term'
+        urgency_score += 20
+      when '6-12 meses', 'medium_term'
+        urgency_score += 15
+      when '12+ meses', 'long_term'
+        urgency_score += 10
+      else
+        urgency_score += 12
+      end
+      
+      # Sentiment-based urgency
+      sentiment_score = analysis.dig('sentiment_analysis', 'sentiment_score') || 0
+      urgency_score += 15 if sentiment_score < -0.3  # Negative sentiment = urgency
+      
+      # Keyword-based urgency
+      urgent_keywords = ['urgente', 'crisis', 'competencia', 'perdiendo', 'inmediato']
+      challenge_text = answers['main_challenge']&.downcase || ''
+      urgent_keywords.each { |kw| urgency_score += 5 if challenge_text.include?(kw) }
+      
+      [[urgency_score, 0].max, 40].min
+    end
+
+    def calculate_authority_score(response_data)
+      answers = response_data[:answers]
+      authority_score = 0
+      
+      # Role-based authority
+      role = answers['role']&.downcase || 'unknown'
+      case role
+      when 'ceo', 'cto', 'founder', 'director', 'vp'
+        authority_score += 25
+      when 'manager', 'head', 'lead'
+        authority_score += 20
+      when 'senior', 'specialist'
+        authority_score += 15
+      else
+        authority_score += 10
+      end
+      
+      # Decision authority
+      decision_authority = answers['decision_authority']&.downcase || 'unknown'
+      case decision_authority
+      when 'tengo autoridad completa', 'complete authority'
+        authority_score += 20
+      when 'tengo influencia significativa', 'significant influence'
+        authority_score += 15
+      when 'tengo influencia limitada', 'limited influence'
+        authority_score += 10
+      else
+        authority_score += 5
+      end
+      
+      [[authority_score, 0].max, 45].min
+    end
+
+    def calculate_complexity_score(response_data)
+      answers = response_data[:answers]
+      complexity_score = 0
+      
+      # Implementation complexity indicators
+      integration_needs = answers['integration_needs']&.downcase || 'simple'
+      compliance_needs = answers['compliance_needs']&.downcase || 'none'
+      change_management = answers['change_management']&.downcase || 'minimal'
+      
+      # Complexity scoring (lower complexity = higher score)
+      case integration_needs
+      when 'simple', 'standalone'
+        complexity_score += 20
+      when 'moderate', 'some_integration'
+        complexity_score += 15
+      when 'complex', 'heavy_integration'
+        complexity_score += 10
+      else
+        complexity_score += 12
+      end
+      
+      case compliance_needs
+      when 'none'
+        complexity_score += 15
+      when 'basic', 'standard'
+        complexity_score += 10
+      when 'strict', 'regulated'
+        complexity_score += 5
+      else
+        complexity_score += 10
+      end
+      
+      case change_management
+      when 'minimal'
+        complexity_score += 15
+      when 'moderate'
+        complexity_score += 10
+      when 'significant'
+        complexity_score += 5
+      else
+        complexity_score += 10
+      end
+      
+      [[complexity_score, 0].max, 50].min
+    end
+
+    def get_industry_weights(industry)
+      return default_weights unless industry
+      
+      industry_weights = {
+        'technology' => {
+          technical_readiness: 1.2,
+          business_impact: 1.1,
+          financial_capacity: 1.0,
+          urgency_factor: 1.0,
+          decision_authority: 1.0,
+          implementation_complexity: 0.9
+        },
+        'healthcare' => {
+          technical_readiness: 0.8,
+          business_impact: 1.3,
+          financial_capacity: 1.1,
+          urgency_factor: 1.2,
+          decision_authority: 0.9,
+          implementation_complexity: 1.3
+        },
+        'financial_services' => {
+          technical_readiness: 1.1,
+          business_impact: 1.2,
+          financial_capacity: 1.2,
+          urgency_factor: 1.1,
+          decision_authority: 1.1,
+          implementation_complexity: 1.2
+        },
+        'manufacturing' => {
+          technical_readiness: 0.9,
+          business_impact: 1.1,
+          financial_capacity: 1.0,
+          urgency_factor: 0.9,
+          decision_authority: 1.0,
+          implementation_complexity: 1.1
+        },
+        'retail' => {
+          technical_readiness: 1.0,
+          business_impact: 1.2,
+          financial_capacity: 0.9,
+          urgency_factor: 1.1,
+          decision_authority: 1.0,
+          implementation_complexity: 1.0
+        }
+      }
+      
+      industry_weights[industry.downcase] || industry_weights[industry] || default_weights
+    end
+
+    private
+
+    def default_weights
+      {
+        technical_readiness: 1.0,
+        business_impact: 1.0,
+        financial_capacity: 1.0,
+        urgency_factor: 1.0,
+        decision_authority: 1.0,
+        implementation_complexity: 1.0
+      }
+    end
+
+    def extract_budget_numeric(budget_string)
+      return nil unless budget_string
+      
+      # Extract numeric value from budget string
+      budget_string.scan(/[\d,]+/).first&.gsub(',', '')&.to_i
     end
   end
 end
@@ -40816,6 +40769,438 @@ class PaymentSetupValidationService < ApplicationService
 end
 </file>
 
+<file path="services/redis_error_logger.rb">
+# frozen_string_literal: true
+
+# RedisErrorLogger - Centralized Redis error logging service
+# Provides comprehensive error logging for all Redis operations across the application
+# Includes context information, masked connection details, and Sentry integration
+class RedisErrorLogger
+  include ActiveSupport::Configurable
+  
+  # Error severity levels
+  SEVERITY_LEVELS = {
+    debug: 0,
+    info: 1,
+    warn: 2,
+    error: 3,
+    fatal: 4
+  }.freeze
+  
+  # Redis error types for categorization
+  REDIS_ERROR_TYPES = {
+    connection: [
+      'Redis::CannotConnectError',
+      'Redis::ConnectionError',
+      'Redis::TimeoutError',
+      'Redis::ReadOnlyError'
+    ].freeze,
+    command: [
+      'Redis::CommandError',
+      'Redis::WrongTypeError',
+      'Redis::OutOfMemoryError'
+    ].freeze,
+    protocol: [
+      'Redis::ProtocolError',
+      'Redis::ParserError'
+    ].freeze,
+    client: [
+      'Redis::ClientError',
+      'Redis::InheritedError'
+    ].freeze
+  }.freeze
+  
+  class << self
+    # Main entry point for logging Redis errors
+    # @param exception [Exception] The Redis-related exception
+    # @param context [Hash] Additional context information
+    # @param severity [Symbol] Log severity level (:debug, :info, :warn, :error, :fatal)
+    def log_redis_error(exception, context = {}, severity: :error)
+      return unless should_log?(exception, severity)
+      
+      error_data = build_error_data(exception, context)
+      log_to_rails_logger(error_data, severity)
+      send_to_sentry(exception, error_data) if should_send_to_sentry?(severity)
+      track_error_metrics(error_data)
+      
+      error_data
+    end
+    
+    # Log Redis connection errors specifically
+    def log_connection_error(exception, context = {})
+      enhanced_context = context.merge({
+        error_category: 'connection',
+        redis_url_masked: mask_redis_url(current_redis_url),
+        ssl_enabled: ssl_enabled?,
+        environment: Rails.env,
+        timestamp: Time.current.iso8601
+      })
+      
+      log_redis_error(exception, enhanced_context, severity: :error)
+    end
+    
+    # Log Redis command errors
+    def log_command_error(exception, context = {})
+      enhanced_context = context.merge({
+        error_category: 'command',
+        redis_url_masked: mask_redis_url(current_redis_url),
+        timestamp: Time.current.iso8601
+      })
+      
+      log_redis_error(exception, enhanced_context, severity: :warn)
+    end
+    
+    # Log Redis operation warnings (non-critical issues)
+    def log_redis_warning(message, context = {})
+      warning_data = {
+        message: message,
+        context: context,
+        redis_url_masked: mask_redis_url(current_redis_url),
+        ssl_enabled: ssl_enabled?,
+        environment: Rails.env,
+        timestamp: Time.current.iso8601,
+        severity: 'warning'
+      }
+      
+      Rails.logger.warn format_log_message(warning_data)
+      track_warning_metrics(warning_data)
+    end
+    
+    # Log Redis operation info (successful operations, monitoring)
+    def log_redis_info(message, context = {})
+      info_data = {
+        message: message,
+        context: context,
+        redis_url_masked: mask_redis_url(current_redis_url),
+        timestamp: Time.current.iso8601,
+        severity: 'info'
+      }
+      
+      Rails.logger.info format_log_message(info_data)
+    end
+    
+    # Log Redis connection recovery
+    def log_connection_recovery(context = {})
+      recovery_data = {
+        message: 'Redis connection recovered successfully',
+        context: context,
+        redis_url_masked: mask_redis_url(current_redis_url),
+        ssl_enabled: ssl_enabled?,
+        environment: Rails.env,
+        timestamp: Time.current.iso8601,
+        event_type: 'connection_recovery'
+      }
+      
+      Rails.logger.info format_log_message(recovery_data)
+      
+      if defined?(Sentry)
+        Sentry.capture_message(
+          'Redis connection recovered',
+          level: :info,
+          extra: recovery_data
+        )
+      end
+    end
+    
+    # Test Redis connection and log results
+    def test_and_log_connection(component: 'unknown')
+      start_time = Time.current
+      
+      begin
+        # Test basic Redis connectivity using proper SSL configuration
+        case component
+        when 'sidekiq'
+          if defined?(Sidekiq)
+            Sidekiq.redis(&:ping)
+          else
+            Redis.new(RedisConfig.sidekiq_config).ping
+          end
+        when 'cache'
+          if Rails.cache.respond_to?(:redis)
+            Rails.cache.redis.ping
+          else
+            Redis.new(RedisConfig.cache_config).ping
+          end
+        when 'actioncable'
+          Redis.new(RedisConfig.cable_config).ping
+        else
+          # Generic Redis test using RedisConfig
+          Redis.new(RedisConfig.connection_config).ping
+        end
+        
+        duration = Time.current - start_time
+        
+        log_redis_info("Redis connection test successful for #{component}", {
+          component: component,
+          duration_ms: (duration * 1000).round(2),
+          test_type: 'connectivity'
+        })
+        
+        true
+      rescue => e
+        duration = Time.current - start_time
+        
+        log_connection_error(e, {
+          component: component,
+          duration_ms: (duration * 1000).round(2),
+          test_type: 'connectivity',
+          operation: 'connection_test'
+        })
+        
+        false
+      end
+    end
+    
+    # Get Redis connection diagnostics
+    def get_connection_diagnostics
+      diagnostics = {
+        redis_url_masked: mask_redis_url(current_redis_url),
+        ssl_enabled: ssl_enabled?,
+        environment: Rails.env,
+        timestamp: Time.current.iso8601
+      }
+      
+      begin
+        # Try to get Redis info
+        redis_info = get_redis_info
+        diagnostics.merge!(redis_info)
+      rescue => e
+        diagnostics[:connection_error] = e.message
+        diagnostics[:connection_status] = 'failed'
+      end
+      
+      diagnostics
+    end
+    
+    private
+    
+    # Build comprehensive error data structure
+    def build_error_data(exception, context)
+      {
+        error_class: exception.class.name,
+        error_message: exception.message,
+        error_category: categorize_error(exception),
+        context: context,
+        redis_url_masked: mask_redis_url(current_redis_url),
+        ssl_enabled: ssl_enabled?,
+        environment: Rails.env,
+        timestamp: Time.current.iso8601,
+        backtrace: format_backtrace(exception),
+        redis_diagnostics: get_safe_redis_diagnostics
+      }
+    end
+    
+    # Determine if error should be logged based on severity and configuration
+    def should_log?(exception, severity)
+      # In test environment, check if Redis error logging is explicitly enabled
+      if Rails.env.test?
+        return false unless Rails.application.config.respond_to?(:log_redis_errors_in_test) &&
+                           Rails.application.config.log_redis_errors_in_test
+      end
+      
+      # Always log errors and fatal
+      return true if [:error, :fatal].include?(severity)
+      
+      # Log warnings in production and development, or in test when enabled
+      return true if severity == :warn && (
+        !Rails.env.test? || 
+        (Rails.application.config.respond_to?(:log_redis_errors_in_test) && 
+         Rails.application.config.log_redis_errors_in_test)
+      )
+      
+      # Log info and debug only in development or when explicitly enabled
+      [:info, :debug].include?(severity) && 
+        (Rails.env.development? || 
+         (Rails.application.config.respond_to?(:verbose_redis_logging) && 
+          Rails.application.config.verbose_redis_logging))
+    end
+    
+    # Determine if error should be sent to Sentry
+    def should_send_to_sentry?(severity)
+      defined?(Sentry) && [:error, :fatal].include?(severity)
+    end
+    
+    # Categorize Redis errors by type
+    def categorize_error(exception)
+      error_class = exception.class.name
+      
+      REDIS_ERROR_TYPES.each do |category, error_classes|
+        return category.to_s if error_classes.include?(error_class)
+      end
+      
+      'unknown'
+    end
+    
+    # Format error message for Rails logger
+    def format_log_message(data)
+      severity_text = case data[:severity]
+                     when 'info'
+                       'INFO'
+                     when 'warning'
+                       'WARNING'
+                     when 'debug'
+                       'DEBUG'
+                     when 'fatal'
+                       'FATAL'
+                     else
+                       'ERROR'
+                     end
+      
+      message_parts = [
+        "Redis #{severity_text}:",
+        data[:error_message] || data[:message]
+      ]
+      
+      if data[:context] && !data[:context].empty?
+        message_parts << "Context: #{data[:context].inspect}"
+      end
+      
+      if data[:redis_url_masked]
+        message_parts << "Redis URL: #{data[:redis_url_masked]}"
+      end
+      
+      if data[:error_category]
+        message_parts << "Category: #{data[:error_category]}"
+      end
+      
+      message_parts.join(' | ')
+    end
+    
+    # Log to Rails logger with appropriate severity
+    def log_to_rails_logger(error_data, severity)
+      formatted_message = format_log_message(error_data)
+      
+      case severity
+      when :debug
+        Rails.logger.debug formatted_message
+      when :info
+        Rails.logger.info formatted_message
+      when :warn
+        Rails.logger.warn formatted_message
+      when :error
+        Rails.logger.error formatted_message
+      when :fatal
+        Rails.logger.fatal formatted_message
+      end
+      
+      # Log additional context in debug mode
+      if Rails.env.development? || Rails.logger.level <= Logger::DEBUG
+        Rails.logger.debug "Redis Error Details: #{error_data.except(:backtrace).to_json}"
+        
+        if error_data[:backtrace]
+          Rails.logger.debug "Redis Error Backtrace:\n#{error_data[:backtrace]}"
+        end
+      end
+    end
+    
+    # Send error to Sentry with enhanced context
+    def send_to_sentry(exception, error_data)
+      Sentry.capture_exception(exception, extra: error_data.except(:backtrace))
+    end
+    
+    # Track error metrics for monitoring
+    def track_error_metrics(error_data)
+      # This could be extended to send metrics to monitoring services
+      # For now, we'll just increment Rails cache-based counters
+      
+      begin
+        cache_key = "redis_errors:#{Date.current}:#{error_data[:error_category]}"
+        current_count = Rails.cache.read(cache_key) || 0
+        Rails.cache.write(cache_key, current_count + 1, expires_in: 7.days)
+        
+        total_cache_key = "redis_errors:#{Date.current}:total"
+        total_count = Rails.cache.read(total_cache_key) || 0
+        Rails.cache.write(total_cache_key, total_count + 1, expires_in: 7.days)
+      rescue
+        # Ignore cache errors when tracking Redis errors to avoid recursion
+      end
+    end
+    
+    # Track warning metrics
+    def track_warning_metrics(warning_data)
+      begin
+        cache_key = "redis_warnings:#{Date.current}"
+        current_count = Rails.cache.read(cache_key) || 0
+        Rails.cache.write(cache_key, current_count + 1, expires_in: 7.days)
+      rescue
+        # Ignore cache errors
+      end
+    end
+    
+    # Get current Redis URL from configuration
+    def current_redis_url
+      ENV.fetch('REDIS_URL', 'redis://localhost:6379/0')
+    end
+    
+    # Check if SSL is enabled
+    def ssl_enabled?
+      current_redis_url.start_with?('rediss://')
+    end
+    
+    # Mask sensitive information in Redis URL
+    def mask_redis_url(url)
+      return url unless url&.include?('@')
+      
+      # Replace password with asterisks
+      url.gsub(/:[^:@]*@/, ':***@')
+    end
+    
+    # Format exception backtrace for logging
+    def format_backtrace(exception)
+      return nil unless exception.backtrace
+      
+      # Limit backtrace to first 10 lines to avoid log spam
+      exception.backtrace.first(10).join("\n")
+    end
+    
+    # Get Redis server information safely
+    def get_redis_info
+      info = {}
+      
+      begin
+        # Try different Redis connection methods
+        redis_client = if defined?(Sidekiq)
+          Sidekiq.redis { |conn| conn }
+        elsif Rails.cache.respond_to?(:redis)
+          Rails.cache.redis
+        else
+          Redis.new(url: current_redis_url)
+        end
+        
+        server_info = redis_client.info
+        
+        info.merge!({
+          redis_version: server_info['redis_version'],
+          connected_clients: server_info['connected_clients'],
+          used_memory_human: server_info['used_memory_human'],
+          uptime_in_seconds: server_info['uptime_in_seconds'],
+          connection_status: 'connected'
+        })
+      rescue => e
+        info.merge!({
+          connection_status: 'failed',
+          connection_error: e.message
+        })
+      end
+      
+      info
+    end
+    
+    # Get Redis diagnostics safely (won't raise exceptions)
+    def get_safe_redis_diagnostics
+      begin
+        get_redis_info
+      rescue
+        {
+          connection_status: 'unknown',
+          diagnostic_error: 'Unable to retrieve Redis diagnostics'
+        }
+      end
+    end
+  end
+end
+</file>
+
 <file path="services/service_object.rb">
 # frozen_string_literal: true
 
@@ -41128,8 +41513,7 @@ end
 </file>
 
 <file path="services/stripe_payment_service.rb">
-class StripePaymentService
-  include ApplicationService
+class StripePaymentService < ApplicationService
 
   def initialize(user:, form:, form_response:, payment_data:)
     @user = user
@@ -48632,7 +49016,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         <button type="button" 
                 class="inline-flex items-center px-2 py-1 border border-red-300 shadow-sm text-xs font-medium rounded text-red-700 bg-white hover:bg-red-50"
-                data-action="click->google-sheets-integration#disconnect">
+                data-action="click->google-sheets-integration#disconnectIntegration">
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
           </svg>
@@ -48667,6 +49051,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         <div class="text-center">
           <%= link_to google_oauth_connect_path, 
+                data: { turbo: false },
                 class: "inline-flex items-center px-3 py-1 border border-transparent text-xs font-medium rounded text-white bg-blue-600 hover:bg-blue-700" do %>
             <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
@@ -57836,6 +58221,7 @@ if (typeof gtag !== 'undefined') {
 
       <div class="flex space-x-3">
         <%= link_to google_oauth_connect_path, 
+              data: { turbo: false },
               class: "flex-1 inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700" do %>
           <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path>
@@ -63445,6 +63831,11 @@ module Forms
               }
             end
             
+            completion_time = nil
+            if form_response.started_at && form_response.completed_at
+              completion_time = ((form_response.completed_at - form_response.started_at) / 1.minute).round(2)
+            end
+            
             {
               form_response: form_response,
               form: form,
@@ -63453,7 +63844,7 @@ module Forms
               ai_analysis: ai_analysis_data,
               enriched_data: enriched_data,
               dynamic_responses: dynamic_responses,
-              completion_time: calculate_completion_time(form_response),
+              completion_time: completion_time,
               response_metadata: {
                 user_agent: form_response.user_agent,
                 referrer: form_response.referrer_url,
@@ -63492,7 +63883,81 @@ module Forms
           data_result = context.get(:collect_response_data)
           response_data = data_result[:response_data]
           
-          format_lead_scoring_prompt(response_data)
+          # Format the prompt inline instead of using a separate method
+          form = response_data[:form]
+          answers = response_data[:answers]
+          enriched_data = response_data[:enriched_data]
+          ai_analysis = response_data[:ai_analysis]
+          
+          <<~PROMPT
+            Analyze this form response as a lead qualification specialist. Score the lead quality from 0-100 and provide detailed insights.
+
+            **Form Information:**
+            - Name: "#{form.name}"
+            - Category: #{form.category}
+            - Purpose: #{form.form_settings&.dig('purpose') || 'Lead generation'}
+
+            **Response Data:**
+            #{answers.map { |k, v| "- #{k}: #{v}" }.join("\n")}
+
+            **Enriched Data:**
+            #{enriched_data.map { |k, v| "- #{k}: #{v}" }.join("\n") if enriched_data.present?}
+
+            **AI Analysis:**
+            #{ai_analysis.map { |k, v| "- #{k}: #{v}" }.join("\n") if ai_analysis.present?}
+
+            **Analysis Requirements:**
+            Return a JSON object with:
+            {
+              "quality_score": 0-100,
+              "lead_tier": "hot|warm|lukewarm|cold",
+              "quality_factors": [
+                {
+                  "factor": "specific quality indicator",
+                  "score": 0-25,
+                  "reasoning": "why this contributes to quality"
+                }
+              ],
+              "risk_factors": [
+                {
+                  "factor": "potential concern",
+                  "impact": "low|medium|high",
+                  "reasoning": "why this might be a risk"
+                }
+              ],
+              "qualification_notes": "detailed assessment of lead quality",
+              "recommended_actions": [
+                "specific action 1",
+                "specific action 2"
+              ],
+              "estimated_value": "estimated deal value or importance",
+              "confidence_level": 0-1.0,
+              "buying_signals": [
+                "specific indicators of purchase intent"
+              ],
+              "timing_indicators": {
+                "urgency": "immediate|short_term|long_term",
+                "budget_availability": "confirmed|likely|unknown",
+                "decision_maker": "yes|no|influencer"
+              },
+              "next_best_action": "specific recommendation for follow-up"
+            }
+
+            **Scoring Guidelines:**
+            - 80-100: Hot lead - immediate follow-up required
+            - 60-79: Warm lead - follow-up within 24 hours
+            - 40-59: Lukewarm lead - nurture campaign
+            - 0-39: Cold lead - long-term nurture
+
+            Consider:
+            - Company size and industry (if enriched)
+            - Response quality and detail level
+            - Specific pain points mentioned
+            - Timeline indicators
+            - Budget indicators
+            - Decision-making authority signals
+            - Engagement level throughout form
+          PROMPT
         end
       end
       
@@ -63515,11 +63980,61 @@ module Forms
             # Parse quality analysis
             lead_analysis = quality_analysis.is_a?(String) ? JSON.parse(quality_analysis) : quality_analysis
             
-            # Calculate numerical score
-            lead_score = calculate_lead_score(lead_analysis, response_data)
+            # Calculate numerical score inline
+            lead_score = if response_data[:form].ai_enhanced? && response_data[:form].ai_configuration&.dig('lead_scoring', 'enabled') == true
+              # Multi-dimensional scoring
+              dimensions = {
+                technical_readiness: LeadScoringCalculator.calculate_technical_score(response_data),
+                business_impact: LeadScoringCalculator.calculate_business_impact_score(lead_analysis, response_data),
+                financial_capacity: LeadScoringCalculator.calculate_financial_score(response_data),
+                urgency_factor: LeadScoringCalculator.calculate_urgency_score(lead_analysis, response_data),
+                decision_authority: LeadScoringCalculator.calculate_authority_score(response_data),
+                implementation_complexity: LeadScoringCalculator.calculate_complexity_score(response_data)
+              }
+              
+              # Get industry-specific weights
+              industry = response_data[:enriched_data]&.[](:industry)
+              weights = LeadScoringCalculator.get_industry_weights(industry)
+              
+              # Calculate weighted score
+              weighted_score = dimensions.sum { |dim, score| score * (weights[dim] || 1.0) }
+              
+              # Ensure score is between 0-100
+              [[weighted_score, 0].max, 100].min.round
+            else
+              # Simple scoring
+              base_score = 0
+              
+              # Score based on quality factors
+              quality_score = lead_analysis['quality_score'] || 50
+              base_score += quality_score
+              
+              # Bonus for company data enrichment
+              base_score += 15 if response_data[:enriched_data].present?
+              
+              # Bonus for detailed responses
+              detailed_responses = response_data[:answers].values.count { |ans| ans.to_s.length > 50 }
+              base_score += [detailed_responses * 5, 20].min
+              
+              # Bonus for completion time (faster = better)
+              completion_time = response_data[:completion_time]
+              if completion_time && completion_time < 10
+                base_score += 10
+              elsif completion_time && completion_time > 30
+                base_score -= 5
+              end
+              
+              # Ensure score is between 0-100
+              [[base_score, 0].max, 100].min.round
+            end
             
             # Determine lead tier based on score
-            lead_tier = determine_lead_tier(lead_score)
+            lead_tier = case lead_score
+            when 80..100 then 'hot'
+            when 60..79 then 'warm'
+            when 40..59 then 'lukewarm'
+            else 'cold'
+            end
             
             # Create lead scoring record
             lead_scoring = LeadScoring.create!(
@@ -63618,9 +64133,35 @@ module Forms
             }
           end
           
-          # Check for specific routing rules
-          custom_routing = apply_custom_routing_rules(scoring_result, response_data, routing_config)
-          routing_actions.concat(custom_routing) if custom_routing.any?
+          # Check for specific routing rules - inline implementation
+          custom_actions = []
+          
+          # Check for specific industry routing
+          industry = response_data[:answers]['industry'] || response_data[:enriched_data]&.[](:industry)
+          if industry
+            industry_config = routing_config['industry_routing']&.[](industry)
+            if industry_config
+              custom_actions << {
+                action: 'industry_specialist',
+                priority: 'high',
+                assign_to: industry_config['assignee'],
+                channels: industry_config['channels'] || ['email']
+              }
+            end
+          end
+          
+          # Check for high-value company routing
+          company_size = response_data[:enriched_data]&.[](:company_size)
+          if company_size && company_size > 1000
+            custom_actions << {
+              action: 'enterprise_specialist',
+              priority: 'high',
+              assign_to: routing_config['enterprise_assignee'] || 'enterprise_sales',
+              channels: ['email', 'phone', 'slack']
+            }
+          end
+          
+          routing_actions.concat(custom_actions) if custom_actions.any?
           
           # Create routing record
           lead_routing = LeadRouting.create!(
@@ -63632,9 +64173,33 @@ module Forms
             priority: routing_actions.first&.dig(:priority) || 'medium'
           )
           
-          # Queue integration triggers for each routing action
+          # Queue integration triggers for each routing action - inline implementation
           routing_actions.each do |action|
-            queue_routing_integration(form_response, action, scoring_result)
+            case action[:action]
+            when 'immediate_followup', 'scheduled_followup'
+              Forms::IntegrationTriggerJob.perform_later(
+                form_response.id,
+                'lead_qualified',
+                {
+                  score: scoring_result[:score],
+                  tier: scoring_result[:tier],
+                  routing_action: action,
+                  priority: action[:priority],
+                  assign_to: action[:assign_to]
+                }
+              )
+            when 'nurture_campaign'
+              Forms::IntegrationTriggerJob.perform_later(
+                form_response.id,
+                'lead_nurture',
+                {
+                  score: scoring_result[:score],
+                  tier: scoring_result[:tier],
+                  campaign_type: 'nurture',
+                  priority: action[:priority]
+                }
+              )
+            end
           end
           
           {
@@ -63671,500 +64236,6 @@ module Forms
             form: data_result[:response_data][:form]
           }
         end
-      end
-      
-      private
-      
-      def calculate_completion_time(form_response)
-        return nil unless form_response.started_at && form_response.completed_at
-        ((form_response.completed_at - form_response.started_at) / 1.minute).round(2)
-      end
-      
-      def calculate_lead_score(analysis, response_data)
-        # Use multi-dimensional scoring if enhanced features are enabled
-        if response_data[:form].ai_enhanced? && response_data[:form].ai_configuration&.dig('lead_scoring', 'enabled') == true
-          calculate_multi_dimensional_score(analysis, response_data)
-        else
-          calculate_simple_lead_score(analysis, response_data)
-        end
-      end
-
-      def calculate_multi_dimensional_score(analysis, response_data)
-        dimensions = {
-          technical_readiness: calculate_technical_score(response_data),
-          business_impact: calculate_business_impact_score(analysis, response_data),
-          financial_capacity: calculate_financial_score(response_data),
-          urgency_factor: calculate_urgency_score(analysis, response_data),
-          decision_authority: calculate_authority_score(response_data),
-          implementation_complexity: calculate_complexity_score(response_data)
-        }
-        
-        # Get industry-specific weights
-        industry = response_data[:enriched_data]&.[](:industry)
-        weights = get_industry_weights(industry)
-        
-        # Calculate weighted score
-        weighted_score = dimensions.sum { |dim, score| score * (weights[dim] || 1.0) }
-        
-        # Ensure score is between 0-100
-        [[weighted_score, 0].max, 100].min.round
-      end
-
-      def calculate_simple_lead_score(analysis, response_data)
-        base_score = 0
-        
-        # Score based on quality factors
-        quality_score = analysis['quality_score'] || 50
-        base_score += quality_score
-        
-        # Bonus for company data enrichment
-        if response_data[:enriched_data].present?
-          base_score += 15
-        end
-        
-        # Bonus for detailed responses
-        detailed_responses = response_data[:answers].values.count { |ans| ans.to_s.length > 50 }
-        base_score += [detailed_responses * 5, 20].min
-        
-        # Bonus for completion time (faster = better)
-        completion_time = response_data[:completion_time]
-        if completion_time && completion_time < 10
-          base_score += 10
-        elsif completion_time && completion_time > 30
-          base_score -= 5
-        end
-        
-        # Ensure score is between 0-100
-        [[base_score, 0].max, 100].min.round
-      end
-
-      def calculate_technical_score(response_data)
-        answers = response_data[:answers]
-        technical_score = 0
-        
-        # Technical maturity indicators
-        tech_maturity = answers['technical_maturity_score']&.to_i || 5
-        ai_experience = answers['ai_experience']&.downcase || 'none'
-        current_infrastructure = answers['current_infrastructure']&.downcase || 'basic'
-        
-        # Scoring based on technical readiness
-        technical_score += (tech_maturity * 2)  # 0-20 points
-        
-        case ai_experience
-        when 'experto', 'advanced'
-          technical_score += 20
-        when 'intermedio', 'intermediate'
-          technical_score += 15
-        when 'básico', 'basic'
-          technical_score += 10
-        else
-          technical_score += 5
-        end
-        
-        case current_infrastructure
-        when 'cloud-native', 'modern'
-          technical_score += 15
-        when 'hybrid', 'moderate'
-          technical_score += 10
-        when 'legacy', 'basic'
-          technical_score += 5
-        else
-          technical_score += 8
-        end
-        
-        [[technical_score, 0].max, 50].min
-      end
-
-      def calculate_business_impact_score(analysis, response_data)
-        answers = response_data[:answers]
-        impact_score = 0
-        
-        # Business impact indicators
-        use_case_clarity = answers['ai_use_cases']&.length || 0
-        strategic_alignment = answers['strategic_alignment']&.downcase || 'neutral'
-        pain_points = answers['main_challenge']&.length || 0
-        
-        # Scoring based on business impact potential
-        impact_score += [use_case_clarity * 2, 20].min  # 0-20 points
-        impact_score += [pain_points / 10, 15].min      # 0-15 points
-        
-        case strategic_alignment
-        when 'high', 'critical'
-          impact_score += 20
-        when 'medium', 'important'
-          impact_score += 15
-        when 'low', 'nice_to_have'
-          impact_score += 10
-        else
-          impact_score += 12
-        end
-        
-        # Bonus for specific business impact indicators
-        business_impact_keywords = ['revenue', 'cost', 'efficiency', 'competitive', 'growth']
-        challenge_text = answers['main_challenge']&.downcase || ''
-        business_impact_keywords.each { |kw| impact_score += 3 if challenge_text.include?(kw) }
-        
-        [[impact_score, 0].max, 55].min
-      end
-
-      def calculate_financial_score(response_data)
-        answers = response_data[:answers]
-        financial_score = 0
-        
-        # Financial capacity indicators
-        budget_amount = extract_budget_numeric(answers['budget_amount'])
-        company_size = response_data[:enriched_data]&.[](:company_size) || 0
-        
-        # Budget-based scoring
-        if budget_amount
-          case budget_amount
-          when 100000..Float::INFINITY
-            financial_score += 25
-          when 50000..99999
-            financial_score += 20
-          when 20000..49999
-            financial_score += 15
-          when 5000..19999
-            financial_score += 10
-          else
-            financial_score += 5
-          end
-        end
-        
-        # Company size-based scoring
-        case company_size
-        when 1000..Float::INFINITY
-          financial_score += 20
-        when 100..999
-          financial_score += 15
-        when 50..99
-          financial_score += 10
-        when 10..49
-          financial_score += 8
-        else
-          financial_score += 5
-        end
-        
-        [[financial_score, 0].max, 45].min
-      end
-
-      def calculate_urgency_score(analysis, response_data)
-        answers = response_data[:answers]
-        urgency_score = 0
-        
-        # Timeline-based urgency
-        timeline = answers['timeline']&.downcase || 'long_term'
-        case timeline
-        when 'immediately', '1-3 meses'
-          urgency_score += 25
-        when '3-6 meses', 'short_term'
-          urgency_score += 20
-        when '6-12 meses', 'medium_term'
-          urgency_score += 15
-        when '12+ meses', 'long_term'
-          urgency_score += 10
-        else
-          urgency_score += 12
-        end
-        
-        # Sentiment-based urgency
-        sentiment_score = analysis.dig('sentiment_analysis', 'sentiment_score') || 0
-        urgency_score += 15 if sentiment_score < -0.3  # Negative sentiment = urgency
-        
-        # Keyword-based urgency
-        urgent_keywords = ['urgente', 'crisis', 'competencia', 'perdiendo', 'inmediato']
-        challenge_text = answers['main_challenge']&.downcase || ''
-        urgent_keywords.each { |kw| urgency_score += 5 if challenge_text.include?(kw) }
-        
-        [[urgency_score, 0].max, 40].min
-      end
-
-      def calculate_authority_score(response_data)
-        answers = response_data[:answers]
-        authority_score = 0
-        
-        # Role-based authority
-        role = answers['role']&.downcase || 'unknown'
-        case role
-        when 'ceo', 'cto', 'founder', 'director', 'vp'
-          authority_score += 25
-        when 'manager', 'head', 'lead'
-          authority_score += 20
-        when 'senior', 'specialist'
-          authority_score += 15
-        else
-          authority_score += 10
-        end
-        
-        # Decision authority
-        decision_authority = answers['decision_authority']&.downcase || 'unknown'
-        case decision_authority
-        when 'tengo autoridad completa', 'complete authority'
-          authority_score += 20
-        when 'tengo influencia significativa', 'significant influence'
-          authority_score += 15
-        when 'tengo influencia limitada', 'limited influence'
-          authority_score += 10
-        else
-          authority_score += 5
-        end
-        
-        [[authority_score, 0].max, 45].min
-      end
-
-      def calculate_complexity_score(response_data)
-        answers = response_data[:answers]
-        complexity_score = 0
-        
-        # Implementation complexity indicators
-        integration_needs = answers['integration_needs']&.downcase || 'simple'
-        compliance_needs = answers['compliance_needs']&.downcase || 'none'
-        change_management = answers['change_management']&.downcase || 'minimal'
-        
-        # Complexity scoring (lower complexity = higher score)
-        case integration_needs
-        when 'simple', 'standalone'
-          complexity_score += 20
-        when 'moderate', 'some_integration'
-          complexity_score += 15
-        when 'complex', 'heavy_integration'
-          complexity_score += 10
-        else
-          complexity_score += 12
-        end
-        
-        case compliance_needs
-        when 'none'
-          complexity_score += 15
-        when 'basic', 'standard'
-          complexity_score += 10
-        when 'strict', 'regulated'
-          complexity_score += 5
-        else
-          complexity_score += 10
-        end
-        
-        case change_management
-        when 'minimal'
-          complexity_score += 15
-        when 'moderate'
-          complexity_score += 10
-        when 'significant'
-          complexity_score += 5
-        else
-          complexity_score += 10
-        end
-        
-        [[complexity_score, 0].max, 50].min
-      end
-
-      def get_industry_weights(industry)
-        return { technical_readiness: 1.0, business_impact: 1.0, financial_capacity: 1.0, urgency_factor: 1.0, decision_authority: 1.0, implementation_complexity: 1.0 } unless industry
-        
-        industry_weights = {
-          'technology' => {
-            technical_readiness: 1.2,
-            business_impact: 1.1,
-            financial_capacity: 1.0,
-            urgency_factor: 1.0,
-            decision_authority: 1.0,
-            implementation_complexity: 0.9
-          },
-          'healthcare' => {
-            technical_readiness: 0.8,
-            business_impact: 1.3,
-            financial_capacity: 1.1,
-            urgency_factor: 1.2,
-            decision_authority: 0.9,
-            implementation_complexity: 1.3
-          },
-          'financial_services' => {
-            technical_readiness: 1.1,
-            business_impact: 1.2,
-            financial_capacity: 1.2,
-            urgency_factor: 1.1,
-            decision_authority: 1.1,
-            implementation_complexity: 1.2
-          },
-          'manufacturing' => {
-            technical_readiness: 0.9,
-            business_impact: 1.1,
-            financial_capacity: 1.0,
-            urgency_factor: 0.9,
-            decision_authority: 1.0,
-            implementation_complexity: 1.1
-          },
-          'retail' => {
-            technical_readiness: 1.0,
-            business_impact: 1.2,
-            financial_capacity: 0.9,
-            urgency_factor: 1.1,
-            decision_authority: 1.0,
-            implementation_complexity: 1.0
-          }
-        }
-        
-        industry_weights[industry.downcase] || industry_weights[industry] || {
-          technical_readiness: 1.0,
-          business_impact: 1.0,
-          financial_capacity: 1.0,
-          urgency_factor: 1.0,
-          decision_authority: 1.0,
-          implementation_complexity: 1.0
-        }
-      end
-
-      def extract_budget_numeric(budget_string)
-        return nil unless budget_string
-        
-        # Extract numeric value from budget string
-        budget_string.scan(/[\d,]+/).first&.gsub(',', '')&.to_i
-      end
-      
-      def determine_lead_tier(score)
-        case score
-        when 80..100 then 'hot'
-        when 60..79 then 'warm'
-        when 40..59 then 'lukewarm'
-        else 'cold'
-        end
-      end
-      
-      def apply_custom_routing_rules(scoring_result, response_data, routing_config)
-        custom_actions = []
-        
-        # Check for specific industry routing
-        industry = response_data[:answers]['industry'] || response_data[:enriched_data]&.[](:industry)
-        if industry
-          industry_config = routing_config['industry_routing']&.[](industry)
-          if industry_config
-            custom_actions << {
-              action: 'industry_specialist',
-              priority: 'high',
-              assign_to: industry_config['assignee'],
-              channels: industry_config['channels'] || ['email']
-            }
-          end
-        end
-        
-        # Check for high-value company routing
-        company_size = response_data[:enriched_data]&.[](:company_size)
-        if company_size && company_size > 1000
-          custom_actions << {
-            action: 'enterprise_specialist',
-            priority: 'high',
-            assign_to: routing_config['enterprise_assignee'] || 'enterprise_sales',
-            channels: ['email', 'phone', 'slack']
-          }
-        end
-        
-        custom_actions
-      end
-      
-      def queue_routing_integration(form_response, action, scoring_result)
-        # Queue specific integration based on action type
-        case action[:action]
-        when 'immediate_followup', 'scheduled_followup'
-          Forms::IntegrationTriggerJob.perform_later(
-            form_response.id,
-            'lead_qualified',
-            {
-              score: scoring_result[:score],
-              tier: scoring_result[:tier],
-              routing_action: action,
-              priority: action[:priority],
-              assign_to: action[:assign_to]
-            }
-          )
-        when 'nurture_campaign'
-          Forms::IntegrationTriggerJob.perform_later(
-            form_response.id,
-            'lead_nurture',
-            {
-              score: scoring_result[:score],
-              tier: scoring_result[:tier],
-              campaign_type: 'nurture',
-              priority: action[:priority]
-            }
-          )
-        end
-      end
-      
-      def format_lead_scoring_prompt(response_data)
-        form = response_data[:form]
-        answers = response_data[:answers]
-        enriched_data = response_data[:enriched_data]
-        ai_analysis = response_data[:ai_analysis]
-        
-        <<~PROMPT
-          Analyze this form response as a lead qualification specialist. Score the lead quality from 0-100 and provide detailed insights.
-
-          **Form Information:**
-          - Name: "#{form.name}"
-          - Category: #{form.category}
-          - Purpose: #{form.form_settings&.dig('purpose') || 'Lead generation'}
-
-          **Response Data:**
-          #{answers.map { |k, v| "- #{k}: #{v}" }.join("\n")}
-
-          **Enriched Data:**
-          #{enriched_data.map { |k, v| "- #{k}: #{v}" }.join("\n") if enriched_data.present?}
-
-          **AI Analysis:**
-          #{ai_analysis.map { |k, v| "- #{k}: #{v}" }.join("\n") if ai_analysis.present?}
-
-          **Analysis Requirements:**
-          Return a JSON object with:
-          {
-            "quality_score": 0-100,
-            "lead_tier": "hot|warm|lukewarm|cold",
-            "quality_factors": [
-              {
-                "factor": "specific quality indicator",
-                "score": 0-25,
-                "reasoning": "why this contributes to quality"
-              }
-            ],
-            "risk_factors": [
-              {
-                "factor": "potential concern",
-                "impact": "low|medium|high",
-                "reasoning": "why this might be a risk"
-              }
-            ],
-            "qualification_notes": "detailed assessment of lead quality",
-            "recommended_actions": [
-              "specific action 1",
-              "specific action 2"
-            ],
-            "estimated_value": "estimated deal value or importance",
-            "confidence_level": 0-1.0,
-            "buying_signals": [
-              "specific indicators of purchase intent"
-            ],
-            "timing_indicators": {
-              "urgency": "immediate|short_term|long_term",
-              "budget_availability": "confirmed|likely|unknown",
-              "decision_maker": "yes|no|influencer"
-            },
-            "next_best_action": "specific recommendation for follow-up"
-          }
-
-          **Scoring Guidelines:**
-          - 80-100: Hot lead - immediate follow-up required
-          - 60-79: Warm lead - follow-up within 24 hours
-          - 40-59: Lukewarm lead - nurture campaign
-          - 0-39: Cold lead - long-term nurture
-
-          Consider:
-          - Company size and industry (if enriched)
-          - Response quality and detail level
-          - Specific pain points mentioned
-          - Timeline indicators
-          - Budget indicators
-          - Decision-making authority signals
-          - Engagement level throughout form
-        PROMPT
       end
     end
   end
@@ -64431,433 +64502,434 @@ module Forms
           })
         end
       end
+    end
+    
+    # Los métodos privados van FUERA del bloque workflow
+    private
+    
+    def calculate_completion_duration(form_response)
+      return 0 unless form_response.started_at && form_response.completed_at
+      ((form_response.completed_at - form_response.started_at) / 1.minute).round(2)
+    end
+    
+    def build_structured_responses(form_response)
+      responses = {}
       
-      private
-      
-      def calculate_completion_duration(form_response)
-        return 0 unless form_response.started_at && form_response.completed_at
-        ((form_response.completed_at - form_response.started_at) / 1.minute).round(2)
-      end
-      
-      def build_structured_responses(form_response)
-        responses = {}
-        
-        form_response.question_responses.includes(:form_question).each do |qr|
-          question = qr.form_question
-          responses[question.title] = {
-            value: qr.answer_data['value'],
-            question_type: question.question_type,
-            response_time_ms: qr.response_time_ms,
-            ai_analysis: qr.ai_analysis_results,
-            position: question.position
-          }
-        end
-        
-        responses
-      end
-      
-      def collect_ai_analyses(form_response)
-        analyses = {
-          sentiment_scores: [],
-          quality_indicators: [],
-          confidence_levels: [],
-          key_insights: []
+      form_response.question_responses.includes(:form_question).each do |qr|
+        question = qr.form_question
+        responses[question.title] = {
+          value: qr.answer_data['value'],
+          question_type: question.question_type,
+          response_time_ms: qr.response_time_ms,
+          ai_analysis: qr.ai_analysis_results,
+          position: question.position
         }
-        
-        form_response.question_responses.each do |qr|
-          if qr.ai_analysis_results.present?
-            analysis = qr.ai_analysis_results
-            analyses[:sentiment_scores] << analysis['sentiment'] if analysis['sentiment']
-            analyses[:quality_indicators] << analysis['quality_indicators'] if analysis['quality_indicators']
-            analyses[:confidence_levels] << analysis['confidence_score'] if analysis['confidence_score']
-            
-            if analysis['insights']
-              analyses[:key_insights].concat(analysis['insights'])
-            end
+      end
+      
+      responses
+    end
+    
+    def collect_ai_analyses(form_response)
+      analyses = {
+        sentiment_scores: [],
+        quality_indicators: [],
+        confidence_levels: [],
+        key_insights: []
+      }
+      
+      form_response.question_responses.each do |qr|
+        if qr.ai_analysis_results.present?
+          analysis = qr.ai_analysis_results
+          analyses[:sentiment_scores] << analysis['sentiment'] if analysis['sentiment']
+          analyses[:quality_indicators] << analysis['quality_indicators'] if analysis['quality_indicators']
+          analyses[:confidence_levels] << analysis['confidence_score'] if analysis['confidence_score']
+          
+          if analysis['insights']
+            analyses[:key_insights].concat(analysis['insights'])
           end
         end
-        
-        analyses
       end
       
-      def collect_dynamic_questions_data(form_response)
-        dynamic_data = []
-        
-        form_response.dynamic_questions.includes(:responses).each do |dq|
-          dynamic_data << {
-            title: dq.title,
-            question_type: dq.question_type,
-            generation_context: dq.generation_context,
-            ai_confidence: dq.ai_confidence,
-            answered: dq.responses.any?,
-            answer: dq.responses.first&.answer_data,
-            generated_from: dq.generated_from_question&.title
-          }
-        end
-        
-        dynamic_data
-      end
+      analyses
+    end
+    
+    def collect_dynamic_questions_data(form_response)
+      dynamic_data = []
       
-      def calculate_completion_percentage(form_response)
-        total_questions = form_response.form.form_questions.count
-        answered_questions = form_response.question_responses.count
-        return 0 if total_questions.zero?
-        
-        (answered_questions.to_f / total_questions * 100).round(2)
-      end
-      
-      def calculate_response_quality_indicators(form_response)
-        responses = form_response.question_responses
-        return {} if responses.empty?
-        
-        {
-          avg_response_time: responses.average(:response_time_ms)&.to_f || 0,
-          detailed_responses_count: responses.joins(:form_question)
-                                            .where(form_questions: { question_type: ['text_long', 'text_short'] })
-                                            .count { |qr| qr.answer_data['value'].to_s.length > 50 },
-          total_text_length: responses.sum { |qr| qr.answer_data['value'].to_s.length },
-          ai_confidence_avg: responses.where.not(ai_confidence_score: nil)
-                                    .average(:ai_confidence_score)&.to_f || 0
+      form_response.dynamic_questions.includes(:responses).each do |dq|
+        dynamic_data << {
+          title: dq.title,
+          question_type: dq.question_type,
+          generation_context: dq.generation_context,
+          ai_confidence: dq.ai_confidence,
+          answered: dq.responses.any?,
+          answer: dq.responses.first&.answer_data,
+          generated_from: dq.generated_from_question&.title
         }
       end
       
-      def format_strategic_analysis_prompt(comprehensive_data)
-        responses = comprehensive_data[:structured_responses]
-        metadata = comprehensive_data[:metadata]
-        enrichment = comprehensive_data[:enrichment_data]
-        scoring = comprehensive_data[:scoring_data]
-        
-        <<~PROMPT
-          Analyze the following business evaluation data and provide a deep strategic analysis.
-          
-          **DATOS DE LA EMPRESA:**
-          #{format_company_data(enrichment)}
-          
-          **RESPUESTAS DEL FORMULARIO:**
-          #{format_responses_for_analysis(responses)}
-          
-          **MÉTRICAS DE CALIDAD:**
-          - Porcentaje de Completitud: #{metadata[:completion_rate]}%
-          - Tiempo Promedio por Respuesta: #{metadata[:quality_indicators][:avg_response_time]&.to_i || 0}ms
-          - Respuestas Detalladas: #{metadata[:quality_indicators][:detailed_responses_count]}
-          
-          **PUNTUACIÓN DE LEAD (si disponible):**
-          #{scoring ? format_scoring_data(scoring) : 'No disponible'}
-          
-          **ANÁLISIS REQUERIDO (JSON):**
-          {
-            "executive_summary": "Resumen ejecutivo de máximo 3 párrafos",
-            "strategic_positioning": {
-              "current_state": "Evaluación del estado actual",
-              "ai_readiness_level": "beginner|intermediate|advanced",
-              "competitive_advantages": ["ventaja1", "ventaja2"],
-              "strategic_gaps": ["gap1", "gap2"]
-            },
-            "business_impact_assessment": {
-              "primary_value_drivers": ["driver1", "driver2"],
-              "estimated_roi_range": "Rango de ROI estimado",
-              "timeline_to_value": "3-6 months|6-12 months|12+ months",
-              "success_metrics": ["métrica1", "métrica2"]
-            },
-            "transformation_priority": {
-              "urgency_level": "low|medium|high|critical",
-              "complexity_assessment": "simple|moderate|complex|highly_complex",
-              "resource_requirements": "Evaluación de recursos necesarios",
-              "change_management_needs": "Evaluación de gestión del cambio"
-            },
-            "next_steps_recommendation": [
-              "Paso inmediato 1",
-              "Paso inmediato 2",
-              "Paso inmediato 3"
-            ]
-          }
-          
-          **INSTRUCCIONES:**
-          - Be specific and actionable in all recommendations
-          - Considera el contexto de la industria y tamaño de empresa
-          - Evaluate both opportunities and risks
-          - Proporciona estimaciones realistas de tiempo y recursos
-        PROMPT
-      end
+      dynamic_data
+    end
+    
+    def calculate_completion_percentage(form_response)
+      total_questions = form_response.form.form_questions.count
+      answered_questions = form_response.question_responses.count
+      return 0 if total_questions.zero?
       
-      def format_technical_recommendations_prompt(comprehensive_data, strategic_analysis)
-        responses = comprehensive_data[:structured_responses]
-        enrichment = comprehensive_data[:enrichment_data]
+      (answered_questions.to_f / total_questions * 100).round(2)
+    end
+    
+    def calculate_response_quality_indicators(form_response)
+      responses = form_response.question_responses
+      return {} if responses.empty?
+      
+      {
+        avg_response_time: responses.average(:response_time_ms)&.to_f || 0,
+        detailed_responses_count: responses.joins(:form_question)
+                                          .where(form_questions: { question_type: ['text_long', 'text_short'] })
+                                          .count { |qr| qr.answer_data['value'].to_s.length > 50 },
+        total_text_length: responses.sum { |qr| qr.answer_data['value'].to_s.length },
+        ai_confidence_avg: responses.where.not(ai_confidence_score: nil)
+                                  .average(:ai_confidence_score)&.to_f || 0
+      }
+    end
+    
+    def format_strategic_analysis_prompt(comprehensive_data)
+      responses = comprehensive_data[:structured_responses]
+      metadata = comprehensive_data[:metadata]
+      enrichment = comprehensive_data[:enrichment_data]
+      scoring = comprehensive_data[:scoring_data]
+      
+      <<~PROMPT
+        Analyze the following business evaluation data and provide a deep strategic analysis.
         
-        <<~PROMPT
-          Based on the strategic analysis and technical data, generate specific technical recommendations.
-          
-          **ANÁLISIS ESTRATÉGICO PREVIO:**
-          #{strategic_analysis['strategic_positioning']&.to_json || 'No disponible'}
-          
-          **DATOS TÉCNICOS DISPONIBLES:**
-          #{extract_technical_responses(responses)}
-          
-          **CONTEXTO DE LA EMPRESA:**
-          #{format_company_technical_context(enrichment)}
-          
-          **RECOMENDACIONES TÉCNICAS REQUERIDAS (JSON):**
-          {
-            "architecture_recommendations": {
-              "deployment_model": "cloud|hybrid|on_premise",
-              "recommended_platforms": ["platform1", "platform2"],
-              "integration_approach": "Estrategia de integración",
-              "scalability_considerations": "Consideraciones de escalabilidad"
-            },
-            "technology_stack": {
-              "ai_frameworks": ["framework1", "framework2"],
-              "data_infrastructure": ["tool1", "tool2"],
-              "development_tools": ["tool1", "tool2"],
-              "monitoring_solutions": ["solution1", "solution2"]
-            },
-            "implementation_phases": [
-              {
-                "phase": "Phase 1: Foundation",
-                "duration": "2-3 months",
-                "deliverables": ["deliverable1", "deliverable2"],
-                "success_criteria": ["criteria1", "criteria2"]
-              }
-            ],
-            "resource_requirements": {
-              "technical_team_size": "Número recomendado",
-              "skill_requirements": ["skill1", "skill2"],
-              "external_support_needed": "Tipo de soporte externo",
-              "budget_considerations": "Consideraciones presupuestarias"
-            },
-            "data_requirements": {
-              "data_sources_needed": ["source1", "source2"],
-              "data_quality_requirements": "Requisitos de calidad",
-              "privacy_compliance": ["GDPR", "CCPA", "etc"],
-              "governance_framework": "Marco de gobernanza recomendado"
+        **DATOS DE LA EMPRESA:**
+        #{format_company_data(enrichment)}
+        
+        **RESPUESTAS DEL FORMULARIO:**
+        #{format_responses_for_analysis(responses)}
+        
+        **MÉTRICAS DE CALIDAD:**
+        - Porcentaje de Completitud: #{metadata[:completion_rate]}%
+        - Tiempo Promedio por Respuesta: #{metadata[:quality_indicators][:avg_response_time]&.to_i || 0}ms
+        - Respuestas Detalladas: #{metadata[:quality_indicators][:detailed_responses_count]}
+        
+        **PUNTUACIÓN DE LEAD (si disponible):**
+        #{scoring ? format_scoring_data(scoring) : 'No disponible'}
+        
+        **ANÁLISIS REQUERIDO (JSON):**
+        {
+          "executive_summary": "Resumen ejecutivo de máximo 3 párrafos",
+          "strategic_positioning": {
+            "current_state": "Evaluación del estado actual",
+            "ai_readiness_level": "beginner|intermediate|advanced",
+            "competitive_advantages": ["ventaja1", "ventaja2"],
+            "strategic_gaps": ["gap1", "gap2"]
+          },
+          "business_impact_assessment": {
+            "primary_value_drivers": ["driver1", "driver2"],
+            "estimated_roi_range": "Rango de ROI estimado",
+            "timeline_to_value": "3-6 months|6-12 months|12+ months",
+            "success_metrics": ["métrica1", "métrica2"]
+          },
+          "transformation_priority": {
+            "urgency_level": "low|medium|high|critical",
+            "complexity_assessment": "simple|moderate|complex|highly_complex",
+            "resource_requirements": "Evaluación de recursos necesarios",
+            "change_management_needs": "Evaluación de gestión del cambio"
+          },
+          "next_steps_recommendation": [
+            "Paso inmediato 1",
+            "Paso inmediato 2",
+            "Paso inmediato 3"
+          ]
+        }
+        
+        **INSTRUCCIONES:**
+        - Be specific and actionable in all recommendations
+        - Considera el contexto de la industria y tamaño de empresa
+        - Evaluate both opportunities and risks
+        - Proporciona estimaciones realistas de tiempo y recursos
+      PROMPT
+    end
+    
+    def format_technical_recommendations_prompt(comprehensive_data, strategic_analysis)
+      responses = comprehensive_data[:structured_responses]
+      enrichment = comprehensive_data[:enrichment_data]
+      
+      <<~PROMPT
+        Based on the strategic analysis and technical data, generate specific technical recommendations.
+        
+        **ANÁLISIS ESTRATÉGICO PREVIO:**
+        #{strategic_analysis['strategic_positioning']&.to_json || 'No disponible'}
+        
+        **DATOS TÉCNICOS DISPONIBLES:**
+        #{extract_technical_responses(responses)}
+        
+        **CONTEXTO DE LA EMPRESA:**
+        #{format_company_technical_context(enrichment)}
+        
+        **RECOMENDACIONES TÉCNICAS REQUERIDAS (JSON):**
+        {
+          "architecture_recommendations": {
+            "deployment_model": "cloud|hybrid|on_premise",
+            "recommended_platforms": ["platform1", "platform2"],
+            "integration_approach": "Estrategia de integración",
+            "scalability_considerations": "Consideraciones de escalabilidad"
+          },
+          "technology_stack": {
+            "ai_frameworks": ["framework1", "framework2"],
+            "data_infrastructure": ["tool1", "tool2"],
+            "development_tools": ["tool1", "tool2"],
+            "monitoring_solutions": ["solution1", "solution2"]
+          },
+          "implementation_phases": [
+            {
+              "phase": "Phase 1: Foundation",
+              "duration": "2-3 months",
+              "deliverables": ["deliverable1", "deliverable2"],
+              "success_criteria": ["criteria1", "criteria2"]
             }
+          ],
+          "resource_requirements": {
+            "technical_team_size": "Número recomendado",
+            "skill_requirements": ["skill1", "skill2"],
+            "external_support_needed": "Tipo de soporte externo",
+            "budget_considerations": "Consideraciones presupuestarias"
+          },
+          "data_requirements": {
+            "data_sources_needed": ["source1", "source2"],
+            "data_quality_requirements": "Requisitos de calidad",
+            "privacy_compliance": ["GDPR", "CCPA", "etc"],
+            "governance_framework": "Marco de gobernanza recomendado"
           }
-        PROMPT
-      end
-      
-      def format_risk_analysis_prompt(comprehensive_data, strategic_analysis, technical_recommendations)
-        <<~PROMPT
-          Perform a comprehensive risk analysis based on all available data.
-          
-          **ANÁLISIS DE RIESGOS REQUERIDO (JSON):**
-          {
-            "technical_risks": [
-              {
-                "risk": "Descripción del riesgo técnico",
-                "probability": "low|medium|high",
-                "impact": "low|medium|high|critical",
-                "mitigation_strategies": ["estrategia1", "estrategia2"]
-              }
-            ],
-            "business_risks": [
-              {
-                "risk": "Descripción del riesgo de negocio",
-                "probability": "low|medium|high",
-                "impact": "low|medium|high|critical",
-                "mitigation_strategies": ["estrategia1", "estrategia2"]
-              }
-            ],
-            "organizational_risks": [
-              {
-                "risk": "Descripción del riesgo organizacional",
-                "probability": "low|medium|high",
-                "impact": "low|medium|high|critical",
-                "mitigation_strategies": ["estrategia1", "estrategia2"]
-              }
-            ],
-            "financial_risks": [
-              {
-                "risk": "Descripción del riesgo financiero",
-                "probability": "low|medium|high",
-                "impact": "low|medium|high|critical",
-                "mitigation_strategies": ["estrategia1", "estrategia2"]
-              }
-            ],
-            "overall_risk_assessment": {
-              "risk_level": "low|medium|high|critical",
-              "key_risk_factors": ["factor1", "factor2"],
-              "recommended_risk_tolerance": "conservative|moderate|aggressive",
-              "contingency_planning": "Plan de contingencia recomendado"
+        }
+      PROMPT
+    end
+    
+    def format_risk_analysis_prompt(comprehensive_data, strategic_analysis, technical_recommendations)
+      <<~PROMPT
+        Perform a comprehensive risk analysis based on all available data.
+        
+        **ANÁLISIS DE RIESGOS REQUERIDO (JSON):**
+        {
+          "technical_risks": [
+            {
+              "risk": "Descripción del riesgo técnico",
+              "probability": "low|medium|high",
+              "impact": "low|medium|high|critical",
+              "mitigation_strategies": ["estrategia1", "estrategia2"]
             }
+          ],
+          "business_risks": [
+            {
+              "risk": "Descripción del riesgo de negocio",
+              "probability": "low|medium|high",
+              "impact": "low|medium|high|critical",
+              "mitigation_strategies": ["estrategia1", "estrategia2"]
+            }
+          ],
+          "organizational_risks": [
+            {
+              "risk": "Descripción del riesgo organizacional",
+              "probability": "low|medium|high",
+              "impact": "low|medium|high|critical",
+              "mitigation_strategies": ["estrategia1", "estrategia2"]
+            }
+          ],
+          "financial_risks": [
+            {
+              "risk": "Descripción del riesgo financiero",
+              "probability": "low|medium|high",
+              "impact": "low|medium|high|critical",
+              "mitigation_strategies": ["estrategia1", "estrategia2"]
+            }
+          ],
+          "overall_risk_assessment": {
+            "risk_level": "low|medium|high|critical",
+            "key_risk_factors": ["factor1", "factor2"],
+            "recommended_risk_tolerance": "conservative|moderate|aggressive",
+            "contingency_planning": "Plan de contingencia recomendado"
           }
-        PROMPT
+        }
+      PROMPT
+    end
+    
+    def format_final_report_prompt(comprehensive_data, strategic_analysis, technical_recommendations, risk_analysis)
+      basic_data = comprehensive_data[:basic_data]
+      
+      <<~PROMPT
+        Generate a comprehensive executive report in Markdown format using ALL previous analyses.
+        
+        **ESTRUCTURA REQUERIDA DEL REPORTE:**
+        
+        # Reporte de Evaluación Estratégica: Transformación Digital con IA
+        
+        **Cliente:** [Extraer de datos]
+        **Fecha:** #{Date.current.strftime('%d de %B, %Y')}
+        **ID de Evaluación:** #{basic_data[:response][:id]}
+        
+        ## Resumen Ejecutivo
+        [3-4 párrafos que resuman los hallazgos clave, recomendaciones principales y próximos pasos]
+        
+        ## 1. Análisis de la Situación Actual
+        ### 1.1 Perfil de la Organización
+        [Información de la empresa basada en datos enriquecidos]
+        
+        ### 1.2 Estado de Madurez en IA
+        [Evaluación del nivel actual]
+        
+        ### 1.3 Desafíos Identificados
+        [Principales pain points]
+        
+        ## 2. Análisis Estratégico
+        ### 2.1 Oportunidades de Valor
+        [Drivers de valor identificados]
+        
+        ### 2.2 Posicionamiento Competitivo
+        [Análisis competitivo]
+        
+        ### 2.3 Alineación Estratégica
+        [Alineación con objetivos de negocio]
+        
+        ## 3. Recomendaciones Técnicas
+        ### 3.1 Arquitectura Propuesta
+        [Arquitectura técnica recomendada]
+        
+        ### 3.2 Stack Tecnológico
+        [Tecnologías específicas]
+        
+        ### 3.3 Consideraciones de Implementación
+        [Detalles de implementación]
+        
+        ## 4. Análisis de Riesgos y Mitigación
+        ### 4.1 Matriz de Riesgos
+        [Tabla de riesgos con probabilidad e impacto]
+        
+        ### 4.2 Estrategias de Mitigación
+        [Estrategias específicas]
+        
+        ## 5. Roadmap de Implementación
+        ### 5.1 Fases de Implementación
+        [Cronograma detallado por fases]
+        
+        ### 5.2 Hitos y Entregables
+        [Hitos clave y entregables]
+        
+        ### 5.3 Recursos Requeridos
+        [Recursos humanos y técnicos]
+        
+        ## 6. Proyecciones Financieras
+        ### 6.1 Inversión Estimada
+        [Costos por fase]
+        
+        ### 6.2 ROI Proyectado
+        [Retorno de inversión esperado]
+        
+        ### 6.3 Modelo de Financiamiento
+        [Opciones de financiamiento]
+        
+        ## 7. Próximos Pasos Recomendados
+        ### 7.1 Acciones Inmediatas (0-30 días)
+        [Pasos inmediatos]
+        
+        ### 7.2 Planificación a Corto Plazo (1-3 meses)
+        [Planificación corto plazo]
+        
+        ### 7.3 Visión a Largo Plazo (6-12 meses)
+        [Visión largo plazo]
+        
+        ## 8. Conclusiones
+        [Conclusiones finales y recomendación general]
+        
+        ---
+        
+        **Nota:** Este reporte ha sido generado mediante análisis de IA basado en la información proporcionada durante la evaluación. Las recomendaciones deben ser validadas con el contexto específico de su organización.
+        
+        **INSTRUCCIONES PARA LA GENERACIÓN:**
+        1. Usa TODOS los datos de los análisis previos
+        2. Mantén un tono profesional y ejecutivo
+        3. Incluye datos específicos y métricas cuando estén disponibles
+        4. Haz referencias cruzadas entre secciones cuando sea relevante
+        5. Asegúrate de que el reporte sea accionable y específico
+        6. Incluye tablas en formato Markdown cuando sea apropiado
+        7. El reporte debe tener entre 2500-4000 palabras
+        8. Cada sección debe ser sustantiva y detallada
+      PROMPT
+    end
+    
+    # Helper methods for formatting data
+    def format_company_data(enrichment)
+      return "No hay datos de empresa disponibles" if enrichment.blank?
+      
+      [
+        "- Empresa: #{enrichment[:company_name] || 'No especificada'}",
+        "- Industria: #{enrichment[:industry] || 'No especificada'}",
+        "- Tamaño: #{enrichment[:company_size] || 'No especificado'}",
+        "- Ubicación: #{enrichment[:location] || 'No especificada'}",
+        "- Website: #{enrichment[:website] || 'No especificado'}"
+      ].join("\n")
+    end
+    
+    def format_responses_for_analysis(responses)
+      responses.map do |question, data|
+        "- #{question}: #{data[:value]} (Tipo: #{data[:question_type]})"
+      end.join("\n")
+    end
+    
+    def format_scoring_data(scoring)
+      [
+        "- Puntuación General: #{scoring[:overall_score]}/100",
+        "- Tier: #{scoring[:tier]}",
+        "- Nivel de Confianza: #{scoring[:confidence_level]}",
+        "- Valor Estimado: #{scoring[:estimated_value]}"
+      ].join("\n")
+    end
+    
+    def extract_technical_responses(responses)
+      technical_questions = responses.select do |question, data|
+        question.downcase.include?('tecnolog') || 
+        question.downcase.include?('sistem') ||
+        question.downcase.include?('plataform') ||
+        data[:question_type].in?(['multiple_choice', 'checkbox'])
       end
       
-      def format_final_report_prompt(comprehensive_data, strategic_analysis, technical_recommendations, risk_analysis)
-        basic_data = comprehensive_data[:basic_data]
-        
-        <<~PROMPT
-          Generate a comprehensive executive report in Markdown format using ALL previous analyses.
-          
-          **ESTRUCTURA REQUERIDA DEL REPORTE:**
-          
-          # Reporte de Evaluación Estratégica: Transformación Digital con IA
-          
-          **Cliente:** [Extraer de datos]
-          **Fecha:** #{Date.current.strftime('%d de %B, %Y')}
-          **ID de Evaluación:** #{basic_data[:response][:id]}
-          
-          ## Resumen Ejecutivo
-          [3-4 párrafos que resuman los hallazgos clave, recomendaciones principales y próximos pasos]
-          
-          ## 1. Análisis de la Situación Actual
-          ### 1.1 Perfil de la Organización
-          [Información de la empresa basada en datos enriquecidos]
-          
-          ### 1.2 Estado de Madurez en IA
-          [Evaluación del nivel actual]
-          
-          ### 1.3 Desafíos Identificados
-          [Principales pain points]
-          
-          ## 2. Análisis Estratégico
-          ### 2.1 Oportunidades de Valor
-          [Drivers de valor identificados]
-          
-          ### 2.2 Posicionamiento Competitivo
-          [Análisis competitivo]
-          
-          ### 2.3 Alineación Estratégica
-          [Alineación con objetivos de negocio]
-          
-          ## 3. Recomendaciones Técnicas
-          ### 3.1 Arquitectura Propuesta
-          [Arquitectura técnica recomendada]
-          
-          ### 3.2 Stack Tecnológico
-          [Tecnologías específicas]
-          
-          ### 3.3 Consideraciones de Implementación
-          [Detalles de implementación]
-          
-          ## 4. Análisis de Riesgos y Mitigación
-          ### 4.1 Matriz de Riesgos
-          [Tabla de riesgos con probabilidad e impacto]
-          
-          ### 4.2 Estrategias de Mitigación
-          [Estrategias específicas]
-          
-          ## 5. Roadmap de Implementación
-          ### 5.1 Fases de Implementación
-          [Cronograma detallado por fases]
-          
-          ### 5.2 Hitos y Entregables
-          [Hitos clave y entregables]
-          
-          ### 5.3 Recursos Requeridos
-          [Recursos humanos y técnicos]
-          
-          ## 6. Proyecciones Financieras
-          ### 6.1 Inversión Estimada
-          [Costos por fase]
-          
-          ### 6.2 ROI Proyectado
-          [Retorno de inversión esperado]
-          
-          ### 6.3 Modelo de Financiamiento
-          [Opciones de financiamiento]
-          
-          ## 7. Próximos Pasos Recomendados
-          ### 7.1 Acciones Inmediatas (0-30 días)
-          [Pasos inmediatos]
-          
-          ### 7.2 Planificación a Corto Plazo (1-3 meses)
-          [Planificación corto plazo]
-          
-          ### 7.3 Visión a Largo Plazo (6-12 meses)
-          [Visión largo plazo]
-          
-          ## 8. Conclusiones
-          [Conclusiones finales y recomendación general]
-          
-          ---
-          
-          **Nota:** Este reporte ha sido generado mediante análisis de IA basado en la información proporcionada durante la evaluación. Las recomendaciones deben ser validadas con el contexto específico de su organización.
-          
-          **INSTRUCCIONES PARA LA GENERACIÓN:**
-          1. Usa TODOS los datos de los análisis previos
-          2. Mantén un tono profesional y ejecutivo
-          3. Incluye datos específicos y métricas cuando estén disponibles
-          4. Haz referencias cruzadas entre secciones cuando sea relevante
-          5. Asegúrate de que el reporte sea accionable y específico
-          6. Incluye tablas en formato Markdown cuando sea apropiado
-          7. El reporte debe tener entre 2500-4000 palabras
-          8. Cada sección debe ser sustantiva y detallada
-        PROMPT
+      if technical_questions.any?
+        technical_questions.map { |q, d| "- #{q}: #{d[:value]}" }.join("\n")
+      else
+        "No hay información técnica específica disponible"
       end
+    end
+    
+    def format_company_technical_context(enrichment)
+      return "No hay contexto técnico disponible" if enrichment.blank?
       
-      # Helper methods for formatting data
-      def format_company_data(enrichment)
-        return "No hay datos de empresa disponibles" if enrichment.blank?
-        
-        [
-          "- Empresa: #{enrichment[:company_name] || 'No especificada'}",
-          "- Industria: #{enrichment[:industry] || 'No especificada'}",
-          "- Tamaño: #{enrichment[:company_size] || 'No especificado'}",
-          "- Ubicación: #{enrichment[:location] || 'No especificada'}",
-          "- Website: #{enrichment[:website] || 'No especificado'}"
-        ].join("\n")
-      end
+      tech_info = []
+      tech_info << "- Tecnologías identificadas: #{enrichment[:technologies]&.join(', ')}" if enrichment[:technologies]
+      tech_info << "- Industria: #{enrichment[:industry]}" if enrichment[:industry]
+      tech_info << "- Tamaño de empresa: #{enrichment[:company_size]}" if enrichment[:company_size]
       
-      def format_responses_for_analysis(responses)
-        responses.map do |question, data|
-          "- #{question}: #{data[:value]} (Tipo: #{data[:question_type]})"
-        end.join("\n")
-      end
+      tech_info.any? ? tech_info.join("\n") : "Contexto técnico limitado"
+    end
+    
+    def generate_report_filename(form_response, report_type)
+      company_name = form_response.enrichment_data&.[](:company_name) || 'Unknown_Company'
+      sanitized_name = company_name.gsub(/[^a-zA-Z0-9]/, '_')
+      timestamp = Time.current.strftime('%Y%m%d_%H%M%S')
       
-      def format_scoring_data(scoring)
-        [
-          "- Puntuación General: #{scoring[:overall_score]}/100",
-          "- Tier: #{scoring[:tier]}",
-          "- Nivel de Confianza: #{scoring[:confidence_level]}",
-          "- Valor Estimado: #{scoring[:estimated_value]}"
-        ].join("\n")
-      end
+      "#{sanitized_name}_#{report_type}_#{timestamp}.md"
+    end
+    
+    def generate_downloadable_report(content, filename)
+      # Crear directorio si no existe
+      reports_dir = Rails.root.join('tmp', 'reports')
+      FileUtils.mkdir_p(reports_dir)
       
-      def extract_technical_responses(responses)
-        technical_questions = responses.select do |question, data|
-          question.downcase.include?('tecnolog') || 
-          question.downcase.include?('sistem') ||
-          question.downcase.include?('plataform') ||
-          data[:question_type].in?(['multiple_choice', 'checkbox'])
-        end
-        
-        if technical_questions.any?
-          technical_questions.map { |q, d| "- #{q}: #{d[:value]}" }.join("\n")
-        else
-          "No hay información técnica específica disponible"
-        end
-      end
+      # Escribir archivo
+      file_path = reports_dir.join(filename)
+      File.write(file_path, content)
       
-      def format_company_technical_context(enrichment)
-        return "No hay contexto técnico disponible" if enrichment.blank?
-        
-        tech_info = []
-        tech_info << "- Tecnologías identificadas: #{enrichment[:technologies]&.join(', ')}" if enrichment[:technologies]
-        tech_info << "- Industria: #{enrichment[:industry]}" if enrichment[:industry]
-        tech_info << "- Tamaño de empresa: #{enrichment[:company_size]}" if enrichment[:company_size]
-        
-        tech_info.any? ? tech_info.join("\n") : "Contexto técnico limitado"
-      end
-      
-      def generate_report_filename(form_response, report_type)
-        company_name = form_response.enrichment_data&.[](:company_name) || 'Unknown_Company'
-        sanitized_name = company_name.gsub(/[^a-zA-Z0-9]/, '_')
-        timestamp = Time.current.strftime('%Y%m%d_%H%M%S')
-        
-        "#{sanitized_name}_#{report_type}_#{timestamp}.md"
-      end
-      
-      def generate_downloadable_report(content, filename)
-        # Crear directorio si no existe
-        reports_dir = Rails.root.join('tmp', 'reports')
-        FileUtils.mkdir_p(reports_dir)
-        
-        # Escribir archivo
-        file_path = reports_dir.join(filename)
-        File.write(file_path, content)
-        
-        file_path.to_s
-      end
+      file_path.to_s
     end
   end
 end

@@ -65,29 +65,43 @@ class Integrations::GoogleSheetsService < ApplicationService
     return self.class.failure("No integration configured") unless @integration&.can_sync?
 
     begin
-      Rails.logger.info "Starting export_all_responses for form #{@form.id}"
+      Rails.logger.info "Starting export for form #{@form.id} (#{@form.name})"
       
-      # Clear existing data (except headers)
-      clear_data_rows
-      Rails.logger.info "Cleared existing data rows"
+      # Validate form has questions
+      if @form.form_questions.empty?
+        return self.class.failure("Form has no questions to export")
+      end
       
-      # Get all responses
-      responses = @form.form_responses.includes(:question_responses)
+      # Load responses with proper associations
+      responses = load_responses_for_export
       Rails.logger.info "Found #{responses.count} responses to export"
       
-      if responses.any?
-        rows = build_response_rows(responses)
-        Rails.logger.info "Built #{rows.size} rows, appending to spreadsheet"
-        append_rows(rows)
-        Rails.logger.info "Successfully appended rows to spreadsheet"
-      else
-        Rails.logger.warn "No responses found to export"
+      # Validate responses have data
+      responses_with_data = responses.select { |r| r.question_responses.any? }
+      Rails.logger.info "#{responses_with_data.count} responses have answer data"
+      
+      if responses_with_data.empty?
+        Rails.logger.warn "No responses with data found"
+        return self.class.success("No responses with data to export")
       end
-
+      
+      # Clear and rebuild data
+      clear_data_rows
+      rows = build_response_rows(responses_with_data)
+      
+      Rails.logger.info "Built #{rows.size} data rows"
+      rows.each_with_index do |row, index|
+        Rails.logger.debug "Row #{index + 1}: #{row.inspect}"
+      end
+      
+      append_rows(rows) if rows.any?
+      
       @integration.mark_sync_success!
-      self.class.success("Exported #{responses.count} responses successfully")
+      self.class.success("Exported #{responses_with_data.count} responses successfully")
+      
     rescue => e
-      Rails.logger.error "Export failed: #{e.message}\n#{e.backtrace.join("\n")}"
+      Rails.logger.error "Export failed: #{e.message}"
+      Rails.logger.error e.backtrace.join("\n")
       @integration.mark_sync_error!(e)
       self.class.failure("Export failed: #{e.message}")
     end
@@ -97,6 +111,22 @@ class Integrations::GoogleSheetsService < ApplicationService
     return unless @integration&.can_sync? && @integration.auto_sync?
 
     begin
+      # Validate response has data and is in exportable status
+      unless ['completed', 'partial'].include?(response.status)
+        Rails.logger.info "Skipping sync for response #{response.id} with status: #{response.status}"
+        return self.class.success("Response not in exportable status")
+      end
+      
+      unless response.question_responses.any?
+        Rails.logger.info "Skipping sync for response #{response.id} - no answer data"
+        return self.class.success("Response has no answer data")
+      end
+      
+      # Ensure response is loaded with proper associations
+      response = @form.form_responses
+                      .includes(question_responses: :form_question)
+                      .find(response.id)
+      
       row = build_response_row(response)
       append_rows([row])
       
@@ -108,6 +138,13 @@ class Integrations::GoogleSheetsService < ApplicationService
   end
 
   private
+
+  def load_responses_for_export
+    @form.form_responses
+      .includes(question_responses: :form_question)
+      .where(status: ['completed', 'partial'])
+      .order(created_at: :desc)
+  end
 
   def authorize_service
     # Use user's OAuth token if available, fallback to service account

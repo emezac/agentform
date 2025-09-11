@@ -133,7 +133,7 @@ class RedisErrorLogger
     # Test Redis connection and log results
     def test_and_log_connection(component: 'unknown')
       start_time = Time.current
-      
+
       begin
         # Test basic Redis connectivity using proper SSL configuration
         case component
@@ -141,16 +141,23 @@ class RedisErrorLogger
           if defined?(Sidekiq)
             Sidekiq.redis(&:ping)
           else
+            # Fallback si Sidekiq no está definido
             Redis.new(RedisConfig.sidekiq_config).ping
           end
         when 'cache'
+          # Usa el cliente de Redis que Rails Cache ya ha configurado
           if Rails.cache.respond_to?(:redis)
             Rails.cache.redis.ping
           else
-            Redis.new(RedisConfig.cache_config).ping
+            raise "Rails.cache no responde a :redis. No se puede probar la conexión."
           end
         when 'actioncable'
-          Redis.new(RedisConfig.cable_config).ping
+          # Usa el cliente de Redis que Action Cable ya ha configurado
+          if defined?(ActionCable) && ActionCable.server.pubsub.respond_to?(:redis_connection)
+            ActionCable.server.pubsub.redis_connection.ping
+          else
+            raise "Action Cable no parece estar configurado con un adaptador de Redis."
+          end
         else
           # Generic Redis test using RedisConfig
           Redis.new(RedisConfig.connection_config).ping
@@ -177,7 +184,6 @@ class RedisErrorLogger
         
         false
       end
-    end
     
     # Get Redis connection diagnostics
     def get_connection_diagnostics
