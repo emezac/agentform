@@ -114,7 +114,7 @@
   - Documentar proceso de deploy para futuros updates
   - _Requisitos: Performance y mantenibilidad_
 
-- [-] 17. Diagnosticar y resolver fallos de deployment
+- [x] 17. Diagnosticar y resolver fallos de deployment
   - Identificar la causa específica del "pre-receive hook declined"
   - Revisar logs de build para encontrar errores de compilación
   - Verificar que todos los archivos de configuración sean válidos
