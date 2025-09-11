@@ -4,7 +4,13 @@
 # Redis SSL Configuration Verification Script for Production
 # This script verifies that all Redis components work correctly with SSL configuration
 
-require_relative '../config/environment'
+begin
+  require_relative '../config/environment'
+rescue => e
+  # Suppress Rails loading warnings in production scripts
+  puts "Warning: Rails-specific components failed to load: #{e.message}" if ENV['DEBUG']
+  require_relative '../config/environment'
+end
 
 class RedisSSLVerifier
   def initialize

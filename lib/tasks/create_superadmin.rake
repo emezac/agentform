@@ -87,12 +87,10 @@ namespace :users do
       # Try to connect to Redis with a simple ping
       if defined?(Sidekiq)
         Sidekiq.redis { |conn| conn.ping }
-      elsif Rails.cache.respond_to?(:redis)
-        Rails.cache.redis.ping
       else
-        # Fallback to direct Redis connection
-        redis_url = ENV.fetch('REDIS_URL', 'redis://localhost:6379/0')
-        Redis.new(url: redis_url).ping
+        # Fallback to direct Redis connection using RedisConfig
+        redis = Redis.new(RedisConfig.connection_config)
+        redis.ping
       end
       
       Rails.logger.info "Redis connectivity test passed"

@@ -1,14 +1,29 @@
 # frozen_string_literal: true
 
-# Schedule trial expiration job to run daily
-# This will check for expiring trials and handle notifications/downgrades
+# Trial Expiration Scheduler Configuration
+# This initializer sets up the trial expiration job scheduling
 
-if Rails.env.production? || Rails.env.staging?
-  # In production, you would typically use a cron job or scheduler like whenever gem
-  # For now, we'll just log that this should be set up
-  Rails.logger.info "Trial expiration job should be scheduled to run daily in production"
-  Rails.logger.info "Example cron entry: 0 9 * * * cd /path/to/app && bundle exec rails runner 'TrialExpirationJob.perform_now'"
+Rails.application.configure do
+  # Only configure in production
+  if Rails.env.production?
+    # Schedule trial expiration job to run daily
+    # This should be configured in your deployment platform's scheduler
+    
+    Rails.logger.info "Trial expiration job configuration:"
+    Rails.logger.info "  - Job should run daily at 9:00 AM UTC"
+    Rails.logger.info "  - Configure in Heroku Scheduler or similar service"
+    Rails.logger.info "  - Command: TrialExpirationJob.perform_now"
+    
+    # For Heroku, add this to your scheduler:
+    # Frequency: Daily
+    # Time: 09:00 UTC
+    # Command: bundle exec rails runner 'TrialExpirationJob.perform_now'
+    
+    # Verify the job class exists
+    if defined?(TrialExpirationJob)
+      Rails.logger.info "  - TrialExpirationJob class is available"
+    else
+      Rails.logger.warn "  - TrialExpirationJob class not found - create it if needed"
+    end
+  end
 end
-
-# For development/testing, you can manually trigger with:
-# TrialExpirationJob.perform_now

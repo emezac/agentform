@@ -240,9 +240,7 @@ if Rails.env.production?
   Sidekiq.configure_client do |config|
     # Override redis config with retry settings for production
     production_redis_config = redis_config.merge({
-      reconnect_attempts: 3,
-      reconnect_delay: 1,
-      reconnect_delay_max: 5
+      reconnect_attempts: 3
     })
     config.redis = production_redis_config
   end
@@ -250,9 +248,7 @@ if Rails.env.production?
   Sidekiq.configure_server do |config|
     # Override redis config with retry settings for production
     production_redis_config = redis_config.merge({
-      reconnect_attempts: 5,
-      reconnect_delay: 1,
-      reconnect_delay_max: 10
+      reconnect_attempts: 5
     })
     config.redis = production_redis_config
   end
