@@ -65,20 +65,29 @@ class Integrations::GoogleSheetsService < ApplicationService
     return self.class.failure("No integration configured") unless @integration&.can_sync?
 
     begin
+      Rails.logger.info "Starting export_all_responses for form #{@form.id}"
+      
       # Clear existing data (except headers)
       clear_data_rows
+      Rails.logger.info "Cleared existing data rows"
       
       # Get all responses
       responses = @form.form_responses.includes(:question_responses)
+      Rails.logger.info "Found #{responses.count} responses to export"
       
       if responses.any?
         rows = build_response_rows(responses)
+        Rails.logger.info "Built #{rows.size} rows, appending to spreadsheet"
         append_rows(rows)
+        Rails.logger.info "Successfully appended rows to spreadsheet"
+      else
+        Rails.logger.warn "No responses found to export"
       end
 
       @integration.mark_sync_success!
       self.class.success("Exported #{responses.count} responses successfully")
     rescue => e
+      Rails.logger.error "Export failed: #{e.message}\n#{e.backtrace.join("\n")}"
       @integration.mark_sync_error!(e)
       self.class.failure("Export failed: #{e.message}")
     end
@@ -159,23 +168,37 @@ class Integrations::GoogleSheetsService < ApplicationService
   end
 
   def build_response_row(response)
+    Rails.logger.info "Building row for response #{response.id}"
+    
     row = [
       response.created_at.strftime('%Y-%m-%d %H:%M:%S'),
       response.id
     ]
 
     @form.form_questions.order(:position).each do |question|
-      answer = response.question_responses.find { |a| a.form_question_id == question.id }
-      row << format_answer_value(answer, question)
+      answer = response.question_responses.find_by(form_question_id: question.id)
+      formatted_value = format_answer_value(answer, question)
+      Rails.logger.info "Question '#{question.title}': answer = #{formatted_value.inspect}"
+      row << formatted_value
     end
 
+    Rails.logger.info "Final row: #{row.inspect}"
     row
   end
 
   def format_answer_value(answer, question)
+    Rails.logger.debug "Formatting answer for question #{question.id}: #{answer.inspect}"
+    
     return '' unless answer&.answer_data.present?
 
-    value = answer.answer_data['value'] || answer.answer_data
+    # Handle different answer_data structures
+    value = if answer.answer_data.is_a?(Hash)
+              answer.answer_data['value'] || answer.answer_data.values.first
+            else
+              answer.answer_data
+            end
+
+    return '' if value.blank?
 
     case question.question_type
     when 'rating'
