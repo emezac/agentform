@@ -41,33 +41,32 @@ heroku config:set REDIS_POOL_TIMEOUT=5 --app your-app-name
 heroku config:set SIDEKIQ_CONCURRENCY=10 --app your-app-name
 ```
 
-### 3. Google Sheets Integration (Optional)
+### 3. Third-Party Integrations
 
-If you plan to use Google Sheets integration, configure the credentials:
+Configure Google Sheets and Stripe integrations:
 
+#### Quick Setup (Recommended)
 ```bash
-# Edit Rails credentials
-heroku run rails credentials:edit --app your-app-name
+# Set up both Google Sheets and Stripe
+./script/setup_all_integrations.sh your-app-name
+
+# Or set up individually
+./script/setup_google_sheets.sh your-app-name
+./script/setup_stripe.sh your-app-name
 ```
 
-Add the Google Sheets service account credentials:
+#### Manual Setup
+See detailed instructions in: `docs/third_party_integrations_setup.md`
 
-```yaml
-google_sheets:
-  type: service_account
-  project_id: your-project-id
-  private_key_id: your-private-key-id
-  private_key: |
-    -----BEGIN PRIVATE KEY-----
-    your-private-key-content
-    -----END PRIVATE KEY-----
-  client_email: your-service-account@your-project.iam.gserviceaccount.com
-  client_id: your-client-id
-  auth_uri: https://accounts.google.com/o/oauth2/auth
-  token_uri: https://oauth2.googleapis.com/token
-  auth_provider_x509_cert_url: https://www.googleapis.com/oauth2/v1/certs
-  client_x509_cert_url: https://www.googleapis.com/robot/v1/metadata/x509/your-service-account%40your-project.iam.gserviceaccount.com
-```
+**Google Sheets Integration:**
+- Requires Google Cloud Console setup
+- Service Account with JSON credentials
+- Rails encrypted credentials configuration
+
+**Stripe Integration:**
+- Requires Stripe account and API keys
+- Environment variables for keys
+- Optional webhook configuration
 
 ## 🧪 Verification Steps
 

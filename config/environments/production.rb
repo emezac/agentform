@@ -125,15 +125,25 @@ Rails.application.configure do
     httponly: true,
     same_site: :lax
   
-  # Content Security Policy
+  # Content Security Policy - Configured for Rails app with inline scripts
   config.content_security_policy do |policy|
     policy.default_src :self, :https
     policy.font_src    :self, :https, :data
-    policy.img_src     :self, :https, :data
+    policy.img_src     :self, :https, :data, 'blob:'
     policy.object_src  :none
-    policy.script_src  :self, :https
+    # Allow inline scripts and external CDNs
+    policy.script_src  :self, :https, :unsafe_inline, :unsafe_eval, 
+                       'https://cdn.tailwindcss.com',
+                       'https://js.stripe.com',
+                       'https://www.paypal.com'
     policy.style_src   :self, :https, :unsafe_inline
-    policy.connect_src :self, :https
+    # Allow WebSocket connections for ActionCable
+    policy.connect_src :self, :https, :wss, 
+                       "wss://#{ENV.fetch('APP_DOMAIN', 'localhost')}"
+    # Allow frames for payment providers
+    policy.frame_src   :self, :https,
+                       'https://js.stripe.com',
+                       'https://www.paypal.com'
   end
   
   # Configure CORS for API endpoints
