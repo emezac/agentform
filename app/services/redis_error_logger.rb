@@ -135,14 +135,25 @@ class RedisErrorLogger
       start_time = Time.current
       
       begin
-        # Test basic Redis connectivity
-        if defined?(Sidekiq) && component == 'sidekiq'
-          Sidekiq.redis(&:ping)
-        elsif Rails.cache.respond_to?(:redis) && component == 'cache'
-          Rails.cache.redis.ping
+        # Test basic Redis connectivity using proper SSL configuration
+        case component
+        when 'sidekiq'
+          if defined?(Sidekiq)
+            Sidekiq.redis(&:ping)
+          else
+            Redis.new(RedisConfig.sidekiq_config).ping
+          end
+        when 'cache'
+          if Rails.cache.respond_to?(:redis)
+            Rails.cache.redis.ping
+          else
+            Redis.new(RedisConfig.cache_config).ping
+          end
+        when 'actioncable'
+          Redis.new(RedisConfig.cable_config).ping
         else
-          # Generic Redis test
-          Redis.new(url: current_redis_url).ping
+          # Generic Redis test using RedisConfig
+          Redis.new(RedisConfig.connection_config).ping
         end
         
         duration = Time.current - start_time
