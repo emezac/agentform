@@ -106,13 +106,11 @@ class Integrations::GoogleSheetsService < ApplicationService
     
     if user_integration&.valid_token?
       # Use user's OAuth2 credentials
-      credentials = Rails.application.credentials.google_sheets_integration[Rails.env.to_sym]
-      
       Signet::OAuth2::Client.new(
         access_token: user_integration.access_token,
         refresh_token: user_integration.refresh_token,
-        client_id: credentials[:client_id],
-        client_secret: credentials[:client_secret],
+        client_id: GoogleSheets::ConfigService.oauth_client_id,
+        client_secret: GoogleSheets::ConfigService.oauth_client_secret,
         token_credential_uri: 'https://oauth2.googleapis.com/token'
       )
     else

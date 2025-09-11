@@ -98,8 +98,8 @@ class GoogleIntegrationsController < ApplicationController
   def revoke_google_token(integration)
     begin
       auth = Signet::OAuth2::Client.new(
-        client_id: Rails.application.credentials.dig(:google_sheets_integration, :client_id),
-        client_secret: Rails.application.credentials.dig(:google_sheets_integration, :client_secret),
+        client_id: GoogleSheets::ConfigService.oauth_client_id,
+        client_secret: GoogleSheets::ConfigService.oauth_client_secret,
         access_token: integration.access_token
       )
       

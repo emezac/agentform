@@ -21,8 +21,8 @@ module GoogleSheets
       auth = Signet::OAuth2::Client.new(
         access_token: integration.access_token,
         refresh_token: integration.refresh_token,
-        client_id: Rails.application.credentials.dig(:google_sheets_integration, :client_id),
-        client_secret: Rails.application.credentials.dig(:google_sheets_integration, :client_secret)
+        client_id: GoogleSheets::ConfigService.oauth_client_id,
+        client_secret: GoogleSheets::ConfigService.oauth_client_secret
       )
       
       auth

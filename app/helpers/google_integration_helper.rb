@@ -1,17 +1,6 @@
 module GoogleIntegrationHelper
   def google_oauth_configured?
-    begin
-      credentials = Rails.application.credentials.google_sheets_integration
-      return false unless credentials.present?
-      
-      env_credentials = credentials[Rails.env.to_sym]
-      return false unless env_credentials.present?
-      
-      env_credentials[:client_id].present? && env_credentials[:client_secret].present?
-    rescue => e
-      Rails.logger.warn "Error checking Google OAuth configuration: #{e.message}"
-      false
-    end
+    GoogleSheets::ConfigService.oauth_configured?
   end
 
   def google_oauth_status_for_user(user)

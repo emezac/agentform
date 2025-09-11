@@ -110,21 +110,13 @@ class GoogleOauthController < ApplicationController
   private
 
   def oauth_client
-    credentials = Rails.application.credentials.google_sheets_integration
-    
-    unless credentials.present?
-      raise "Google OAuth credentials not configured. Please configure google_sheets_integration in Rails credentials."
-    end
-    
-    env_credentials = credentials[Rails.env.to_sym]
-    
-    unless env_credentials.present?
-      raise "Google OAuth credentials not found for #{Rails.env} environment."
+    unless GoogleSheets::ConfigService.oauth_configured?
+      raise "Google OAuth credentials not configured. Please configure GOOGLE_SHEETS_CLIENT_ID and GOOGLE_SHEETS_CLIENT_SECRET environment variables for production, or google_sheets_integration in Rails credentials for development."
     end
     
     Signet::OAuth2::Client.new(
-      client_id: env_credentials[:client_id],
-      client_secret: env_credentials[:client_secret],
+      client_id: GoogleSheets::ConfigService.oauth_client_id,
+      client_secret: GoogleSheets::ConfigService.oauth_client_secret,
       authorization_uri: 'https://accounts.google.com/o/oauth2/auth',
       token_credential_uri: 'https://oauth2.googleapis.com/token',
       redirect_uri: google_oauth_callback_url

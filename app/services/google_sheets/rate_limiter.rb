@@ -78,7 +78,12 @@ module GoogleSheets
     end
     
     def max_requests_per_minute
-      Rails.application.credentials.dig(:google_sheets_integration, :rate_limits, :requests_per_minute) || 60
+      # Use environment variable in production, fallback to credentials in development
+      if Rails.env.production?
+        ENV['GOOGLE_SHEETS_RATE_LIMIT_PER_MINUTE']&.to_i || 60
+      else
+        Rails.application.credentials.dig(:google_sheets_integration, :rate_limits, :requests_per_minute) || 60
+      end
     end
   end
 end
