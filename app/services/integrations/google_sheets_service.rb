@@ -168,7 +168,7 @@ class Integrations::GoogleSheetsService < ApplicationService
   end
 
   def build_response_row(response)
-    Rails.logger.info "Building row for response #{response.id}"
+    Rails.logger.info "Building row for response #{response.id} (status: #{response.status})"
     
     row = [
       response.created_at.strftime('%Y-%m-%d %H:%M:%S'),
@@ -177,8 +177,15 @@ class Integrations::GoogleSheetsService < ApplicationService
 
     @form.form_questions.order(:position).each do |question|
       answer = response.question_responses.find_by(form_question_id: question.id)
+      Rails.logger.info "Question '#{question.title}' (ID: #{question.id}): found answer = #{answer.present?}"
+      
+      if answer.present?
+        Rails.logger.info "Answer data: #{answer.answer_data.inspect}"
+        Rails.logger.info "Answer text: #{answer.answer_text.inspect}"
+      end
+      
       formatted_value = format_answer_value(answer, question)
-      Rails.logger.info "Question '#{question.title}': answer = #{formatted_value.inspect}"
+      Rails.logger.info "Question '#{question.title}': formatted value = #{formatted_value.inspect}"
       row << formatted_value
     end
 
@@ -189,30 +196,15 @@ class Integrations::GoogleSheetsService < ApplicationService
   def format_answer_value(answer, question)
     Rails.logger.debug "Formatting answer for question #{question.id}: #{answer.inspect}"
     
-    return '' unless answer&.answer_data.present?
+    return '' unless answer.present?
 
-    # Handle different answer_data structures
-    value = if answer.answer_data.is_a?(Hash)
-              answer.answer_data['value'] || answer.answer_data.values.first
-            else
-              answer.answer_data
-            end
-
-    return '' if value.blank?
-
-    case question.question_type
-    when 'rating'
-      max_value = question.question_config&.dig('max_value') || 5
-      "#{value}/#{max_value}"
-    when 'multiple_choice'
-      value.to_s
-    when 'checkbox'
-      value.is_a?(Array) ? value.join(', ') : value.to_s
-    when 'date'
-      Date.parse(value.to_s).strftime('%Y-%m-%d') rescue value.to_s
-    else
-      value.to_s
-    end
+    # Use the formatted_answer method from QuestionResponse model
+    formatted_value = answer.formatted_answer
+    Rails.logger.debug "Formatted answer: #{formatted_value.inspect}"
+    
+    return '' if formatted_value.blank?
+    
+    formatted_value.to_s
   end
 
   def clear_data_rows
