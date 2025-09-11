@@ -74,9 +74,8 @@ class RedisSSLVerifier
     puts "\n🔌 Testing: #{test_name}"
 
     begin
-      # Use a simpler Redis connection for basic test
-      redis_url = ENV.fetch('REDIS_URL', 'redis://localhost:6379/0')
-      redis = Redis.new(url: redis_url)
+      # Use RedisConfig to get proper SSL configuration
+      redis = Redis.new(RedisConfig.connection_config)
       
       # Test basic operations
       test_key = "ssl_verification_test_#{Time.current.to_i}"

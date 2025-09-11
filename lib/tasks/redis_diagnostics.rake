@@ -252,6 +252,26 @@ namespace :redis do
     end
   end
 
+  desc "Test Redis SSL connection directly with different configurations"
+  task test_ssl_direct: :environment do
+    puts "🔐 Direct Redis SSL Connection Test"
+    puts "=" * 40
+    
+    # Load and run the direct SSL test script
+    ssl_test_script = Rails.root.join('script', 'test_redis_ssl_direct.rb')
+    
+    if File.exist?(ssl_test_script)
+      load ssl_test_script
+      
+      tester = RedisSSLDirectTest.new
+      tester.run_tests
+    else
+      puts "❌ SSL test script not found at: #{ssl_test_script}"
+      puts "Please ensure script/test_redis_ssl_direct.rb exists"
+      exit 1
+    end
+  end
+
   desc "Monitor Redis connection health in real-time"
   task monitor: :environment do
     puts "📊 Redis Connection Health Monitor"

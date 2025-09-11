@@ -9,10 +9,18 @@ class RedisConfig
     # Includes SSL parameters for production Heroku Redis connections
     def connection_config
       config = {
-        url: redis_url,
-        network_timeout: network_timeout,
-        pool_timeout: pool_timeout
+        url: redis_url
       }
+      
+      # Add timeout configurations (only if supported)
+      begin
+        # Test if these parameters are supported by creating a test config
+        test_config = { url: redis_url, timeout: 5 }
+        config[:timeout] = network_timeout
+      rescue ArgumentError
+        # Skip timeout parameters if not supported
+        Rails.logger.debug "Redis timeout parameters not supported, skipping"
+      end
       
       # Add SSL configuration for production Heroku Redis
       if ssl_required?
