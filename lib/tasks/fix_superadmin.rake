@@ -211,7 +211,7 @@ namespace :users do
 
       # Show login URL
       if Rails.env.production?
-        app_domain = ENV['APP_DOMAIN'] || 'mydialogform-b93454ae9225.herokuapp.com'
+        app_domain = ENV['APP_DOMAIN'] || 'mydialogform.com'
         login_url = "https://#{app_domain}/users/sign_in"
       else
         login_url = "http://localhost:3000/users/sign_in"

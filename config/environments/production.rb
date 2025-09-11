@@ -114,7 +114,7 @@ Rails.application.configure do
     authentication:       "plain",
     enable_starttls_auto: true
   }
-  config.action_mailer.default_url_options = { host: "mydialogform-b93454ae9225.herokuapp.com", protocol: "https" }
+  config.action_mailer.default_url_options = { host: "mydialogform.com", protocol: "https" }
 
   
   # Security configurations
@@ -139,9 +139,14 @@ Rails.application.configure do
                        'https://js.stripe.com',
                        'https://www.paypal.com'
     policy.style_src   :self, :https, :unsafe_inline
-    # Allow WebSocket connections for ActionCable
-    policy.connect_src :self, :https, :wss, 
-                       "wss://#{ENV.fetch('APP_DOMAIN', 'localhost')}"
+    # Allow connections to both custom domain and Heroku domain for transition
+    policy.connect_src :self, :https, :wss,
+                       'https://mydialogform.com',
+                       'https://www.mydialogform.com', 
+                       'https://mydialogform-b93454ae9225.herokuapp.com',
+                       "wss://mydialogform.com",
+                       "wss://www.mydialogform.com",
+                       "wss://mydialogform-b93454ae9225.herokuapp.com"
     # Allow frames for payment providers
     policy.frame_src   :self, :https,
                        'https://js.stripe.com',
@@ -151,7 +156,7 @@ Rails.application.configure do
   # Configure CORS for API endpoints
   config.middleware.insert_before 0, Rack::Cors do
     allow do
-      origins ENV.fetch('APP_DOMAIN', 'localhost')
+      origins 'mydialogform.com', 'www.mydialogform.com', 'mydialogform-b93454ae9225.herokuapp.com'
       resource '*',
         headers: :any,
         methods: [:get, :post, :put, :patch, :delete, :options, :head],
