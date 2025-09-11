@@ -3,6 +3,7 @@
 class FormsController < ApplicationController
   include PaymentErrorHandling
   include PaymentAnalyticsTrackable
+  include SafePagination
   
   before_action :authenticate_user!
   before_action :set_form, only: [:show, :edit, :update, :destroy, :publish, :unpublish, :duplicate, :analytics, :export, :preview, :responses, :download_responses, :payment_setup_status, :has_payment_questions]
@@ -459,10 +460,13 @@ class FormsController < ApplicationController
   def responses
     authorize @form, :responses?
     
-    @responses = @form.form_responses
-                      .includes(:question_responses, :dynamic_questions)
-                      .order(created_at: :desc)
-                      .page(params[:page]).per(20)
+    @responses = safe_paginate(
+      @form.form_responses
+           .includes(:question_responses, :dynamic_questions)
+           .order(created_at: :desc),
+      page: params[:page],
+      per_page: params[:per_page] || 20
+    )
 
     respond_to do |format|
       format.html
